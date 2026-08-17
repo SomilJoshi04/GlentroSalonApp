@@ -12,9 +12,18 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [vendor, setVendor] = useState(null);
-  const [admin, setAdmin] = useState(null);
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('user');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [vendor, setVendor] = useState(() => {
+    const saved = localStorage.getItem('vendor');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [admin, setAdmin] = useState(() => {
+    const saved = localStorage.getItem('admin');
+    return saved ? JSON.parse(saved) : null;
+  });
 
   const [userToken, setUserToken] = useState(localStorage.getItem('token')); // keep 'token' for user backwards compatibility
   const [vendorToken, setVendorToken] = useState(localStorage.getItem('vendor_token'));
@@ -25,15 +34,16 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const loadProfiles = async () => {
       const promises = [];
-      if (userToken) promises.push(getUserProfile(userToken).then(r => setUser(r.data.data.user)).catch(() => { localStorage.removeItem('token'); setUserToken(null); }));
-      if (vendorToken) promises.push(getVendorProfile(vendorToken).then(r => setVendor(r.data.data.user)).catch(() => { localStorage.removeItem('vendor_token'); setVendorToken(null); }));
-      if (adminToken) promises.push(getAdminProfile(adminToken).then(r => setAdmin(r.data.data.user)).catch(() => { localStorage.removeItem('admin_token'); setAdminToken(null); }));
+      if (userToken) promises.push(getUserProfile(userToken).then(r => setUser(r.data.data.user)).catch((e) => console.error('Failed to load user profile', e)));
+      if (vendorToken) promises.push(getVendorProfile(vendorToken).then(r => setVendor(r.data.data.user)).catch((e) => console.error('Failed to load vendor profile', e)));
+      if (adminToken) promises.push(getAdminProfile(adminToken).then(r => setAdmin(r.data.data.user)).catch((e) => console.error('Failed to load admin profile', e)));
 
       await Promise.allSettled(promises);
       setLoading(false);
     };
     loadProfiles();
   }, [userToken, vendorToken, adminToken]);
+
 
   // General login function, caller must handle API call and pass result
   const setAuth = useCallback((role, userData, token) => {
@@ -73,6 +83,17 @@ export const AuthProvider = ({ children }) => {
       setAdmin(null);
     }
   }, []);
+
+  useEffect(() => {
+    const handleAuthUnauthorized = (e) => {
+      const role = e.detail?.role;
+      if (role) {
+        logout(role);
+      }
+    };
+    window.addEventListener('auth:unauthorized', handleAuthUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleAuthUnauthorized);
+  }, [logout]);
 
   return (
     <AuthContext.Provider value={{

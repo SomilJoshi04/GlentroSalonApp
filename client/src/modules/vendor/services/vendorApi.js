@@ -44,12 +44,14 @@ export const getVendorPackages = (params) => api.get('/packages/vendor/my', { pa
 export const createPackage = (data) => api.post('/packages', data);
 export const updatePackage = (id, data) => api.put(`/packages/${id}`, data);
 export const deletePackage = (id) => api.delete(`/packages/${id}`);
+export const togglePackageStatus = (id) => api.patch(`/packages/${id}/toggle-status`);
 
 // Offers
 export const getVendorOffers = (params) => api.get('/offers/vendor/my', { params });
 export const createOffer = (data) => api.post('/offers', data);
 export const updateOffer = (id, data) => api.put(`/offers/${id}`, data);
 export const deleteOffer = (id) => api.delete(`/offers/${id}`);
+export const toggleOfferStatus = (id) => api.patch(`/offers/${id}/toggle-status`);
 
 // Subscription
 export const checkSubscription = () => api.get('/subscriptions/check');

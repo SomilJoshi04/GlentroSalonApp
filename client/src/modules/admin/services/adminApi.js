@@ -51,13 +51,13 @@ export const createCoupon = (data) => api.post('/admin/coupons', data);
 export const deleteCoupon = (id) => api.delete(`/admin/coupons/${id}`);
 
 // Offers & Packages
-export const getOffers = (params) => api.get('/admin/offers', { params });
-export const approveOffer = (id) => api.put(`/admin/offers/${id}/approve`);
-export const rejectOffer = (id, data) => api.put(`/admin/offers/${id}/reject`, data);
+export const getOffers = (params) => api.get('/offers', { params });
+export const approveOffer = (id) => api.patch(`/offers/${id}/approve`);
+export const rejectOffer = (id, data) => api.patch(`/offers/${id}/reject`, data);
 
-export const getPackages = (params) => api.get('/admin/packages', { params });
-export const approvePackage = (id) => api.put(`/admin/packages/${id}/approve`);
-export const rejectPackage = (id, data) => api.put(`/admin/packages/${id}/reject`, data);
+export const getPackages = (params) => api.get('/packages', { params });
+export const approvePackage = (id) => api.patch(`/packages/${id}/approve`);
+export const rejectPackage = (id, data) => api.patch(`/packages/${id}/reject`, data);
 
 // Subscriptions
 export const getSubscriptionPlans = (params) => api.get('/admin/subscriptions/plans', { params });

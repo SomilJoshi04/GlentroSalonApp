@@ -1,25 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { createBooking, validateCoupon } from '../../services/userApi';
 import { useAuth } from '../../../../context/AuthContext';
 
 const CheckoutPage = () => {
   const { id: salonId } = useParams();
-  const { state } = useLocation();
+  const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  const salon = state?.salon;
-  const selectedServices = state?.selectedServices || [];
-  const serviceStaff = state?.serviceStaff || {};
-  const date = state?.date || '';
-  const time = state?.time || '';
+  // Hydrate from state OR sessionStorage
+  const [bookingContext] = useState(() => {
+    if (location.state?.salon) return location.state;
+    const saved = sessionStorage.getItem('pendingBooking');
+    return saved ? JSON.parse(saved) : null;
+  });
 
-  const [couponCode, setCouponCode] = useState(state?.couponCode || '');
-  const [couponResult, setCouponResult] = useState(state?.couponResult || null);
+  const salon = bookingContext?.salon;
+  const selectedServices = bookingContext?.selectedServices || [];
+  const serviceStaff = bookingContext?.serviceStaff || {};
+  const date = bookingContext?.date || '';
+  const time = bookingContext?.time || '';
+
+  const [couponCode, setCouponCode] = useState(bookingContext?.couponCode || '');
+  const [couponResult, setCouponResult] = useState(bookingContext?.couponResult || null);
   const [couponError, setCouponError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  // Persist current state to sessionStorage so it survives refresh
+  useEffect(() => {
+    if (salon && date && time && selectedServices.length > 0) {
+      sessionStorage.setItem('pendingBooking', JSON.stringify({
+        salon, selectedServices, date, time, serviceStaff, couponCode, couponResult
+      }));
+    }
+  }, [salon, selectedServices, date, time, serviceStaff, couponCode, couponResult]);
 
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
   const finalAmount = couponResult ? couponResult.finalAmount : totalPrice;
@@ -47,10 +63,10 @@ const CheckoutPage = () => {
 
   const handleSubmit = async () => {
     if (!user) {
+      // State is already persisted in sessionStorage by useEffect
       navigate('/login', {
         state: {
-          from: location.pathname,
-          bookingState: { salon, selectedServices, date, time, couponCode, couponResult, serviceStaff }
+          from: location.pathname
         }
       });
       return;
@@ -69,6 +85,7 @@ const CheckoutPage = () => {
         ...(couponResult && { couponCode }),
       };
       const res = await createBooking(bookingData);
+      sessionStorage.removeItem('pendingBooking');
       setSuccess(true);
       setTimeout(() => navigate(`/booking/${res.data.data.booking._id}`), 1500);
     } catch (e) {
@@ -204,7 +221,7 @@ const CheckoutPage = () => {
       </main>
 
       {/* Sticky Bottom Action */}
-      <div className="fixed bottom-0 left-0 w-full bg-surface shadow-[0px_-10px_20px_rgba(109,62,168,0.08)] px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] z-40 border-t border-border/50">
+      <div className="fixed bottom-[72px] md:bottom-0 left-0 w-full bg-surface shadow-[0px_-10px_20px_rgba(109,62,168,0.08)] px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] z-40 border-t border-border/50">
         <div className="w-full max-w-md mx-auto">
           <button 
             onClick={handleSubmit}

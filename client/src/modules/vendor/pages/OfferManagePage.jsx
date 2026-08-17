@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getVendorOffers, createOffer, updateOffer, deleteOffer, getVendorSalons, getServices } from '../services/vendorApi';
+import { getVendorOffers, createOffer, updateOffer, deleteOffer, toggleOfferStatus, getVendorSalons, getServices } from '../services/vendorApi';
 
 const OfferManagePage = () => {
   const [offers, setOffers] = useState([]);
@@ -88,6 +88,15 @@ const OfferManagePage = () => {
     if (confirm('Are you sure you want to delete this offer?')) { 
       try { await deleteOffer(id); loadOffers(); } catch (e) { alert('Failed to delete'); } 
     } 
+  };
+
+  const handleToggleStatus = async (id) => {
+    try {
+      await toggleOfferStatus(id);
+      loadOffers();
+    } catch (e) {
+      alert('Failed to update status');
+    }
   };
 
   const openEditForm = (o) => {
@@ -229,7 +238,10 @@ const OfferManagePage = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`px-2.5 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider border ${statusColors[o.status]}`}>
-                    {o.status}
+                    {o.status === 'ACTIVE' ? 'APPROVED' : o.status}
+                  </span>
+                  <span className={`px-2.5 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider border ${o.isActive ? 'bg-green-50 text-green-600 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                    {o.isActive ? 'ENABLED' : 'DISABLED'}
                   </span>
                 </div>
               </div>
@@ -273,7 +285,11 @@ const OfferManagePage = () => {
             </div>
 
             <div className="mt-auto pt-4 border-t border-slate-50 flex gap-0">
-              <button onClick={() => openEditForm(o)} className="flex-1 text-xs py-3 font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 transition-colors">Edit Offer</button>
+              <button onClick={() => openEditForm(o)} className="flex-1 text-xs py-3 font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 transition-colors">Edit</button>
+              <div className="w-px bg-slate-100"></div>
+              <button onClick={() => handleToggleStatus(o._id)} className={`flex-1 text-xs py-3 font-medium transition-colors ${o.isActive ? 'text-orange-600 bg-orange-50 hover:bg-orange-100' : 'text-green-600 bg-green-50 hover:bg-green-100'}`}>
+                {o.isActive ? 'Disable' : 'Enable'}
+              </button>
               <div className="w-px bg-slate-100"></div>
               <button onClick={() => handleDelete(o._id)} className="flex-1 text-xs py-3 font-medium text-red-500 bg-red-50/50 hover:bg-red-100 transition-colors">Delete</button>
             </div>

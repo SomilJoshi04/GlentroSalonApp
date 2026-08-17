@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getVendorPackages, createPackage, updatePackage, deletePackage, getVendorSalons, getServices } from '../services/vendorApi';
+import { getVendorPackages, createPackage, updatePackage, deletePackage, togglePackageStatus, getVendorSalons, getServices } from '../services/vendorApi';
 
 const PackageManagePage = () => {
   const [packages, setPackages] = useState([]);
@@ -79,6 +79,15 @@ const PackageManagePage = () => {
         loadPackages(); 
       } catch (e) { alert('Failed to delete'); } 
     } 
+  };
+
+  const handleToggleStatus = async (id) => {
+    try {
+      await togglePackageStatus(id);
+      loadPackages();
+    } catch (e) {
+      alert('Failed to update status');
+    }
   };
 
   const openEditForm = (p) => {
@@ -227,7 +236,10 @@ const PackageManagePage = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`px-2.5 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider border ${statusColors[p.status]}`}>
-                    {p.status}
+                    {p.status === 'ACTIVE' ? 'APPROVED' : p.status}
+                  </span>
+                  <span className={`px-2.5 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider border ${p.isActive ? 'bg-green-50 text-green-600 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                    {p.isActive ? 'ENABLED' : 'DISABLED'}
                   </span>
                 </div>
               </div>
@@ -261,8 +273,11 @@ const PackageManagePage = () => {
               </div>
             </div>
 
-            <div className="pl-2 mt-auto pt-4 border-t border-slate-50 flex gap-3">
-              <button onClick={() => openEditForm(p)} className="flex-1 text-xs py-2 font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors">Edit Package</button>
+            <div className="pl-2 mt-auto pt-4 border-t border-slate-50 flex gap-2">
+              <button onClick={() => openEditForm(p)} className="flex-1 text-xs py-2 font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors">Edit</button>
+              <button onClick={() => handleToggleStatus(p._id)} className={`flex-1 text-xs py-2 font-medium rounded-xl transition-colors ${p.isActive ? 'text-orange-600 bg-orange-50 hover:bg-orange-100' : 'text-green-600 bg-green-50 hover:bg-green-100'}`}>
+                {p.isActive ? 'Disable' : 'Enable'}
+              </button>
               <button onClick={() => handleDelete(p._id)} className="flex-1 text-xs py-2 font-medium text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-colors">Delete</button>
             </div>
           </div>

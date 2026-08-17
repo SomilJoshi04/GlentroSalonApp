@@ -216,7 +216,7 @@ const BookingPage = () => {
       </main>
 
       {/* Sticky Footer CTA */}
-      <div className="fixed bottom-0 left-0 w-full md:w-full md:max-w-md md:left-1/2 md:-translate-x-1/2 bg-surface/95 backdrop-blur-xl border-t border-border p-4 pb-6 shadow-elevated z-50">
+      <div className="fixed bottom-[72px] md:bottom-0 left-0 w-full md:w-full md:max-w-md md:left-1/2 md:-translate-x-1/2 bg-surface/95 backdrop-blur-xl border-t border-border p-4 pb-6 shadow-elevated z-40">
         <button 
           onClick={handleProceed}
           disabled={!date || !time}

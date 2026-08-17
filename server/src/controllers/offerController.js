@@ -87,4 +87,17 @@ const deleteOffer = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-module.exports = { createOffer, getOffers, getVendorOffers, approveOffer, rejectOffer, updateOffer, deleteOffer };
+const toggleOfferStatus = async (req, res, next) => {
+  try {
+    const offer = await Offer.findById(req.params.id).populate('salon');
+    if (!offer) return res.status(404).json({ success: false, message: 'Offer not found' });
+    if (offer.salon.vendor.toString() !== req.user.id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+    offer.isActive = !offer.isActive;
+    await offer.save();
+    res.json({ success: true, message: `Offer ${offer.isActive ? 'activated' : 'deactivated'}`, data: offer });
+  } catch (error) { next(error); }
+};
+
+module.exports = { createOffer, getOffers, getVendorOffers, approveOffer, rejectOffer, updateOffer, deleteOffer, toggleOfferStatus };

@@ -33,20 +33,20 @@ axiosInstance.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       const url = error.config.url;
-      // Clear token and redirect based on which request failed
-      if (url.includes('/admin/')) {
-        localStorage.removeItem('admin_token');
-        localStorage.removeItem('admin');
-        if (!window.location.pathname.includes('/admin/login')) window.location.href = '/admin/login';
-      } else if (url.includes('/vendor') || url.includes('/vendors/profile') || url.includes('/salons/vendor/')) {
-        localStorage.removeItem('vendor_token');
-        localStorage.removeItem('vendor');
-        if (!window.location.pathname.includes('/vendor/login')) window.location.href = '/vendor/login';
-      } else {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        if (!window.location.pathname.includes('/login') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/vendor')) {
-           window.location.href = '/login';
+      // Only clear auth and trigger logout if the request actually included a token
+      if (error.config.headers.Authorization || error.config.headers?.authorization) {
+        if (url.includes('/admin/')) {
+          localStorage.removeItem('admin_token');
+          localStorage.removeItem('admin');
+          window.dispatchEvent(new CustomEvent('auth:unauthorized', { detail: { role: 'admin' } }));
+        } else if (url.includes('/vendor') || url.includes('/vendors/profile') || url.includes('/salons/vendor/')) {
+          localStorage.removeItem('vendor_token');
+          localStorage.removeItem('vendor');
+          window.dispatchEvent(new CustomEvent('auth:unauthorized', { detail: { role: 'vendor' } }));
+        } else {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.dispatchEvent(new CustomEvent('auth:unauthorized', { detail: { role: 'user' } }));
         }
       }
     }

@@ -26,6 +26,17 @@ const LoginPage = () => {
       const res = await loginUser(formData);
       setAuth('user', res.data.data.user, res.data.data.token);
       
+      const pendingBookingStr = sessionStorage.getItem('pendingBooking');
+      if (pendingBookingStr) {
+        try {
+          const pendingBooking = JSON.parse(pendingBookingStr);
+          navigate(`/salon/${pendingBooking.salon}/checkout`, { state: pendingBooking, replace: true });
+          return;
+        } catch (e) {
+          console.error('Failed to parse pending booking', e);
+        }
+      }
+      
       if (state?.from) {
         navigate(state.from, { state: state.bookingState, replace: true });
       } else {

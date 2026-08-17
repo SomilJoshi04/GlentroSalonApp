@@ -87,4 +87,17 @@ const deletePackage = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-module.exports = { createPackage, getPackages, getVendorPackages, approvePackage, rejectPackage, updatePackage, deletePackage };
+const togglePackageStatus = async (req, res, next) => {
+  try {
+    const pkg = await Package.findById(req.params.id).populate('salon');
+    if (!pkg) return res.status(404).json({ success: false, message: 'Package not found' });
+    if (pkg.salon.vendor.toString() !== req.user.id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+    pkg.isActive = !pkg.isActive;
+    await pkg.save();
+    res.json({ success: true, message: `Package ${pkg.isActive ? 'activated' : 'deactivated'}`, data: pkg });
+  } catch (error) { next(error); }
+};
+
+module.exports = { createPackage, getPackages, getVendorPackages, approvePackage, rejectPackage, updatePackage, deletePackage, togglePackageStatus };
