@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment & Credentials
+.env
+.env.*
+*.pem
+*.key
+certs/
+secrets.json
+
+# Build outputs
+dist/
+build/
+
+# Uploads
+server/uploads/*
+!server/uploads/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Testing & Scratch Scripts
+coverage/
+*.test.js
+*.spec.js
+test-*.js
+scratch/
+
+# Markdown Files
+*.md
+
+# Misc
+*.tgz
+.cache
+
+# Seed & Development Scripts
+server/src/seeds/
+server/scripts/

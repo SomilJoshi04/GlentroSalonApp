@@ -1,0 +1,23 @@
+{
+  "name": "salon-booking-platform",
+  "version": "1.0.0",
+  "description": "Full MERN Stack Salon Booking Platform with User, Vendor, and Admin applications",
+  "private": true,
+  "scripts": {
+    "dev:server": "cd server && npm run dev",
+    "dev:user": "cd client/user-app && npm run dev",
+    "dev:vendor": "cd client/vendor-app && npm run dev",
+    "dev:admin": "cd client/admin-panel && npm run dev",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:user\" \"npm run dev:vendor\" \"npm run dev:admin\"",
+    "install:all": "npm install && cd server && npm install && cd ../client/user-app && npm install && cd ../vendor-app && npm install && cd ../admin-panel && npm install",
+    "build:user": "cd client/user-app && npm run build",
+    "build:vendor": "cd client/vendor-app && npm run build",
+    "build:admin": "cd client/admin-panel && npm run build",
+    "build:all": "npm run build:user && npm run build:vendor && npm run build:admin",
+    "seed": "cd server && npm run seed",
+    "test": "cd server && npm test"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

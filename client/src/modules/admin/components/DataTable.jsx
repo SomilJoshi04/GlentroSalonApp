@@ -1,0 +1,97 @@
+import React from 'react';
+import Loader from '../../../components/common/Loader';
+
+const DataTable = ({ columns, data, loading, pagination, onPageChange }) => {
+  return (
+    <div className="bg-surface rounded-2xl border border-border overflow-hidden shadow-sm flex flex-col">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse min-w-[800px]">
+          <thead className="bg-surface-variant/50 border-b border-border">
+            <tr>
+              {columns.map((col, idx) => (
+                <th key={idx} className="px-6 py-4 font-label-md text-[12px] text-muted-text uppercase tracking-wider">
+                  {col.header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {loading ? (
+              <tr>
+                <td colSpan={columns.length} className="px-6 py-12 text-center">
+                  <div className="flex justify-center"><Loader size="md" text="Loading data..." /></div>
+                </td>
+              </tr>
+            ) : data.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className="px-6 py-16 text-center text-muted-text">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <span className="material-symbols-outlined text-[48px] text-border">inbox</span>
+                    <p className="font-body-md text-[14px]">No records found.</p>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              data.map((row, rowIdx) => (
+                <tr key={rowIdx} className="hover:bg-surface-variant/50 transition-colors">
+                  {columns.map((col, colIdx) => (
+                    <td key={colIdx} className="px-6 py-4 align-middle">
+                      {col.render ? col.render(row) : <span className="font-body-sm text-[14px] text-on-surface">{row[col.accessor]}</span>}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination Footer */}
+      {!loading && data.length > 0 && pagination && (
+        <div className="px-6 py-4 border-t border-border flex items-center justify-between bg-surface-variant/30">
+          <p className="font-body-sm text-[14px] text-muted-text">
+            Showing <span className="font-medium text-on-surface">{(pagination.currentPage - 1) * pagination.limit + 1}</span> to <span className="font-medium text-on-surface">{Math.min(pagination.currentPage * pagination.limit, pagination.total)}</span> of <span className="font-medium text-on-surface">{pagination.total}</span> results
+          </p>
+          <div className="flex items-center gap-1">
+            <button 
+              onClick={() => onPageChange(pagination.currentPage - 1)}
+              disabled={pagination.currentPage === 1}
+              className="p-1.5 rounded-lg border border-border text-muted-text hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+            </button>
+            
+            {/* Page Numbers */}
+            {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+              // Simple logic for showing a few pages
+              let pageNum = i + 1;
+              if (pagination.totalPages > 5 && pagination.currentPage > 3) {
+                 pageNum = pagination.currentPage - 2 + i;
+                 if (pageNum > pagination.totalPages) pageNum = pagination.totalPages - (4 - i);
+              }
+              return (
+                <button 
+                  key={pageNum}
+                  onClick={() => onPageChange(pageNum)}
+                  className={`w-8 h-8 rounded-lg font-label-sm text-[13px] flex items-center justify-center transition-colors ${pagination.currentPage === pageNum ? 'bg-primary/10 text-primary border border-primary/20 font-bold' : 'text-on-surface hover:bg-surface-variant'}`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+
+            <button 
+              onClick={() => onPageChange(pagination.currentPage + 1)}
+              disabled={pagination.currentPage === pagination.totalPages}
+              className="p-1.5 rounded-lg border border-border text-muted-text hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default DataTable;

@@ -1,0 +1,99 @@
+import { NavLink } from 'react-router-dom';
+
+const BottomNav = () => {
+  return (
+    <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] px-4 bg-surface shadow-[0px_-10px_20px_rgba(109,62,168,0.08)] rounded-t-[20px] z-50 md:hidden box-border">
+      <NavLink 
+        to="/" 
+        className={({ isActive }) => 
+          `flex flex-col items-center justify-center transition-all active:scale-90 duration-200 ${
+            isActive 
+              ? 'bg-soft-primary text-primary rounded-2xl px-3 py-1' 
+              : 'text-on-surface-variant hover:text-primary'
+          }`
+        }
+      >
+        {({ isActive }) => (
+          <>
+            <span className="material-symbols-outlined text-[22px]" style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>home</span>
+            <span className="font-label-sm text-[11px] mt-1">Home</span>
+          </>
+        )}
+      </NavLink>
+
+      <NavLink 
+        to="/search" 
+        className={({ isActive }) => 
+          `flex flex-col items-center justify-center transition-all active:scale-90 duration-200 ${
+            isActive 
+              ? 'bg-soft-primary text-primary rounded-2xl px-3 py-1' 
+              : 'text-on-surface-variant hover:text-primary'
+          }`
+        }
+      >
+        {({ isActive }) => (
+          <>
+            <span className="material-symbols-outlined text-[22px]" style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>search</span>
+            <span className="font-label-sm text-[11px] mt-1">Search</span>
+          </>
+        )}
+      </NavLink>
+
+      <NavLink 
+        to="/bookings" 
+        className={({ isActive }) => 
+          `flex flex-col items-center justify-center transition-all active:scale-90 duration-200 ${
+            isActive 
+              ? 'bg-soft-primary text-primary rounded-2xl px-3 py-1' 
+              : 'text-on-surface-variant hover:text-primary'
+          }`
+        }
+      >
+        {({ isActive }) => (
+          <>
+            <span className="material-symbols-outlined text-[22px]" style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>calendar_today</span>
+            <span className="font-label-sm text-[11px] mt-1">Bookings</span>
+          </>
+        )}
+      </NavLink>
+
+      <NavLink 
+        to="/chat" 
+        className={({ isActive }) => 
+          `flex flex-col items-center justify-center transition-all active:scale-90 duration-200 ${
+            isActive 
+              ? 'bg-soft-primary text-primary rounded-2xl px-3 py-1' 
+              : 'text-on-surface-variant hover:text-primary'
+          }`
+        }
+      >
+        {({ isActive }) => (
+          <>
+            <span className="material-symbols-outlined text-[22px]" style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>chat</span>
+            <span className="font-label-sm text-[11px] mt-1">Chat</span>
+          </>
+        )}
+      </NavLink>
+
+      <NavLink 
+        to="/profile" 
+        className={({ isActive }) => 
+          `flex flex-col items-center justify-center transition-all active:scale-90 duration-200 ${
+            isActive 
+              ? 'bg-soft-primary text-primary rounded-2xl px-3 py-1' 
+              : 'text-on-surface-variant hover:text-primary'
+          }`
+        }
+      >
+        {({ isActive }) => (
+          <>
+            <span className="material-symbols-outlined text-[22px]" style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>person</span>
+            <span className="font-label-sm text-[11px] mt-1">Profile</span>
+          </>
+        )}
+      </NavLink>
+    </nav>
+  );
+};
+
+export default BottomNav;

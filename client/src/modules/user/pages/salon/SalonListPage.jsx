@@ -1,0 +1,155 @@
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { getSalons, getNearbySalons, getCategories } from '../../services/userApi';
+import { useLocationContext } from '../../../../context/LocationContext';
+import Loader from '../../../../components/common/Loader';
+
+const SalonListPage = () => {
+  const [salons, setSalons] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchParams] = useSearchParams();
+  const categoryParam = searchParams.get('category') || '';
+  const searchParam = searchParams.get('search') || '';
+  
+  const [filters, setFilters] = useState({ search: searchParam, gender: '', category: categoryParam });
+  const { selectedLocation } = useLocationContext();
+  const navigate = useNavigate();
+
+  useEffect(() => { loadCategories(); }, []);
+  useEffect(() => { loadSalons(); }, [filters, searchParams, selectedLocation]);
+
+  const loadCategories = async () => {
+    try { const res = await getCategories(); setCategories(res.data.data); } catch (e) {}
+  };
+
+  const loadSalons = async () => {
+    setLoading(true);
+    try {
+      const activeFilters = { ...filters, search: searchParams.get('search') || filters.search, category: searchParams.get('category') || filters.category };
+      
+      let params = { limit: 50, ...Object.fromEntries(Object.entries(activeFilters).filter(([_, v]) => v)) };
+      let res;
+      
+      if (selectedLocation?.lat && selectedLocation?.lng) {
+        params = { ...params, lat: selectedLocation.lat, lng: selectedLocation.lng, radius: 50000 }; // 50km radius
+        res = await getNearbySalons(params);
+        
+        // Smart Fallback
+        if (res.data.data.salons.length === 0) {
+          const fallbackParams = { limit: 50, category: params.category, search: params.search };
+          res = await getSalons(fallbackParams);
+        }
+      } else {
+        if (selectedLocation?.city) params.city = selectedLocation.city;
+        res = await getSalons(params);
+      }
+      
+      setSalons(res.data.data.salons || []);
+    } catch (e) {
+      console.error(e);
+    }
+    setLoading(false);
+  };
+
+  const currentCategoryName = categories.find(c => c._id === filters.category)?.name || (searchParams.get('search') ? `Search: ${searchParams.get('search')}` : 'All Salons');
+
+  return (
+    <div className="pb-24 md:pb-0 animate-fade-in min-h-screen bg-background">
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-md shadow-sm">
+        <div className="flex justify-between items-center px-4 md:px-margin-desktop h-16 w-full">
+          <button onClick={() => navigate(-1)} className="p-2 text-on-surface-variant hover:bg-soft-primary transition-colors rounded-full active:scale-95 duration-150 -ml-2">
+            <span className="material-symbols-outlined">arrow_back</span>
+          </button>
+          <h1 className="font-headline-md text-[24px] text-primary flex-1 text-center truncate px-2">{currentCategoryName}</h1>
+          <button onClick={() => navigate('/search')} className="p-2 text-on-surface-variant hover:bg-soft-primary transition-colors rounded-full active:scale-95 duration-150">
+            <span className="material-symbols-outlined">search</span>
+          </button>
+        </div>
+        
+        {/* Category/Filter Pills */}
+        <div className="px-4 md:px-margin-desktop py-3 overflow-x-auto whitespace-nowrap hide-scrollbar border-t border-border">
+          <div className="flex gap-3">
+            <button 
+              onClick={() => { navigate('/salons'); setFilters({...filters, category: ''}) }}
+              className={`px-4 py-2 rounded-full font-label-md text-[14px] transition-colors ${!filters.category && !searchParams.get('search') ? 'bg-primary text-white shadow-sm' : 'bg-soft-primary text-primary hover:bg-primary-container hover:text-white'}`}
+            >
+              All
+            </button>
+            {categories.map(cat => (
+              <button 
+                key={cat._id}
+                onClick={() => { navigate(`/salons?category=${cat._id}`); setFilters({...filters, category: cat._id, search: ''}) }}
+                className={`px-4 py-2 rounded-full font-label-md text-[14px] transition-colors ${filters.category === cat._id ? 'bg-primary text-white shadow-sm' : 'bg-soft-primary text-primary hover:bg-primary-container hover:text-white'}`}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      </header>
+
+      <main className="px-4 md:px-margin-desktop py-6 space-y-6">
+        {loading ? <Loader text="Finding salons..." /> : salons.length === 0 ? (
+          <div className="text-center py-16 bg-surface rounded-2xl border border-border shadow-sm">
+            <div className="text-5xl mb-4">💈</div>
+            <h3 className="font-headline-sm text-[20px] text-on-surface mb-1">No salons found</h3>
+            <p className="font-body-sm text-[14px] text-muted-text">Try a different category or search term</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {salons.map(salon => (
+              <div 
+                key={salon._id} 
+                onClick={() => navigate(`/salon/${salon._id}`)}
+                className="bg-surface rounded-[18px] border border-border shadow-sm overflow-hidden flex flex-col cursor-pointer group hover:shadow-md transition-all duration-300 active:scale-[0.98]"
+              >
+                <div className="h-40 w-full relative overflow-hidden bg-surface-variant">
+                  {salon.images?.[0] ? (
+                    <img 
+                      src={`/uploads/${salon.images[0]}`} 
+                      alt={salon.name} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-4xl opacity-30">✂️</div>
+                  )}
+                  {/* Rating Badge */}
+                  {salon.ratings?.average > 0 && (
+                    <div className="absolute top-3 right-3 bg-surface/90 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
+                      <span className="material-symbols-outlined text-rating text-[14px]" style={{fontVariationSettings: "'FILL' 1"}}>star</span>
+                      <span className="font-label-sm text-[12px] font-bold text-on-surface">{salon.ratings.average.toFixed(1)}</span>
+                    </div>
+                  )}
+                  {/* Gender Tag */}
+                  <div className="absolute top-3 left-3 bg-primary/90 backdrop-blur-sm px-2 py-1 rounded-lg">
+                    <span className="font-label-sm text-[10px] uppercase font-bold text-white tracking-wider">{salon.gender}</span>
+                  </div>
+                </div>
+                
+                <div className="p-4 flex flex-col flex-1">
+                  <h3 className="font-headline-sm text-[18px] text-on-surface group-hover:text-primary transition-colors line-clamp-1">{salon.name}</h3>
+                  <p className="font-body-sm text-[14px] text-muted-text mt-1 flex items-center gap-1 line-clamp-1">
+                    <span className="material-symbols-outlined text-[14px]">location_on</span>
+                    {salon.address}
+                  </p>
+                  
+                  <div className="mt-auto pt-3 flex items-center justify-between border-t border-border mt-3">
+                    <div className="flex items-center gap-1 text-muted-text">
+                      <span className="material-symbols-outlined text-[14px]">schedule</span>
+                      <span className="font-body-sm text-[12px]">{salon.openingTime} - {salon.closingTime}</span>
+                    </div>
+                    <span className="font-label-md text-[14px] text-primary bg-soft-primary px-2 py-1 rounded-lg">{salon.city}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+};
+
+export default SalonListPage;
