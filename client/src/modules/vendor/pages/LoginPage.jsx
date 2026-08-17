@@ -30,7 +30,7 @@ const LoginPage = () => {
         <div className="text-center mb-8">
           {settings?.appLogo ? (
             <div className="inline-flex items-center justify-center mb-4">
-              <img src={`${import.meta.env.VITE_API_URL}/uploads/${settings.appLogo}`} alt="App Logo" className="w-16 h-16 rounded-2xl object-contain" />
+              <img src={`${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}/uploads/${settings.appLogo}`} alt="App Logo" className="w-16 h-16 rounded-2xl object-contain" />
             </div>
           ) : (
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-2xl shadow-lg mb-4"><span className="text-3xl">💈</span></div>

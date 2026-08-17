@@ -17,7 +17,7 @@ const TopNav = () => {
           onClick={() => navigate('/')}
         >
           {settings?.appLogo ? (
-            <img src={`${import.meta.env.VITE_API_URL}/uploads/${settings.appLogo}`} alt="Luxe Salon Logo" className="h-8 object-contain" />
+            <img src={`${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}/uploads/${settings.appLogo}`} alt="Luxe Salon Logo" className="h-8 object-contain" />
           ) : (
             <span className="font-headline-md text-[24px] font-bold text-primary">Luxe Salon</span>
           )}

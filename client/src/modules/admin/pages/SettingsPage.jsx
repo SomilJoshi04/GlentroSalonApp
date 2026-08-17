@@ -97,7 +97,7 @@ export default function SettingsPage() {
             {logoPreview ? (
               <img src={logoPreview} alt="Logo Preview" className="w-full h-full object-contain" />
             ) : settings?.appLogo ? (
-              <img src={`${import.meta.env.VITE_API_URL}/uploads/${settings.appLogo}`} alt="Current Logo" className="w-full h-full object-contain p-2" />
+              <img src={`${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}/uploads/${settings.appLogo}`} alt="Current Logo" className="w-full h-full object-contain p-2" />
             ) : (
               <span className="material-symbols-outlined text-4xl text-muted-text opacity-50">image</span>
             )}

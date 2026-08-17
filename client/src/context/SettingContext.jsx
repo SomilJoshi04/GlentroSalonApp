@@ -31,7 +31,7 @@ export const SettingProvider = ({ children }) => {
     if (settings.appLogo) {
       const favicon = document.getElementById('favicon');
       if (favicon) {
-        favicon.href = `${import.meta.env.VITE_API_URL}/uploads/${settings.appLogo}`;
+        favicon.href = `${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}/uploads/${settings.appLogo}`;
       }
     }
   }, [settings.appLogo]);
