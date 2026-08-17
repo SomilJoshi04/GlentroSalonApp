@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
+import { useNotifications } from '../../../context/NotificationContext';
 import { getPendingCounts } from '../services/adminApi';
+import NotificationDropdown from '../components/NotificationDropdown';
 import { useSettings } from '../../../context/SettingContext';
 
 const AdminLayout = () => {
@@ -12,6 +14,8 @@ const AdminLayout = () => {
   const [pendingCounts, setPendingCounts] = useState({ vendors: 0, packages: 0, offers: 0, bookings: 0 });
 
   // Polling for pending counts every 30 seconds
+  const { latestNotification } = useNotifications();
+
   const fetchPendingCounts = useCallback(async () => {
     try {
       const res = await getPendingCounts();
@@ -19,20 +23,28 @@ const AdminLayout = () => {
         setPendingCounts(res.data.data);
       }
     } catch (error) {
-      console.error("Failed to fetch pending counts:", error);
+      console.error('Failed to fetch pending counts:', error);
     }
   }, []);
 
   useEffect(() => {
     fetchPendingCounts();
-    const intervalId = setInterval(fetchPendingCounts, 30000);
-    return () => clearInterval(intervalId);
+    const interval = setInterval(fetchPendingCounts, 30000);
+    return () => clearInterval(interval);
   }, [fetchPendingCounts]);
+
+  // Refresh pending counts instantly when a new real-time notification arrives
+  useEffect(() => {
+    if (latestNotification) {
+      fetchPendingCounts();
+    }
+  }, [latestNotification, fetchPendingCounts]);
 
   const navItems = [
     { to: '/admin', label: 'Dashboard', icon: 'grid_view' },
     { to: '/admin/users', label: 'Users', icon: 'group' },
     { to: '/admin/vendors', label: 'Vendors', icon: 'storefront', count: pendingCounts.vendors },
+    { to: '/admin/salons', label: 'Salons', icon: 'store' },
     { to: '/admin/categories', label: 'Categories', icon: 'category' },
     { to: '/admin/services', label: 'Services', icon: 'cut' },
     { to: '/admin/bookings', label: 'Bookings', icon: 'calendar_today', count: pendingCounts.bookings },
@@ -135,12 +147,7 @@ const AdminLayout = () => {
           </div>
 
           <div className="flex items-center gap-4 shrink-0">
-            <button className="relative p-2 text-muted-text hover:bg-surface-variant rounded-full transition-colors flex items-center">
-              <span className="material-symbols-outlined text-[24px]">notifications</span>
-              {pendingCounts.vendors + pendingCounts.bookings > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-error rounded-full border-2 border-surface"></span>
-              )}
-            </button>
+            <NotificationDropdown />
             <button className="p-2 text-muted-text hover:bg-surface-variant rounded-full transition-colors flex items-center">
               <span className="material-symbols-outlined text-[24px]">settings</span>
             </button>

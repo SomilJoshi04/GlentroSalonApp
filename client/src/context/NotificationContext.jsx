@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useSocket } from './SocketContext';
-import { getUnreadCount } from '../modules/user/services/userApi';
+import api from '../services/api/axiosInstance';
 import { useAuth } from './AuthContext';
 
 const NotificationContext = createContext(null);
@@ -22,7 +22,7 @@ export const NotificationProvider = ({ children }) => {
     if (!isAuthenticated) return;
     const fetchCount = async () => {
       try {
-        const res = await getUnreadCount();
+        const res = await api.get('/notifications/unread-count');
         setUnreadCount(res.data.data.count);
       } catch (err) { /* ignore */ }
     };

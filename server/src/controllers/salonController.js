@@ -190,7 +190,12 @@ const getSalonById = async (req, res, next) => {
 // @desc    Update salon (Vendor)
 const updateSalon = async (req, res, next) => {
   try {
-    const salon = await Salon.findOne({ _id: req.params.id, vendor: req.user.id });
+    let salon;
+    if (req.user.role === 'admin') {
+      salon = await Salon.findById(req.params.id);
+    } else {
+      salon = await Salon.findOne({ _id: req.params.id, vendor: req.user.id });
+    }
     if (!salon) return res.status(404).json({ success: false, message: 'Salon not found or not authorized' });
 
     const updateData = { ...req.body };
@@ -206,7 +211,7 @@ const updateSalon = async (req, res, next) => {
 // @desc    Get vendor's salons
 const getVendorSalons = async (req, res, next) => {
   try {
-    const salons = await Salon.find({ vendor: req.user.id });
+    const salons = await Salon.find({ vendor: req.user.id }).sort({ createdAt: -1 });
     res.json({ success: true, data: salons });
   } catch (error) { next(error); }
 };

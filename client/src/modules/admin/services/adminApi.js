@@ -23,7 +23,8 @@ export const loginAdmin = (data) => api.post('/auth/login/admin', data);
 export const getProfile = () => api.get('/auth/profile');
 
 // Salons
-export const getAllSalons = (params) => api.get('/admin/salons', { params });
+export const getAllSalons = (params) => api.get('/salons/admin/all', { params });
+export const updateSalonStatus = (id, data) => api.put(`/salons/${id}`, data);
 
 // Bookings
 export const getAllBookings = (params) => api.get('/admin/bookings', { params });
@@ -71,3 +72,10 @@ export const createBanner = (formData) => api.post('/banners', formData, { heade
 export const updateBanner = (id, formData) => api.put(`/banners/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
 export const deleteBanner = (id) => api.delete(`/banners/${id}`);
 export const toggleBannerStatus = (id) => api.patch(`/banners/${id}/toggle-status`);
+
+// Notifications
+export const getNotifications = (params) => api.get('/notifications', { params });
+export const getUnreadCount = () => api.get('/notifications/unread-count');
+export const markAsRead = (id) => api.patch(`/notifications/${id}/read`);
+export const markAllAsRead = () => api.patch('/notifications/read-all');
+export const deleteNotification = (id) => api.delete(`/notifications/${id}`);

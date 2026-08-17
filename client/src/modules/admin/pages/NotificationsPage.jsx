@@ -1,23 +1,171 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { getNotifications, markAsRead, markAllAsRead } from '../services/adminApi';
+import { useNotifications } from '../../../context/NotificationContext';
+import { formatDistanceToNow } from 'date-fns';
+import { useAuth } from '../../../context/AuthContext';
+import toast from 'react-hot-toast';
 
 const NotificationsPage = () => {
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  
+  const { unreadCount, decrementCount, resetCount } = useNotifications();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    fetchNotifications(page);
+  }, [page]);
+
+  const fetchNotifications = async (pageNum) => {
+    try {
+      setLoading(true);
+      const res = await getNotifications({ page: pageNum, limit: 20 });
+      if (res.data?.success) {
+        setNotifications(res.data.data.notifications);
+        setTotalPages(res.data.data.totalPages);
+      }
+    } catch (error) {
+      toast.error('Failed to load notifications');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMarkAsRead = async (id, isRead) => {
+    if (isRead) return;
+    try {
+      await markAsRead(id);
+      setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
+      decrementCount();
+    } catch (error) {
+      toast.error('Failed to mark as read');
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    if (unreadCount === 0) return;
+    try {
+      await markAllAsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      resetCount();
+      toast.success('All notifications marked as read');
+    } catch (error) {
+      toast.error('Failed to mark all as read');
+    }
+  };
+
+  const getIcon = (type) => {
+    if (!type) return 'notifications';
+    if (type.includes('BOOKING')) return 'calendar_today';
+    if (type.includes('VENDOR')) return 'storefront';
+    if (type.includes('PACKAGE') || type.includes('OFFER')) return 'redeem';
+    return 'notifications';
+  };
+
   return (
     <div className="space-y-6 animate-fade-in pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="font-headline-md text-[28px] text-on-surface">Notifications</h1>
+          <h1 className="font-headline-md text-[28px] text-on-surface flex items-center gap-3">
+            Notifications
+            {unreadCount > 0 && (
+              <span className="bg-primary text-white text-[14px] font-bold px-2 py-0.5 rounded-full">
+                {unreadCount} new
+              </span>
+            )}
+          </h1>
           <p className="font-body-md text-muted-text mt-1">Manage system alerts and updates.</p>
         </div>
+        {unreadCount > 0 && (
+          <button 
+            onClick={handleMarkAllAsRead}
+            className="flex items-center gap-2 px-4 py-2 bg-surface-variant hover:bg-surface-variant-hover text-primary font-medium rounded-xl transition-colors shrink-0"
+          >
+            <span className="material-symbols-outlined text-[20px]">done_all</span>
+            Mark All as Read
+          </button>
+        )}
       </div>
       
-      <div className="bg-surface rounded-2xl border border-border p-12 flex flex-col items-center justify-center text-center shadow-sm">
-        <div className="w-16 h-16 bg-surface-variant rounded-full flex items-center justify-center mb-4 text-muted-text">
-          <span className="material-symbols-outlined text-[32px]">notifications_off</span>
-        </div>
-        <h3 className="font-headline-sm text-[18px] text-on-surface mb-2">No Notifications</h3>
-        <p className="font-body-sm text-muted-text max-w-md">
-          You currently have no unread notifications or system alerts.
-        </p>
+      <div className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
+        {loading && notifications.length === 0 ? (
+          <div className="p-12 flex justify-center">
+            <div className="w-8 h-8 border-4 border-border border-t-primary rounded-full animate-spin"></div>
+          </div>
+        ) : notifications.length === 0 ? (
+          <div className="p-12 flex flex-col items-center justify-center text-center">
+            <div className="w-16 h-16 bg-surface-variant rounded-full flex items-center justify-center mb-4 text-muted-text">
+              <span className="material-symbols-outlined text-[32px]">notifications_off</span>
+            </div>
+            <h3 className="font-headline-sm text-[18px] text-on-surface mb-2">No Notifications</h3>
+            <p className="font-body-sm text-muted-text max-w-md">
+              You currently have no system alerts. When new events occur, they will appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {notifications.map((notif) => (
+              <div 
+                key={notif._id} 
+                onClick={() => handleMarkAsRead(notif._id, notif.isRead)}
+                className={`p-6 flex flex-col sm:flex-row sm:items-start gap-4 transition-colors cursor-pointer ${
+                  !notif.isRead ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-surface-variant'
+                }`}
+              >
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${
+                  !notif.isRead ? 'bg-primary/20 text-primary' : 'bg-surface-variant text-muted-text'
+                }`}>
+                  <span className="material-symbols-outlined">{getIcon(notif.type)}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2">
+                    <h4 className={`text-[15px] ${!notif.isRead ? 'font-bold text-on-surface' : 'font-medium text-text-secondary'}`}>
+                      {notif.title}
+                    </h4>
+                    <span className="text-[12px] text-muted-text whitespace-nowrap">
+                      {formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true })}
+                    </span>
+                  </div>
+                  <p className={`text-[14px] ${!notif.isRead ? 'text-text-secondary' : 'text-muted-text'}`}>
+                    {notif.message}
+                  </p>
+                </div>
+                {!notif.isRead && (
+                  <div className="shrink-0 self-start sm:self-center">
+                    <div className="w-3 h-3 rounded-full bg-primary" title="Unread" />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="p-4 border-t border-border flex items-center justify-between bg-surface-card">
+            <span className="text-[13px] text-muted-text">
+              Page {page} of {totalPages}
+            </span>
+            <div className="flex gap-2">
+              <button 
+                disabled={page === 1}
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                className="p-1.5 rounded-lg border border-border text-on-surface hover:bg-surface-variant disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+              </button>
+              <button 
+                disabled={page === totalPages}
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                className="p-1.5 rounded-lg border border-border text-on-surface hover:bg-surface-variant disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

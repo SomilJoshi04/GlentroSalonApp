@@ -155,7 +155,7 @@ const VendorsPage = () => {
         <div className="flex items-center gap-3">
           <button className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl font-label-md text-[14px] hover:bg-primary-600 transition-colors shadow-sm">
             <span className="material-symbols-outlined text-[18px]">add</span>
-            Add New Salon
+            Add New Vendor
           </button>
         </div>
       </div>

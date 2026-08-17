@@ -13,7 +13,7 @@ router.get('/detail/:id', getSalonById);
 
 // Vendor routes
 router.post('/', protect, authorize('vendor'), createSalon);
-router.put('/:id', protect, authorize('vendor'), updateSalon);
+router.put('/:id', protect, authorize('vendor', 'admin'), updateSalon);
 router.get('/vendor/my-salons', protect, authorize('vendor'), getVendorSalons);
 
 // Admin routes
