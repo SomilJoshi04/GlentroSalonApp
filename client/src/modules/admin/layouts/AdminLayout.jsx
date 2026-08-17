@@ -2,10 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { getPendingCounts } from '../services/adminApi';
+import { useSettings } from '../../../context/SettingContext';
 
 const AdminLayout = () => {
   const { admin: user, logout } = useAuth();
   const navigate = useNavigate();
+  const { settings } = useSettings();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pendingCounts, setPendingCounts] = useState({ vendors: 0, packages: 0, offers: 0, bookings: 0 });
 
@@ -39,6 +41,7 @@ const AdminLayout = () => {
     { to: '/admin/coupons', label: 'Coupons', icon: 'local_activity' },
     { to: '/admin/banners', label: 'Banners', icon: 'view_carousel' },
     { to: '/admin/notifications', label: 'Notifications', icon: 'notifications' },
+    { to: '/admin/settings', label: 'Settings', icon: 'settings' },
     { to: '/admin/support', label: 'Support', icon: 'headset_mic' },
   ];
 
@@ -49,9 +52,13 @@ const AdminLayout = () => {
         
         {/* Brand/Logo */}
         <div className="flex items-center gap-3 px-6 py-6 border-b border-border">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white">
-            <span className="material-symbols-outlined text-[20px]">spa</span>
-          </div>
+          {settings?.appLogo ? (
+            <img src={`${import.meta.env.VITE_API_URL}/uploads/${settings.appLogo}`} alt="App Logo" className="w-10 h-10 rounded-lg object-contain" />
+          ) : (
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white">
+              <span className="material-symbols-outlined text-[20px]">spa</span>
+            </div>
+          )}
           <div>
             <h1 className="font-headline-sm text-[18px] text-primary leading-tight">LuxeSalon</h1>
             <p className="font-label-sm text-[11px] text-muted-text">Management Portal</p>

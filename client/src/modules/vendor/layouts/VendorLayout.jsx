@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
+import { useSettings } from '../../../context/SettingContext';
 
 const VendorLayout = () => {
   const { vendor: user, logout } = useAuth();
   const navigate = useNavigate();
+  const { settings } = useSettings();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navItems = [
@@ -23,7 +25,11 @@ const VendorLayout = () => {
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-surface text-on-surface border-r border-slate-200 transform transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-200">
-          <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center text-lg text-white">💈</div>
+          {settings?.appLogo ? (
+            <img src={`${import.meta.env.VITE_API_URL}/uploads/${settings.appLogo}`} alt="App Logo" className="w-10 h-10 rounded-lg object-contain" />
+          ) : (
+            <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center text-lg text-white">💈</div>
+          )}
           <div>
             <h1 className="font-bold text-sm text-slate-800">SalonBook</h1>
             <p className="text-xs text-slate-500">Vendor Portal</p>

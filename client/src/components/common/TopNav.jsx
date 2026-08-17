@@ -1,21 +1,27 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
+import { useSettings } from '../../context/SettingContext';
 
 const TopNav = () => {
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
+  const { settings } = useSettings();
   const navigate = useNavigate();
 
   return (
     <nav className="hidden md:flex fixed top-0 w-full z-50 justify-between items-center px-margin-desktop h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-surface shadow-sm box-border">
       <div className="flex items-center gap-8">
-        <span 
-          className="font-headline-md text-[24px] font-bold text-primary cursor-pointer"
+        <div 
+          className="cursor-pointer flex items-center"
           onClick={() => navigate('/')}
         >
-          Luxe Salon
-        </span>
+          {settings?.appLogo ? (
+            <img src={`${import.meta.env.VITE_API_URL}/uploads/${settings.appLogo}`} alt="Luxe Salon Logo" className="h-8 object-contain" />
+          ) : (
+            <span className="font-headline-md text-[24px] font-bold text-primary">Luxe Salon</span>
+          )}
+        </div>
         <div className="flex gap-6">
           <NavLink 
             to="/" 

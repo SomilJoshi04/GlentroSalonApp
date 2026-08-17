@@ -27,6 +27,7 @@ const adminRoutes = require('./routes/adminRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const locationRoutes = require('./routes/locationRoutes');
 const bannerRoutes = require('./routes/bannerRoutes');
+const settingRoutes = require('./routes/settingRoutes');
 
 const app = express();
 
@@ -76,6 +77,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/location', locationRoutes);
 app.use('/api/banners', bannerRoutes);
+app.use('/api/settings', settingRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

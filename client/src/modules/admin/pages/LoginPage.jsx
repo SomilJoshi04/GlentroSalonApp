@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { loginAdmin } from '../services/adminApi';
+import { useSettings } from '../../../context/SettingContext';
 
 const LoginPage = () => {
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { setAuth } = useAuth();
+  const { settings } = useSettings();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -24,7 +26,13 @@ const LoginPage = () => {
     <div className="min-h-screen bg-surface flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl shadow-lg mb-4"><span className="text-3xl">⚡</span></div>
+          {settings?.appLogo ? (
+            <div className="inline-flex items-center justify-center mb-4">
+              <img src={`${import.meta.env.VITE_API_URL}/uploads/${settings.appLogo}`} alt="App Logo" className="w-16 h-16 rounded-2xl object-contain" />
+            </div>
+          ) : (
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl shadow-lg mb-4"><span className="text-3xl">⚡</span></div>
+          )}
           <h1 className="text-2xl font-bold text-text-primary">Admin Panel</h1>
           <p className="text-text-secondary text-sm mt-1">Salon Booking Platform</p>
         </div>

@@ -21,6 +21,7 @@ const CouponsPage = lazy(() => import('../pages/CouponsPage'));
 const SubscriptionsPage = lazy(() => import('../pages/SubscriptionsPage'));
 const CommissionsPage = lazy(() => import('../pages/CommissionsPage'));
 const BannersPage = lazy(() => import('../pages/BannersPage'));
+const SettingsPage = lazy(() => import('../pages/SettingsPage'));
 
 const SuspenseWrapper = ({ children }) => (
   <Suspense fallback={<Loader text="Loading..." />}>
@@ -47,6 +48,7 @@ export default function AdminRoutes() {
         <Route path="subscriptions" element={<SuspenseWrapper><SubscriptionsPage /></SuspenseWrapper>} />
         <Route path="commissions" element={<SuspenseWrapper><CommissionsPage /></SuspenseWrapper>} />
         <Route path="banners" element={<SuspenseWrapper><BannersPage /></SuspenseWrapper>} />
+        <Route path="settings" element={<SuspenseWrapper><SettingsPage /></SuspenseWrapper>} />
       </Route>
     </Routes>
   );

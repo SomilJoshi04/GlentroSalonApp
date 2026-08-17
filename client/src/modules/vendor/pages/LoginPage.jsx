@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { loginVendor } from '../services/vendorApi';
+import { useSettings } from '../../../context/SettingContext';
 import Button from '../../../components/common/Button';
 import Input from '../../../components/common/Input';
 
@@ -10,6 +11,7 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { setAuth } = useAuth();
+  const { settings } = useSettings();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -26,7 +28,13 @@ const LoginPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-soft-primary via-white to-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-2xl shadow-lg mb-4"><span className="text-3xl">💈</span></div>
+          {settings?.appLogo ? (
+            <div className="inline-flex items-center justify-center mb-4">
+              <img src={`${import.meta.env.VITE_API_URL}/uploads/${settings.appLogo}`} alt="App Logo" className="w-16 h-16 rounded-2xl object-contain" />
+            </div>
+          ) : (
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-2xl shadow-lg mb-4"><span className="text-3xl">💈</span></div>
+          )}
           <h1 className="text-2xl font-bold text-slate-900">Vendor Portal</h1>
           <p className="text-slate-500 text-sm mt-1">Manage your salon business</p>
         </div>
