@@ -6,6 +6,7 @@ import StatusBadge from '../components/StatusBadge';
 const VendorsPage = () => {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   
@@ -18,6 +19,7 @@ const VendorsPage = () => {
 
   const fetchVendors = useCallback(async (page = 1) => {
     setLoading(true);
+    setError(null);
     try {
       const res = await getVendors({ page, limit: pagination.limit, search, status: statusFilter });
       if (res.data?.success) {
@@ -31,6 +33,7 @@ const VendorsPage = () => {
       }
     } catch (err) {
       console.error("Failed to load vendors", err);
+      setError('Unable to load vendors. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -188,7 +191,8 @@ const VendorsPage = () => {
       <DataTable 
         columns={columns} 
         data={vendors} 
-        loading={loading} 
+        loading={loading}
+        error={error} 
         pagination={pagination}
         onPageChange={fetchVendors}
       />

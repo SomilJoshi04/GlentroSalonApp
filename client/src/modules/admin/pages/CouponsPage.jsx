@@ -4,12 +4,25 @@ import { getCoupons, createCoupon, deleteCoupon } from '../services/adminApi';
 const CouponsPage = () => {
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ code: '', discountType: 'percentage', discountValue: '', minPurchaseAmount: '0', maxDiscountAmount: '', validFrom: '', validTo: '', usageLimit: '' });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { load(); }, []);
-  const load = async () => { try { const r = await getCoupons(); setCoupons(r.data.data.coupons || r.data.data); } catch (e) {} setLoading(false); };
+  const load = async () => { 
+    setLoading(true);
+    setError(null);
+    try { 
+      const r = await getCoupons(); 
+      const data = r.data?.data;
+      const list = data?.coupons || data || [];
+      setCoupons(Array.isArray(list) ? list : []); 
+    } catch (e) {
+      setError('Unable to load coupons. Please try again.');
+    } 
+    setLoading(false); 
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setSaving(true);
@@ -39,8 +52,14 @@ const CouponsPage = () => {
         </form>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {coupons.map(c => (
+      {error ? (
+        <div className="bg-danger/10 border border-danger/20 text-danger p-4 rounded-xl">
+          {error}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {coupons.length === 0 ? <p className="text-text-muted col-span-full py-8 text-center">No coupons found.</p> :
+          coupons.map(c => (
           <div key={c._id} className="bg-surface-card border border-border rounded-2xl p-5">
             <div className="flex justify-between items-start">
               <div className="px-3 py-1 bg-primary-600/20 text-primary-400 font-bold tracking-wider rounded-lg border border-primary-500/30">{c.code}</div>
@@ -55,6 +74,7 @@ const CouponsPage = () => {
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 };

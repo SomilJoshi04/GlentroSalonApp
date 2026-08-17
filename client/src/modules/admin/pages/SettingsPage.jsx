@@ -1,24 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSettings } from '../../../context/SettingContext';
 import { updateAppLogo, updateAppName } from '../../../services/api/settingApi';
+import ImageUpload from '../../../components/common/ImageUpload';
 
 export default function SettingsPage() {
   const { settings, fetchSettings } = useSettings();
   const [logoFile, setLogoFile] = useState(null);
-  const [logoPreview, setLogoPreview] = useState(null);
   const [appName, setAppName] = useState('');
   const [loading, setLoading] = useState(false);
   const [nameLoading, setNameLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
-  const fileInputRef = useRef(null);
-
-  const handleLogoChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setLogoFile(file);
-      setLogoPreview(URL.createObjectURL(file));
-    }
-  };
 
   // Initialize app name from settings
   useEffect(() => {
@@ -95,40 +86,25 @@ export default function SettingsPage() {
               Recommended size: 512x512px.
             </p>
             
-            <div className="pt-4 flex gap-3">
-              <button 
-                onClick={() => fileInputRef.current?.click()}
-                className="px-4 py-2 bg-surface-variant text-on-surface rounded-xl text-sm font-medium hover:bg-border transition-colors"
-              >
-                Choose Image
-              </button>
+            <div className="pt-4 flex gap-3 flex-col sm:flex-row">
+              <div className="flex-1">
+                <ImageUpload 
+                  currentImage={settings?.appLogo}
+                  onFileSelect={setLogoFile}
+                  label=""
+                  maxSizeMB={0.5}
+                />
+              </div>
               {logoFile && (
                 <button 
                   onClick={handleSaveLogo}
                   disabled={loading}
-                  className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 mt-4 sm:mt-0 h-fit bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
                 >
                   {loading ? 'Saving...' : 'Save Logo'}
                 </button>
               )}
             </div>
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              onChange={handleLogoChange} 
-              accept="image/*" 
-              className="hidden" 
-            />
-          </div>
-          
-          <div className="w-32 h-32 rounded-2xl border-2 border-dashed border-border bg-background-alt flex items-center justify-center shrink-0 overflow-hidden">
-            {logoPreview ? (
-              <img src={logoPreview} alt="Logo Preview" className="w-full h-full object-contain" />
-            ) : settings?.appLogo ? (
-              <img src={`${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}/uploads/${settings.appLogo}`} alt="Current Logo" className="w-full h-full object-contain p-2" />
-            ) : (
-              <span className="material-symbols-outlined text-4xl text-muted-text opacity-50">image</span>
-            )}
           </div>
         </div>
 

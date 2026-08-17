@@ -5,6 +5,7 @@ const SubscriptionsPage = () => {
   const [plans, setPlans] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showPlanForm, setShowPlanForm] = useState(false);
   const [showAssignForm, setShowAssignForm] = useState(false);
   const [planForm, setPlanForm] = useState({ name: '', price: '', durationDays: '', maxSalons: '1', maxStaffPerSalon: '5', features: '' });
@@ -12,7 +13,19 @@ const SubscriptionsPage = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { load(); }, []);
-  const load = async () => { try { const [p, v] = await Promise.all([getSubscriptionPlans(), getVendors()]); setPlans(p.data.data); setVendors(v.data.data); } catch (e) {} setLoading(false); };
+  const load = async () => { 
+    setLoading(true);
+    setError(null);
+    try { 
+      const [p, v] = await Promise.all([getSubscriptionPlans(), getVendors()]); 
+      const pData = p.data?.data;
+      setPlans(Array.isArray(pData) ? pData : (pData?.plans || [])); 
+      setVendors(v.data.data); 
+    } catch (e) {
+      setError('Unable to load subscriptions. Please try again.');
+    } 
+    setLoading(false); 
+  };
 
   const handlePlanSubmit = async (e) => {
     e.preventDefault(); setSaving(true);
@@ -61,8 +74,14 @@ const SubscriptionsPage = () => {
         </form>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {plans.map(p => (
+      {error ? (
+        <div className="bg-danger/10 border border-danger/20 text-danger p-4 rounded-xl">
+          {error}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {plans.length === 0 ? <p className="text-text-muted col-span-full py-8 text-center">No subscription plans found.</p> :
+          plans.map(p => (
           <div key={p._id} className="bg-gradient-to-b from-surface-card to-surface-elevated border border-border rounded-2xl p-6 relative overflow-hidden">
             <h3 className="text-xl font-bold text-text-primary">{p.name}</h3>
             <p className="mt-4"><span className="text-3xl font-bold text-text-primary">₹{p.price}</span><span className="text-text-muted"> / {p.durationDays} days</span></p>
@@ -75,6 +94,7 @@ const SubscriptionsPage = () => {
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 };

@@ -4,17 +4,32 @@ import { getPackages, approvePackage, rejectPackage } from '../services/adminApi
 const PackagesPage = () => {
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [filter, setFilter] = useState('PENDING');
 
   useEffect(() => { load(); }, [filter]);
-  const load = async () => { try { const r = await getPackages({ status: filter }); setPackages(r.data.data.packages || r.data.data); } catch (e) {} setLoading(false); };
+  const load = async () => { 
+    setLoading(true);
+    setError(null);
+    try { 
+      const r = await getPackages({ status: filter }); 
+      const data = r.data?.data;
+      const list = data?.packages || data || [];
+      setPackages(Array.isArray(list) ? list : []); 
+    } catch (e) {
+      setError('Unable to load packages. Please try again.');
+    } 
+    setLoading(false); 
+  };
 
   const handleAction = async (id, action) => {
     try {
       if (action === 'approve') await approvePackage(id);
       else await rejectPackage(id, { reason: 'Rejected by admin' });
       load();
-    } catch (e) { alert('Failed'); }
+    } catch (e) { 
+      alert(e.response?.data?.message || 'Failed to process action'); 
+    }
   };
 
   if (loading) return <div className="flex justify-center py-12"><div className="w-10 h-10 border-4 border-dark-700 border-t-primary-500 rounded-full animate-spin" /></div>;
@@ -27,9 +42,14 @@ const PackagesPage = () => {
           <button key={f} onClick={() => setFilter(f)} className={`px-4 py-2 rounded-xl text-xs font-medium ${filter === f ? 'bg-primary-600 text-white' : 'bg-surface-card text-text-secondary border border-border'}`}>{f}</button>
         ))}
       </div>
-      <div className="space-y-4">
-        {packages.length === 0 ? <p className="text-text-muted text-center py-8">No packages found</p> :
-          packages.map(p => (
+      {error ? (
+        <div className="bg-danger/10 border border-danger/20 text-danger p-4 rounded-xl">
+          {error}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {packages.length === 0 ? <p className="text-text-muted text-center py-8">No packages found for the selected status.</p> :
+            packages.map(p => (
             <div key={p._id} className="bg-surface-card rounded-2xl p-5 border border-border flex flex-col md:flex-row justify-between gap-4">
               <div>
                 <h4 className="font-semibold text-text-primary">{p.name}</h4>
@@ -47,6 +67,7 @@ const PackagesPage = () => {
           ))
         }
       </div>
+      )}
     </div>
   );
 };

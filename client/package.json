@@ -12,6 +12,7 @@
   "dependencies": {
     "@react-google-maps/api": "^2.20.8",
     "axios": "^1.19.0",
+    "browser-image-compression": "^2.0.2",
     "leaflet": "^1.9.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

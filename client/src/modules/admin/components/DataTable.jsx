@@ -1,7 +1,7 @@
 import React from 'react';
 import Loader from '../../../components/common/Loader';
 
-const DataTable = ({ columns, data, loading, pagination, onPageChange }) => {
+const DataTable = ({ columns, data, loading, error, pagination, onPageChange }) => {
   return (
     <div className="bg-surface rounded-2xl border border-border overflow-hidden shadow-sm flex flex-col">
       <div className="overflow-x-auto">
@@ -20,6 +20,15 @@ const DataTable = ({ columns, data, loading, pagination, onPageChange }) => {
               <tr>
                 <td colSpan={columns.length} className="px-6 py-12 text-center">
                   <div className="flex justify-center"><Loader size="md" text="Loading data..." /></div>
+                </td>
+              </tr>
+            ) : error ? (
+              <tr>
+                <td colSpan={columns.length} className="px-6 py-16 text-center text-danger">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <span className="material-symbols-outlined text-[48px] text-danger/50">error</span>
+                    <p className="font-body-md text-[14px]">{error}</p>
+                  </div>
                 </td>
               </tr>
             ) : data.length === 0 ? (

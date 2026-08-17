@@ -7,6 +7,7 @@ import ServiceDetailsModal from '../components/ServiceDetailsModal';
 const ServicesPage = () => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [selectedService, setSelectedService] = useState(null);
   
@@ -19,6 +20,7 @@ const ServicesPage = () => {
 
   const fetchServices = useCallback(async (page = 1) => {
     setLoading(true);
+    setError(null);
     try {
       const res = await getServices({ page, limit: pagination.limit, search });
       if (res.data?.success) {
@@ -32,6 +34,7 @@ const ServicesPage = () => {
       }
     } catch (err) {
       console.error("Failed to load services", err);
+      setError('Unable to load services. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -129,11 +132,11 @@ const ServicesPage = () => {
         </div>
       </div>
 
-      {/* Data Table */}
       <DataTable 
         columns={columns} 
         data={services} 
-        loading={loading} 
+        loading={loading}
+        error={error} 
         pagination={pagination}
         onPageChange={fetchServices}
       />

@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const { processAndStoreImage, deleteImageSafe } = require('../services/imageService');
 
 // @desc    Get all users (Admin)
 const getUsers = async (req, res, next) => {
@@ -31,10 +32,44 @@ const getUserById = async (req, res, next) => {
 // @desc    Update user profile
 const updateProfile = async (req, res, next) => {
   try {
-    const { name, phone, city, avatar } = req.body;
-    const user = await User.findByIdAndUpdate(req.user.id, { name, phone, city, avatar }, { new: true, runValidators: true }).select('-password');
-    res.json({ success: true, message: 'Profile updated', data: user });
-  } catch (error) { next(error); }
+    const { name, phone, city } = req.body;
+    let newImage = null;
+
+    const currentUser = await User.findById(req.user.id);
+    if (!currentUser) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    let oldImage = currentUser.avatar;
+
+    // We only process if there is a file. If req.body.avatar is empty, it might mean user removed it (if we support that feature).
+    if (req.file) {
+      newImage = await processAndStoreImage(req.file.buffer, 'user');
+    }
+
+    const updateData = { name, phone, city };
+    if (newImage) {
+      updateData.avatar = newImage;
+    } else if (req.body.avatar === '') {
+      // If frontend explicitly sends empty string, they want to remove the photo
+      updateData.avatar = '';
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(req.user.id, updateData, { new: true, runValidators: true }).select('-password');
+    
+    // Cleanup old image if it was replaced or removed, AND if it's not a Base64 string (handled during migration)
+    if ((newImage || req.body.avatar === '') && oldImage && !oldImage.startsWith('data:')) {
+      deleteImageSafe(oldImage);
+    }
+
+    res.json({ success: true, message: 'Profile updated', data: updatedUser });
+  } catch (error) {
+    if (req.file && error) {
+       // newImage would be deleted here if we had access to it, but processAndStoreImage could have failed.
+       // It's safe to just let it pass if DB update failed, as newImage might not have been created yet or we can't reliably delete it without the filename.
+    }
+    next(error);
+  }
 };
 
 // @desc    Update user location

@@ -1,13 +1,5 @@
 const AppSetting = require('../models/AppSetting');
-const sharp = require('sharp');
-const path = require('path');
-const fs = require('fs');
-
-// Ensure uploads dir exists
-const uploadsDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+const { processAndStoreImage, deleteImageSafe } = require('../services/imageService');
 
 // @desc    Get all settings (Public)
 const getSettings = async (req, res, next) => {
@@ -30,30 +22,29 @@ const updateAppLogo = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Please upload an image file' });
     }
 
-    const filename = `app-logo-${Date.now()}-${Math.round(Math.random() * 1e9)}.webp`;
-    
-    await sharp(req.file.buffer)
-      .webp({ quality: 90 })
-      .toFile(path.join(uploadsDir, filename));
+    const newImage = await processAndStoreImage(req.file.buffer, 'logo');
 
     // Find existing app logo to potentially delete the old file
     const existingLogo = await AppSetting.findOne({ key: 'appLogo' });
-    if (existingLogo && existingLogo.value) {
-      // Optional: Delete old image
-      const oldPath = path.join(uploadsDir, existingLogo.value);
-      if (fs.existsSync(oldPath)) {
-        fs.unlinkSync(oldPath);
-      }
-    }
+    const oldImage = existingLogo ? existingLogo.value : null;
 
     const updatedSetting = await AppSetting.findOneAndUpdate(
       { key: 'appLogo' },
-      { value: filename },
+      { value: newImage },
       { new: true, upsert: true }
     );
 
+    // After DB save succeeds, delete old image if replaced
+    if (oldImage) {
+      deleteImageSafe(oldImage);
+    }
+
     res.json({ success: true, data: updatedSetting });
   } catch (error) {
+    if (req.file && error) {
+      // If we could access the generated filename, we'd delete it, but processAndStoreImage might have thrown.
+      // Better to return the error safely.
+    }
     next(error);
   }
 };

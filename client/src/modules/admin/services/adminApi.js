@@ -30,7 +30,7 @@ export const getAllBookings = (params) => api.get('/admin/bookings', { params })
 
 // Categories
 export const getCategories = (params) => api.get('/admin/categories', { params });
-export const createCategory = (data) => api.post('/admin/categories', data);
+export const createCategory = (data) => api.post('/admin/categories', data, { headers: { 'Content-Type': data instanceof FormData ? 'multipart/form-data' : 'application/json' }});
 export const deleteCategory = (id) => api.delete(`/admin/categories/${id}`);
 export const getSubcategories = (params) => api.get('/admin/subcategories', { params });
 export const createSubcategory = (data) => api.post('/admin/subcategories', data);

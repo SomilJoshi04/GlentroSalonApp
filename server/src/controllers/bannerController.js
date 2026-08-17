@@ -1,13 +1,5 @@
 const Banner = require('../models/Banner');
-const sharp = require('sharp');
-const path = require('path');
-const fs = require('fs');
-
-// Ensure uploads dir exists
-const uploadsDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+const { processAndStoreImage, deleteImageSafe } = require('../services/imageService');
 
 // @desc    Get active banners (Public)
 const getActiveBanners = async (req, res, next) => {
@@ -36,10 +28,7 @@ const createBanner = async (req, res, next) => {
     let filename = '';
 
     if (req.file) {
-      filename = `banner-${Date.now()}-${Math.round(Math.random() * 1e9)}.webp`;
-      await sharp(req.file.buffer)
-        .webp({ quality: 80 })
-        .toFile(path.join(uploadsDir, filename));
+      filename = await processAndStoreImage(req.file.buffer, 'banner');
     } else {
       return res.status(400).json({ success: false, message: 'Please upload an image file' });
     }
@@ -69,26 +58,28 @@ const updateBanner = async (req, res, next) => {
     if (link !== undefined) banner.link = link;
     if (isActive !== undefined) banner.isActive = isActive;
 
+    let oldImage = banner.image;
+    let newImage = null;
+
     // Handle new image upload
     if (req.file) {
-      // Optional: Delete old image
-      if (banner.image) {
-        const oldPath = path.join(uploadsDir, banner.image);
-        if (fs.existsSync(oldPath)) {
-          fs.unlinkSync(oldPath);
-        }
-      }
-
-      const filename = `banner-${Date.now()}-${Math.round(Math.random() * 1e9)}.webp`;
-      await sharp(req.file.buffer)
-        .webp({ quality: 80 })
-        .toFile(path.join(uploadsDir, filename));
-      banner.image = filename;
+      newImage = await processAndStoreImage(req.file.buffer, 'banner');
+      banner.image = newImage;
     }
 
     await banner.save();
+
+    // After DB save succeeds, delete old image if replaced
+    if (newImage && oldImage) {
+      deleteImageSafe(oldImage);
+    }
+
     res.json({ success: true, data: banner });
   } catch (error) {
+    // If DB fails but we uploaded a new image, delete the new orphaned file
+    if (newImage) {
+      deleteImageSafe(newImage);
+    }
     next(error);
   }
 };
@@ -99,12 +90,9 @@ const deleteBanner = async (req, res, next) => {
     const banner = await Banner.findById(req.params.id);
     if (!banner) return res.status(404).json({ success: false, message: 'Banner not found' });
 
-    // Delete image file
+    // Delete image file safely
     if (banner.image) {
-      const filePath = path.join(uploadsDir, banner.image);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
+      deleteImageSafe(banner.image);
     }
 
     await banner.deleteOne();

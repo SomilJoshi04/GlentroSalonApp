@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getBanners, createBanner, updateBanner, deleteBanner, toggleBannerStatus } from '../services/adminApi';
-import { compressImage } from '../../../utils/imageCompressor';
+import ImageUpload from '../../../components/common/ImageUpload';
 
 const BannersPage = () => {
   const [banners, setBanners] = useState([]);
@@ -9,9 +9,6 @@ const BannersPage = () => {
   
   const [form, setForm] = useState({ title: '', link: '' });
   const [selectedFile, setSelectedFile] = useState(null);
-  const [preview, setPreview] = useState(null);
-  
-  const fileInputRef = useRef(null);
 
   useEffect(() => { loadBanners(); }, []);
 
@@ -26,25 +23,7 @@ const BannersPage = () => {
     }
   };
 
-  const handleFileChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
 
-    // Show instant preview
-    const objectUrl = URL.createObjectURL(file);
-    setPreview(objectUrl);
-    
-    // Compress immediately
-    try {
-      const compressed = await compressImage(file, 1200, 1200, 0.8);
-      setSelectedFile(compressed);
-    } catch (err) {
-      console.error('Compression error:', err);
-      alert('Failed to compress image. Please try another.');
-      setSelectedFile(null);
-      setPreview(null);
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -62,8 +41,6 @@ const BannersPage = () => {
       // Reset form
       setForm({ title: '', link: '' });
       setSelectedFile(null);
-      setPreview(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
       
       loadBanners();
     } catch (error) {
@@ -117,16 +94,12 @@ const BannersPage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1">Banner Image *</label>
-            <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="block w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100" />
-            <p className="text-xs text-text-muted mt-1">Image will be automatically compressed to WebP format.</p>
+            <ImageUpload 
+              onFileSelect={setSelectedFile} 
+              label="Banner Image *"
+              maxSizeMB={1.5}
+            />
           </div>
-
-          {preview && (
-            <div className="relative w-full max-w-md h-32 rounded-xl overflow-hidden border border-border">
-              <img src={preview} alt="Preview" className="w-full h-full object-cover" />
-            </div>
-          )}
 
           <button type="submit" disabled={saving || !selectedFile} className="px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors">
             {saving ? 'Uploading...' : 'Upload Banner'}

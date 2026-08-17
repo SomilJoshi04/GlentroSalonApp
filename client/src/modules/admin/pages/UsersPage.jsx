@@ -6,6 +6,7 @@ import StatusBadge from '../components/StatusBadge';
 const UsersPage = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   
@@ -18,6 +19,7 @@ const UsersPage = () => {
 
   const fetchUsers = useCallback(async (page = 1) => {
     setLoading(true);
+    setError(null);
     try {
       const res = await getUsers({ page, limit: pagination.limit, search, status: statusFilter });
       if (res.data?.success) {
@@ -31,6 +33,7 @@ const UsersPage = () => {
       }
     } catch (err) {
       console.error("Failed to load users", err);
+      setError('Unable to load users. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -155,11 +158,11 @@ const UsersPage = () => {
         </div>
       </div>
 
-      {/* Data Table */}
       <DataTable 
         columns={columns} 
         data={users} 
-        loading={loading} 
+        loading={loading}
+        error={error} 
         pagination={pagination}
         onPageChange={fetchUsers}
       />

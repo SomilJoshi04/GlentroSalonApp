@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 const BookingsPage = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [vendorFilter, setVendorFilter] = useState('');
@@ -43,6 +44,7 @@ const BookingsPage = () => {
 
   const fetchBookings = useCallback(async (page = 1) => {
     setLoading(true);
+    setError(null);
     try {
       const res = await getAllBookings({ 
         page, 
@@ -71,6 +73,7 @@ const BookingsPage = () => {
       }
     } catch (err) {
       console.error("Failed to load bookings", err);
+      setError('Unable to load bookings. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -254,11 +257,11 @@ const BookingsPage = () => {
         </div>
       </div>
 
-      {/* Data Table */}
       <DataTable 
         columns={columns} 
         data={bookings} 
-        loading={loading} 
+        loading={loading}
+        error={error} 
         pagination={pagination}
         onPageChange={fetchBookings}
       />
