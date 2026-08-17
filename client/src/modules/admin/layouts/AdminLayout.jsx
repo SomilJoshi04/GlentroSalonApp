@@ -12,6 +12,12 @@ const AdminLayout = () => {
   const { settings } = useSettings();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pendingCounts, setPendingCounts] = useState({ vendors: 0, packages: 0, offers: 0, bookings: 0 });
+  const [avatarError, setAvatarError] = useState(false);
+  const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace('/api', '');
+
+  useEffect(() => {
+    setAvatarError(false);
+  }, [user?.avatar]);
 
   // Polling for pending counts every 30 seconds
   const { latestNotification } = useNotifications();
@@ -100,17 +106,8 @@ const AdminLayout = () => {
           ))}
         </nav>
 
-        {/* Admin Profile & Logout */}
+        {/* Logout */}
         <div className="p-4 border-t border-border mt-auto">
-          <div className="flex items-center gap-3 mb-4 px-2">
-            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold shrink-0">
-              {user?.name?.charAt(0) || 'A'}
-            </div>
-            <div className="min-w-0">
-              <p className="font-label-md text-[14px] text-on-surface truncate">{user?.name || 'Super Admin'}</p>
-              <p className="font-label-sm text-[12px] text-muted-text truncate">{user?.email}</p>
-            </div>
-          </div>
           <button 
             onClick={() => { logout('admin'); navigate('/admin/login'); }} 
             className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-[13px] font-medium text-error hover:bg-error/10 transition-colors"
@@ -151,12 +148,21 @@ const AdminLayout = () => {
             <button className="p-2 text-muted-text hover:bg-surface-variant rounded-full transition-colors flex items-center">
               <span className="material-symbols-outlined text-[24px]">settings</span>
             </button>
-            <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-border">
-               <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-[12px] font-bold shrink-0">
-                 {user?.name?.charAt(0) || 'A'}
-               </div>
-               <span className="font-label-md text-[14px] text-on-surface">Admin Profile</span>
-            </div>
+            <NavLink to="/admin/profile" className="hidden sm:flex items-center gap-2 pl-2 border-l border-border hover:bg-surface-variant p-1 pr-3 rounded-full transition-colors">
+               {!avatarError && user?.avatar ? (
+                 <img 
+                   src={`${baseUrl}/uploads/${user.avatar}`} 
+                   alt="Profile" 
+                   onError={() => setAvatarError(true)}
+                   className="w-8 h-8 rounded-full object-cover shrink-0 border border-border"
+                 />
+               ) : (
+                 <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-[12px] font-bold shrink-0">
+                   {user?.name?.charAt(0)?.toUpperCase() || 'A'}
+                 </div>
+               )}
+               <span className="font-label-md text-[14px] text-on-surface">{user?.name || 'Admin Profile'}</span>
+            </NavLink>
           </div>
         </header>
 

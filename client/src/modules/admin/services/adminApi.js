@@ -21,6 +21,7 @@ export const updateVendorStatus = (id, statusData) => api.put(`/admin/vendors/${
 // Auth & Profile
 export const loginAdmin = (data) => api.post('/auth/login/admin', data);
 export const getProfile = () => api.get('/auth/profile');
+export const updateProfile = (data) => api.put('/users/profile', data);
 
 // Salons
 export const getAllSalons = (params) => api.get('/salons/admin/all', { params });
@@ -31,7 +32,7 @@ export const getAllBookings = (params) => api.get('/admin/bookings', { params })
 
 // Categories
 export const getCategories = (params) => api.get('/admin/categories', { params });
-export const createCategory = (data) => api.post('/admin/categories', data, { headers: { 'Content-Type': data instanceof FormData ? 'multipart/form-data' : 'application/json' }});
+export const createCategory = (data) => api.post('/admin/categories', data, { headers: { 'Content-Type': data instanceof FormData ? 'multipart/form-data' : 'application/json' } });
 export const deleteCategory = (id) => api.delete(`/admin/categories/${id}`);
 export const getSubcategories = (params) => api.get('/admin/subcategories', { params });
 export const createSubcategory = (data) => api.post('/admin/subcategories', data);
@@ -65,7 +66,7 @@ export const getSubscriptionPlans = (params) => api.get('/admin/subscriptions/pl
 export const createSubscriptionPlan = (data) => api.post('/admin/subscriptions/plans', data);
 export const updateSubscriptionPlan = (id, data) => api.put(`/admin/subscriptions/plans/${id}`, data);
 export const assignSubscription = (vendorId, planId) => api.post(`/admin/subscriptions/assign`, { vendorId, planId });
-  
+
 // Banners
 export const getBanners = () => api.get('/banners');
 export const createBanner = (formData) => api.post('/banners', formData, { headers: { 'Content-Type': 'multipart/form-data' } });

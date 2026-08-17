@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -12,6 +13,7 @@ import AdminRoutes from './modules/admin/routes';
 function App() {
   return (
     <BrowserRouter>
+      <Toaster position="top-center" toastOptions={{ duration: 4000 }} />
       <AuthProvider>
         <SocketProvider>
           <NotificationProvider>
