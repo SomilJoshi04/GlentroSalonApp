@@ -1,12 +1,14 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSettings } from '../../../context/SettingContext';
-import { updateAppLogo } from '../../../services/api/settingApi';
+import { updateAppLogo, updateAppName } from '../../../services/api/settingApi';
 
 export default function SettingsPage() {
   const { settings, fetchSettings } = useSettings();
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
+  const [appName, setAppName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [nameLoading, setNameLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const fileInputRef = useRef(null);
 
@@ -17,6 +19,13 @@ export default function SettingsPage() {
       setLogoPreview(URL.createObjectURL(file));
     }
   };
+
+  // Initialize app name from settings
+  useEffect(() => {
+    if (settings?.appName) {
+      setAppName(settings.appName);
+    }
+  }, [settings]);
 
   const handleSaveLogo = async () => {
     if (!logoFile) return;
@@ -37,6 +46,25 @@ export default function SettingsPage() {
       setMessage({ type: 'error', text: 'Failed to update app logo' });
     } finally {
       setLoading(false);
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+    }
+  };
+
+  const handleSaveAppName = async () => {
+    if (!appName.trim()) return;
+    setNameLoading(true);
+    setMessage({ type: '', text: '' });
+    try {
+      const res = await updateAppName(appName.trim());
+      if (res.data?.success) {
+        setMessage({ type: 'success', text: 'App name updated successfully' });
+        await fetchSettings();
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage({ type: 'error', text: 'Failed to update app name' });
+    } finally {
+      setNameLoading(false);
       setTimeout(() => setMessage({ type: '', text: '' }), 5000);
     }
   };
@@ -102,6 +130,36 @@ export default function SettingsPage() {
               <span className="material-symbols-outlined text-4xl text-muted-text opacity-50">image</span>
             )}
           </div>
+        </div>
+
+        <hr className="my-8 border-border" />
+
+        <div className="flex flex-col sm:flex-row gap-6 items-start">
+          <div className="flex-1 space-y-2">
+            <h3 className="text-sm font-medium text-on-surface">Application Name</h3>
+            <p className="text-xs text-muted-text max-w-md">
+              This name will be displayed next to the logo on the admin panel, vendor panel, user app, and as the website title.
+            </p>
+            
+            <div className="pt-4 flex flex-col sm:flex-row gap-3">
+              <input 
+                type="text" 
+                value={appName}
+                onChange={(e) => setAppName(e.target.value)}
+                placeholder="Enter App Name (e.g. SalonBook)"
+                className="flex-1 px-4 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-background-alt"
+              />
+              <button 
+                onClick={handleSaveAppName}
+                disabled={nameLoading || !appName.trim()}
+                className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                {nameLoading ? 'Saving...' : 'Save Name'}
+              </button>
+            </div>
+          </div>
+          
+          <div className="w-32 hidden sm:block shrink-0"></div>
         </div>
       </div>
     </div>

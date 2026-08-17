@@ -58,7 +58,28 @@ const updateAppLogo = async (req, res, next) => {
   }
 };
 
+// @desc    Update app name (Admin)
+const updateAppName = async (req, res, next) => {
+  try {
+    const { name } = req.body;
+    if (!name) {
+      return res.status(400).json({ success: false, message: 'Please provide an application name' });
+    }
+
+    const updatedSetting = await AppSetting.findOneAndUpdate(
+      { key: 'appName' },
+      { value: name },
+      { new: true, upsert: true }
+    );
+
+    res.json({ success: true, data: updatedSetting });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getSettings,
   updateAppLogo,
+  updateAppName,
 };

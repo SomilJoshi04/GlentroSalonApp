@@ -35,8 +35,8 @@ const LoginPage = () => {
           ) : (
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-2xl shadow-lg mb-4"><span className="text-3xl">💈</span></div>
           )}
-          <h1 className="text-2xl font-bold text-slate-900">Vendor Portal</h1>
-          <p className="text-slate-500 text-sm mt-1">Manage your salon business</p>
+          <h1 className="text-2xl font-bold text-slate-900">{settings?.appName || 'Vendor Portal'}</h1>
+          <p className="text-slate-500 text-sm mt-1">Manage your business</p>
         </div>
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
           <h2 className="text-xl font-bold mb-6">Sign In</h2>

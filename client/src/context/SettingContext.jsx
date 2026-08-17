@@ -26,7 +26,7 @@ export const SettingProvider = ({ children }) => {
     fetchSettings();
   }, []);
 
-  // Update favicon dynamically
+  // Update favicon and title dynamically
   useEffect(() => {
     if (settings.appLogo) {
       const favicon = document.getElementById('favicon');
@@ -34,7 +34,13 @@ export const SettingProvider = ({ children }) => {
         favicon.href = `${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}/uploads/${settings.appLogo}`;
       }
     }
-  }, [settings.appLogo]);
+    
+    if (settings.appName) {
+      document.title = settings.appName;
+    } else {
+      document.title = 'SalonBook';
+    }
+  }, [settings.appLogo, settings.appName]);
 
   return (
     <SettingContext.Provider value={{ settings, fetchSettings, loading }}>

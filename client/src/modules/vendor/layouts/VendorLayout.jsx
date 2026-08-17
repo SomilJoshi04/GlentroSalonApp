@@ -31,8 +31,8 @@ const VendorLayout = () => {
             <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center text-lg text-white">💈</div>
           )}
           <div>
-            <h1 className="font-bold text-sm text-slate-800">SalonBook</h1>
-            <p className="text-xs text-slate-500">Vendor Portal</p>
+            <h1 className="text-xl font-bold tracking-tight">{settings?.appName || 'LuxeSalon'}</h1>
+            <p className="text-xs text-slate-500 font-medium">Vendor Portal</p>
           </div>
         </div>
         <nav className="px-3 py-4 space-y-1">

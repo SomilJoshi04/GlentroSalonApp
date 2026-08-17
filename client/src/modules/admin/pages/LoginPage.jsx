@@ -33,8 +33,8 @@ const LoginPage = () => {
           ) : (
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl shadow-lg mb-4"><span className="text-3xl">⚡</span></div>
           )}
-          <h1 className="text-2xl font-bold text-text-primary">Admin Panel</h1>
-          <p className="text-text-secondary text-sm mt-1">Salon Booking Platform</p>
+          <h1 className="text-2xl font-bold text-text-primary">{settings?.appName || 'Admin Panel'}</h1>
+          <p className="text-text-secondary text-sm mt-1">Management Portal</p>
         </div>
         <div className="bg-surface-card rounded-2xl shadow-card p-8 border border-border">
           {error && <div className="mb-4 px-4 py-3 rounded-xl bg-danger/10 border border-danger/30 text-danger text-sm">{error}</div>}

@@ -60,7 +60,7 @@ const AdminLayout = () => {
             </div>
           )}
           <div>
-            <h1 className="font-headline-sm text-[18px] text-primary leading-tight">LuxeSalon</h1>
+            <h1 className="font-headline-sm text-[18px] text-primary leading-tight">{settings?.appName || 'LuxeSalon'}</h1>
             <p className="font-label-sm text-[11px] text-muted-text">Management Portal</p>
           </div>
         </div>
