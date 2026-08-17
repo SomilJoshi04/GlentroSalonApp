@@ -1,14 +1,13 @@
 import { useState, useRef } from 'react';
-import { useSettings } from '../../../../context/SettingContext';
-import { updateAppLogo } from '../../../../services/api/settingApi';
-import { useNotification } from '../../../../context/NotificationContext';
+import { useSettings } from '../../../context/SettingContext';
+import { updateAppLogo } from '../../../services/api/settingApi';
 
 export default function SettingsPage() {
   const { settings, fetchSettings } = useSettings();
-  const { showNotification } = useNotification();
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
   const fileInputRef = useRef(null);
 
   const handleLogoChange = (e) => {
@@ -22,21 +21,23 @@ export default function SettingsPage() {
   const handleSaveLogo = async () => {
     if (!logoFile) return;
     setLoading(true);
+    setMessage({ type: '', text: '' });
     try {
       const formData = new FormData();
       formData.append('logo', logoFile);
       
       const res = await updateAppLogo(formData);
       if (res.data?.success) {
-        showNotification('App logo updated successfully', 'success');
+        setMessage({ type: 'success', text: 'App logo updated successfully' });
         await fetchSettings();
         setLogoFile(null);
       }
     } catch (error) {
       console.error(error);
-      showNotification('Failed to update app logo', 'error');
+      setMessage({ type: 'error', text: 'Failed to update app logo' });
     } finally {
       setLoading(false);
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000);
     }
   };
 
@@ -48,6 +49,12 @@ export default function SettingsPage() {
           <p className="text-muted-text mt-1">Manage global application settings</p>
         </div>
       </div>
+
+      {message.text && (
+        <div className={`p-4 rounded-xl text-sm ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+          {message.text}
+        </div>
+      )}
 
       <div className="bg-surface rounded-2xl border border-border p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-on-surface mb-4">Branding</h2>
