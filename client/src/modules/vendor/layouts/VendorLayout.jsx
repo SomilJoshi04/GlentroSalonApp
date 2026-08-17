@@ -21,24 +21,24 @@ const VendorLayout = () => {
   return (
     <div className="min-h-screen bg-surface flex">
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-surface-sidebar text-white transform transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-700">
-          <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center text-lg">💈</div>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-surface text-on-surface border-r border-slate-200 transform transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-200">
+          <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center text-lg text-white">💈</div>
           <div>
-            <h1 className="font-bold text-sm">SalonBook</h1>
-            <p className="text-xs text-slate-400">Vendor Portal</p>
+            <h1 className="font-bold text-sm text-slate-800">SalonBook</h1>
+            <p className="text-xs text-slate-500">Vendor Portal</p>
           </div>
         </div>
         <nav className="px-3 py-4 space-y-1">
           {navItems.map(item => (
             <NavLink key={item.to} to={item.to} end={item.to === '/vendor'} onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-primary-600/20 text-primary-400' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
+              className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-soft-primary text-primary' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}>
               <span>{item.icon}</span>{item.label}
             </NavLink>
           ))}
         </nav>
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-700">
-          <button onClick={() => { logout('vendor'); navigate('/vendor/login'); }} className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-red-400 hover:bg-red-900/20 transition-all">
+          <button onClick={() => { logout('vendor'); navigate('/vendor/login'); }} className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-red-500 hover:bg-red-50 transition-all">
             🚪 Logout
           </button>
         </div>
@@ -58,7 +58,7 @@ const VendorLayout = () => {
               <p className="text-sm font-medium">{user?.businessName || user?.name}</p>
               <p className="text-xs text-text-muted">{user?.businessName ? user?.name : 'Vendor'}</p>
             </div>
-            <div className="w-9 h-9 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+            <div className="w-9 h-9 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center text-white text-sm font-bold">
               {user?.businessName?.charAt(0)?.toUpperCase() || user?.name?.charAt(0)?.toUpperCase() || 'V'}
             </div>
           </div>

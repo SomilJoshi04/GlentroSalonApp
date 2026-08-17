@@ -38,14 +38,14 @@ const SalonManagePage = () => {
     { name: 'email', label: 'Email' },
   ];
 
-  if (loading) return <div className="flex justify-center py-12"><div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" /></div>;
+  if (loading) return <div className="flex justify-center py-12"><div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" /></div>;
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">My Salons</h1>
         <button onClick={() => { setShowForm(!showForm); setEditingSalon(null); }}
-          className="px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition-all">
+          className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-dark transition-all">
           {showForm ? 'Cancel' : '+ Add Salon'}
         </button>
       </div>
@@ -70,7 +70,7 @@ const SalonManagePage = () => {
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-slate-700 mb-1">Detailed Address (Auto-filled by map)</label>
               <input type="text" value={form.address} onChange={e => setForm({...form, address: e.target.value})} required
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-primary-400" />
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-primary" />
             </div>
             <div className="sm:col-span-1">
               <label className="block text-sm font-medium text-slate-700 mb-1">Latitude</label>
@@ -84,7 +84,7 @@ const SalonManagePage = () => {
               <div key={f.name}>
                 <label className="block text-sm font-medium text-slate-700 mb-1">{f.label}</label>
                 <input type="text" value={form[f.name]} onChange={e => setForm({...form, [f.name]: e.target.value})} required={f.required}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-primary-400" />
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-primary" />
               </div>
             ))}
             <div>
@@ -108,9 +108,9 @@ const SalonManagePage = () => {
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
             <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} rows={3}
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-primary-400 resize-none" />
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-primary resize-none" />
           </div>
-          <button type="submit" disabled={saving} className="px-6 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 disabled:opacity-50">
+          <button type="submit" disabled={saving} className="px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-dark disabled:opacity-50">
             {saving ? 'Saving...' : editingSalon ? 'Update Salon' : 'Create Salon'}
           </button>
         </form>
@@ -124,13 +124,13 @@ const SalonManagePage = () => {
                 <h3 className="font-semibold">{s.name}</h3>
                 <p className="text-sm text-slate-500 mt-1">{s.address}</p>
                 <div className="flex gap-2 mt-2">
-                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-primary-50 text-primary-700 capitalize">{s.gender}</span>
+                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-soft-primary text-primary-dark capitalize">{s.gender}</span>
                   <span className={`px-2 py-0.5 rounded text-xs font-medium ${s.isApproved ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}`}>
                     {s.isApproved ? 'Approved' : 'Pending'}
                   </span>
                 </div>
               </div>
-              <button onClick={() => handleEdit(s)} className="text-sm text-primary-600 hover:text-primary-700 font-medium">Edit</button>
+              <button onClick={() => handleEdit(s)} className="text-sm text-primary hover:text-primary-dark font-medium">Edit</button>
             </div>
             <div className="mt-3 pt-3 border-t border-slate-50 text-xs text-slate-400">
               🕐 {s.openingTime} - {s.closingTime} | ⭐ {s.ratings?.average?.toFixed(1) || '0.0'} ({s.ratings?.count || 0})

@@ -30,10 +30,10 @@ const RegisterPage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-soft-primary via-white to-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl shadow-lg mb-4"><span className="text-3xl">💈</span></div>
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-2xl shadow-lg mb-4"><span className="text-3xl">💈</span></div>
           <h1 className="text-2xl font-bold">Register as Vendor</h1>
         </div>
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
@@ -43,16 +43,16 @@ const RegisterPage = () => {
               <div key={f.name}>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">{f.label}</label>
                 <input type={f.type} value={formData[f.name]} onChange={e => setFormData({...formData, [f.name]: e.target.value})} required
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200" placeholder={f.placeholder} />
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" placeholder={f.placeholder} />
               </div>
             ))}
             <button type="submit" disabled={loading}
-              className="w-full py-3 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 transition-all disabled:opacity-50">
+              className="w-full py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark transition-all disabled:opacity-50">
               {loading ? 'Registering...' : 'Create Account'}
             </button>
           </form>
           <p className="mt-6 text-center text-sm text-slate-500">
-            Already registered? <Link to="/login" className="text-primary-600 font-semibold">Sign In</Link>
+            Already registered? <Link to="/login" className="text-primary font-semibold">Sign In</Link>
           </p>
         </div>
       </div>

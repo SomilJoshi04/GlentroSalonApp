@@ -14,7 +14,7 @@ export const updateSalon = (id, data) => api.put(`/salons/${id}`, data);
 export const getSalonById = (id) => api.get(`/salons/detail/${id}`);
 
 // Staff
-export const getSalonStaff = (salonId) => api.get(`/staff/salon/${salonId}`);
+export const getSalonStaff = (salonId, params) => api.get(`/staff/salon/${salonId}`, { params });
 export const addStaff = (data) => api.post('/staff', data);
 export const updateStaff = (id, data) => api.put(`/staff/${id}`, data);
 export const deleteStaff = (id) => api.delete(`/staff/${id}`);
@@ -26,6 +26,7 @@ export const getServices = (params) => api.get('/services', { params });
 export const createService = (data) => api.post('/services', data);
 export const updateService = (id, data) => api.put(`/services/${id}`, data);
 export const deleteService = (id) => api.delete(`/services/${id}`);
+export const toggleServiceStatus = (id) => api.patch(`/services/${id}/toggle-status`);
 
 // Categories
 export const getCategories = () => api.get('/categories');
@@ -39,13 +40,13 @@ export const rejectBooking = (id, data) => api.patch(`/bookings/${id}/reject`, d
 export const completeBooking = (id) => api.patch(`/bookings/${id}/complete`);
 
 // Packages
-export const getVendorPackages = () => api.get('/packages/vendor/my');
+export const getVendorPackages = (params) => api.get('/packages/vendor/my', { params });
 export const createPackage = (data) => api.post('/packages', data);
 export const updatePackage = (id, data) => api.put(`/packages/${id}`, data);
 export const deletePackage = (id) => api.delete(`/packages/${id}`);
 
 // Offers
-export const getVendorOffers = () => api.get('/offers/vendor/my');
+export const getVendorOffers = (params) => api.get('/offers/vendor/my', { params });
 export const createOffer = (data) => api.post('/offers', data);
 export const updateOffer = (id, data) => api.put(`/offers/${id}`, data);
 export const deleteOffer = (id) => api.delete(`/offers/${id}`);

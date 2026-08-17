@@ -16,7 +16,12 @@ const addStaff = async (req, res, next) => {
 // @desc    Get salon staff
 const getSalonStaff = async (req, res, next) => {
   try {
-    const staff = await Staff.find({ salon: req.params.salonId });
+    const { search, isActive } = req.query;
+    const query = { salon: req.params.salonId };
+    if (search) query.name = { $regex: search, $options: 'i' };
+    if (isActive !== undefined) query.isActive = isActive === 'true';
+
+    const staff = await Staff.find(query);
     res.json({ success: true, data: staff });
   } catch (error) { next(error); }
 };

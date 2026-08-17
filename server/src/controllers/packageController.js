@@ -26,9 +26,15 @@ const getPackages = async (req, res, next) => {
 
 const getVendorPackages = async (req, res, next) => {
   try {
+    const { status, search } = req.query;
     const salons = await Salon.find({ vendor: req.user.id });
     const salonIds = salons.map((s) => s._id);
-    const packages = await Package.find({ salon: { $in: salonIds } }).populate('services', 'name price duration').populate('salon', 'name');
+    
+    const query = { salon: { $in: salonIds } };
+    if (status) query.status = status;
+    if (search) query.name = { $regex: search, $options: 'i' };
+
+    const packages = await Package.find(query).populate('services', 'name price duration').populate('salon', 'name');
     res.json({ success: true, data: packages });
   } catch (error) { next(error); }
 };
@@ -71,6 +77,11 @@ const updatePackage = async (req, res, next) => {
 
 const deletePackage = async (req, res, next) => {
   try {
+    const pkg = await Package.findById(req.params.id).populate('salon');
+    if (!pkg) return res.status(404).json({ success: false, message: 'Package not found' });
+    if (pkg.salon.vendor.toString() !== req.user.id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
     await Package.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: 'Package deleted' });
   } catch (error) { next(error); }

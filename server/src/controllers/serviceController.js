@@ -3,8 +3,14 @@ const Salon = require('../models/Salon');
 
 const getServices = async (req, res, next) => {
   try {
-    const { salon, category, subcategory, gender, search, page = 1, limit = 50 } = req.query;
-    const query = { isActive: true };
+    const { salon, category, subcategory, gender, search, isActive, page = 1, limit = 50 } = req.query;
+    const query = {};
+    
+    if (isActive !== undefined) {
+      if (isActive !== 'all') query.isActive = isActive === 'true';
+    } else {
+      query.isActive = true; // Default for users
+    }
     if (salon) query.salon = salon;
     if (category) query.category = category;
     if (subcategory) query.subcategory = subcategory;
@@ -61,8 +67,11 @@ const deleteService = async (req, res, next) => {
 
 const toggleServiceStatus = async (req, res, next) => {
   try {
-    const service = await Service.findById(req.params.id);
+    const service = await Service.findById(req.params.id).populate('salon');
     if (!service) return res.status(404).json({ success: false, message: 'Service not found' });
+    if (req.user.role !== 'admin' && service.salon.vendor.toString() !== req.user.id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
     service.isActive = !service.isActive;
     await service.save();
     res.json({ success: true, data: service });

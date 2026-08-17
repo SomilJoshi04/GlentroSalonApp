@@ -26,9 +26,15 @@ const getOffers = async (req, res, next) => {
 
 const getVendorOffers = async (req, res, next) => {
   try {
+    const { status, search } = req.query;
     const salons = await Salon.find({ vendor: req.user.id });
     const salonIds = salons.map((s) => s._id);
-    const offers = await Offer.find({ salon: { $in: salonIds } }).populate('applicableServices', 'name price').populate('salon', 'name');
+    
+    const query = { salon: { $in: salonIds } };
+    if (status) query.status = status;
+    if (search) query.title = { $regex: search, $options: 'i' };
+
+    const offers = await Offer.find(query).populate('applicableServices', 'name price').populate('salon', 'name');
     res.json({ success: true, data: offers });
   } catch (error) { next(error); }
 };
@@ -71,6 +77,11 @@ const updateOffer = async (req, res, next) => {
 
 const deleteOffer = async (req, res, next) => {
   try {
+    const offer = await Offer.findById(req.params.id).populate('salon');
+    if (!offer) return res.status(404).json({ success: false, message: 'Offer not found' });
+    if (offer.salon.vendor.toString() !== req.user.id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
     await Offer.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: 'Offer deleted' });
   } catch (error) { next(error); }

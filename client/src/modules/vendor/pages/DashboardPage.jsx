@@ -39,13 +39,13 @@ const DashboardPage = () => {
   const statCards = [
     { label: 'Total Bookings', value: stats.total, color: 'from-blue-500 to-blue-600', icon: '📅' },
     { label: 'Pending', value: stats.pending, color: 'from-yellow-500 to-orange-500', icon: '⏳' },
-    { label: 'Confirmed', value: stats.confirmed, color: 'from-primary-500 to-primary-600', icon: '✅' },
+    { label: 'Confirmed', value: stats.confirmed, color: 'from-primary to-primary', icon: '✅' },
     { label: 'Completed', value: stats.completed, color: 'from-green-500 to-emerald-600', icon: '🎉' },
   ];
 
   const statusColors = { PENDING: 'bg-yellow-100 text-yellow-700', CONFIRMED: 'bg-blue-100 text-blue-700', COMPLETED: 'bg-green-100 text-green-700', CANCELLED: 'bg-red-100 text-red-700', REJECTED: 'bg-gray-100 text-gray-700' };
 
-  if (loading) return <div className="flex justify-center py-12"><div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" /></div>;
+  if (loading) return <div className="flex justify-center py-12"><div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" /></div>;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -70,8 +70,8 @@ const DashboardPage = () => {
       </div>
 
       {/* Revenue Card */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-800 rounded-2xl p-6 text-white">
-        <p className="text-primary-100 text-sm">Total Revenue (Completed)</p>
+      <div className="bg-gradient-to-r from-primary to-primary-dark rounded-2xl p-6 text-white">
+        <p className="text-primary/20 text-sm">Total Revenue (Completed)</p>
         <p className="text-3xl font-bold mt-1">₹{stats.todayRevenue.toLocaleString()}</p>
       </div>
 

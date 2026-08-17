@@ -23,10 +23,10 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-soft-primary via-white to-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl shadow-lg mb-4"><span className="text-3xl">💈</span></div>
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-2xl shadow-lg mb-4"><span className="text-3xl">💈</span></div>
           <h1 className="text-2xl font-bold text-slate-900">Vendor Portal</h1>
           <p className="text-slate-500 text-sm mt-1">Manage your salon business</p>
         </div>
@@ -37,20 +37,20 @@ const LoginPage = () => {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
               <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} required
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400" placeholder="vendor@email.com" />
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" placeholder="vendor@email.com" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
               <input type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400" placeholder="Enter password" />
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" placeholder="Enter password" />
             </div>
             <button type="submit" disabled={loading}
-              className="w-full py-3 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 transition-all disabled:opacity-50">
+              className="w-full py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark transition-all disabled:opacity-50">
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
           <p className="mt-6 text-center text-sm text-slate-500">
-            New vendor? <Link to="/register" className="text-primary-600 font-semibold hover:text-primary-700">Register</Link>
+            New vendor? <Link to="/register" className="text-primary font-semibold hover:text-primary-dark">Register</Link>
           </p>
         </div>
       </div>

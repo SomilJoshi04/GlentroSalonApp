@@ -27,7 +27,7 @@ const BookingManagePage = () => {
     } catch (e) { alert(e.response?.data?.message || 'Failed'); }
   };
 
-  if (loading) return <div className="flex justify-center py-12"><div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" /></div>;
+  if (loading) return <div className="flex justify-center py-12"><div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" /></div>;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -39,7 +39,7 @@ const BookingManagePage = () => {
         <div className="flex gap-2 overflow-x-auto">
           {['', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'].map(f => (
             <button key={f} onClick={() => setFilter(f)}
-              className={`px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap ${filter === f ? 'bg-primary-600 text-white' : 'bg-white border border-slate-200 text-slate-600'}`}>
+              className={`px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap ${filter === f ? 'bg-primary text-white' : 'bg-white border border-slate-200 text-slate-600'}`}>
               {f || 'All'}
             </button>
           ))}
@@ -69,7 +69,7 @@ const BookingManagePage = () => {
               )}
               {b.status === 'CONFIRMED' && (
                 <div className="mt-4 pt-3 border-t border-slate-50">
-                  <button onClick={() => handleAction(b._id, 'complete')} className="w-full py-2 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700">Mark Complete</button>
+                  <button onClick={() => handleAction(b._id, 'complete')} className="w-full py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-dark">Mark Complete</button>
                 </div>
               )}
             </div>
