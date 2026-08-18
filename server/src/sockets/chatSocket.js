@@ -15,19 +15,8 @@ const setupChatSocket = (io) => {
       socket.leave(`chat:${chatId}`);
     });
 
-    // Send message
-    socket.on('chat:message', (data) => {
-      const { chatId, content, messageType } = data;
-      // Broadcast to chat room (the actual save happens via REST API)
-      socket.to(`chat:${chatId}`).emit('chat:message', {
-        chatId,
-        sender: socket.userId,
-        senderRole: socket.userRole,
-        content,
-        messageType: messageType || 'text',
-        timestamp: new Date(),
-      });
-    });
+    // Send message (deprecated, now handled by REST API which emits to sockets directly)
+    // socket.on('chat:message', ...) is no longer needed
 
     // Typing indicator
     socket.on('chat:typing', (data) => {

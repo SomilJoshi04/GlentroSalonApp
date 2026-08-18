@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getSalons, getNearbySalons, getCategories } from '../../services/userApi';
 import { useLocationContext } from '../../../../context/LocationContext';
+import { goBack } from '../../../../utils/navigation';
 import Loader from '../../../../components/common/Loader';
+import { getImageUrl } from '../../../../utils/imageUtils';
 
 const SalonListPage = () => {
   const [salons, setSalons] = useState([]);
@@ -32,7 +34,7 @@ const SalonListPage = () => {
       let res;
       
       if (selectedLocation?.lat && selectedLocation?.lng) {
-        params = { ...params, lat: selectedLocation.lat, lng: selectedLocation.lng, radius: 50000 }; // 50km radius
+        params = { ...params, lat: selectedLocation.lat, lng: selectedLocation.lng };
         res = await getNearbySalons(params);
         
         // Smart Fallback
@@ -55,11 +57,11 @@ const SalonListPage = () => {
   const currentCategoryName = categories.find(c => c._id === filters.category)?.name || (searchParams.get('search') ? `Search: ${searchParams.get('search')}` : 'All Salons');
 
   return (
-    <div className="pb-24 md:pb-0 animate-fade-in min-h-screen bg-background">
+    <div className="animate-fade-in min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-md shadow-sm">
         <div className="flex justify-between items-center px-4 md:px-margin-desktop h-16 w-full">
-          <button onClick={() => navigate(-1)} className="p-2 text-on-surface-variant hover:bg-soft-primary transition-colors rounded-full active:scale-95 duration-150 -ml-2">
+          <button onClick={() => goBack(navigate, '/')} className="p-2 text-on-surface-variant hover:bg-soft-primary transition-colors rounded-full active:scale-95 duration-150 -ml-2">
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
           <h1 className="font-headline-md text-[24px] text-primary flex-1 text-center truncate px-2">{currentCategoryName}</h1>
@@ -91,7 +93,23 @@ const SalonListPage = () => {
       </header>
 
       <main className="px-4 md:px-margin-desktop py-6 space-y-6">
-        {loading ? <Loader text="Finding salons..." /> : salons.length === 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="bg-surface rounded-[18px] border border-border shadow-sm overflow-hidden flex flex-col animate-pulse">
+                <div className="h-40 w-full bg-surface-variant/60"></div>
+                <div className="p-4 flex flex-col flex-1 space-y-3">
+                  <div className="h-5 bg-surface-variant/60 rounded w-3/4"></div>
+                  <div className="h-4 bg-surface-variant/60 rounded w-1/2"></div>
+                  <div className="mt-auto pt-3 border-t border-border flex justify-between">
+                    <div className="h-4 bg-surface-variant/60 rounded w-1/3"></div>
+                    <div className="h-6 bg-surface-variant/60 rounded-lg w-16"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : salons.length === 0 ? (
           <div className="text-center py-16 bg-surface rounded-2xl border border-border shadow-sm">
             <div className="text-5xl mb-4">💈</div>
             <h3 className="font-headline-sm text-[20px] text-on-surface mb-1">No salons found</h3>
@@ -108,7 +126,7 @@ const SalonListPage = () => {
                 <div className="h-40 w-full relative overflow-hidden bg-surface-variant">
                   {salon.images?.[0] ? (
                     <img 
-                      src={`/uploads/${salon.images[0]}`} 
+                      src={getImageUrl(salon.images[0])} 
                       alt={salon.name} 
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                     />

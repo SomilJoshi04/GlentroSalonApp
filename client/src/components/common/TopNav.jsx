@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useSettings } from '../../context/SettingContext';
+import { getImageUrl } from '../../utils/imageUtils';
 
 const TopNav = () => {
   const { user } = useAuth();
@@ -56,9 +57,13 @@ const TopNav = () => {
             </button>
             <button 
               onClick={() => navigate('/profile')}
-              className="w-10 h-10 flex items-center justify-center rounded-full bg-soft-primary text-primary hover:bg-primary hover:text-on-primary transition-colors"
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-soft-primary text-primary hover:bg-primary hover:text-on-primary transition-colors overflow-hidden border border-border"
             >
-              <span className="material-symbols-outlined">person</span>
+              {user.avatar ? (
+                <img src={getImageUrl(user.avatar)} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <span className="material-symbols-outlined">person</span>
+              )}
             </button>
           </>
         ) : (

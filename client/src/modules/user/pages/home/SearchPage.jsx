@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getSalons, getNearbySalons, getServices, getCategories } from '../../services/userApi';
 import { useLocationContext } from '../../../../context/LocationContext';
+import { goBack } from '../../../../utils/navigation';
 import PageHeader from '../../../../components/common/PageHeader';
 import Loader from '../../../../components/common/Loader';
+import { getImageUrl } from '../../../../utils/imageUtils';
 
 const SearchPage = () => {
   const { selectedLocation } = useLocationContext();
@@ -39,7 +41,7 @@ const SearchPage = () => {
       try {
         let salonPromise;
         if (selectedLocation?.lat && selectedLocation?.lng) {
-          salonPromise = getNearbySalons({ lat: selectedLocation.lat, lng: selectedLocation.lng, radius: 15, limit: 5 });
+          salonPromise = getNearbySalons({ lat: selectedLocation.lat, lng: selectedLocation.lng, limit: 5 });
         } else {
           salonPromise = getSalons({ city: selectedLocation?.city, limit: 5 });
         }
@@ -94,7 +96,7 @@ const SearchPage = () => {
         if (filters.rating) queryParams.rating = filters.rating;
 
         if (selectedLocation?.lat && selectedLocation?.lng) {
-          res = await getNearbySalons({ ...queryParams, lat: selectedLocation.lat, lng: selectedLocation.lng, radius: 15 });
+          res = await getNearbySalons({ ...queryParams, lat: selectedLocation.lat, lng: selectedLocation.lng });
         } else {
           res = await getSalons({ ...queryParams, city: selectedLocation?.city });
         }
@@ -132,12 +134,12 @@ const SearchPage = () => {
   };
 
   return (
-    <div className="animate-fade-in space-y-6 w-full pb-24 md:pb-0">
+    <div className="animate-fade-in space-y-6 w-full">
       {/* Header */}
       <header className="sticky top-[env(safe-area-inset-top)] z-40 bg-surface/90 backdrop-blur-md pb-4 pt-2 -mx-4 px-4 md:mx-0 md:px-0">
-        <div className="md:hidden"><PageHeader title="Search" /></div>
+        <div className="md:hidden"><PageHeader title="Search" fallbackPath="/" /></div>
         <div className="hidden md:block mb-4">
-           <button onClick={() => navigate(-1)} className="p-2 text-on-surface-variant hover:bg-soft-primary transition-colors rounded-full active:scale-95 duration-150 -ml-2 mb-2">
+           <button onClick={() => goBack(navigate, '/')} className="p-2 text-on-surface-variant hover:bg-soft-primary transition-colors rounded-full active:scale-95 duration-150 -ml-2 mb-2">
              <span className="material-symbols-outlined">arrow_back</span>
            </button>
            <h1 className="font-headline-xl text-[40px] font-bold text-on-surface leading-tight">Discover Top Salons</h1>
@@ -244,7 +246,7 @@ const SearchPage = () => {
                     <div className="h-32 w-full relative overflow-hidden bg-surface-variant">
                       {salon.images?.[0] ? (
                         <img 
-                          src={`/uploads/${salon.images[0]}`}
+                          src={getImageUrl(salon.images[0])}
                           alt={salon.name} 
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                         />
@@ -276,7 +278,21 @@ const SearchPage = () => {
           <h2 className="font-headline-sm text-[20px] font-semibold text-on-surface">Search Results</h2>
           
           {loadingResults ? (
-            <div className="flex justify-center py-12"><Loader text="Searching..." /></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="bg-surface rounded-[18px] border border-border shadow-sm overflow-hidden flex flex-col animate-pulse">
+                  <div className="h-40 w-full bg-surface-variant/60"></div>
+                  <div className="p-4 flex flex-col flex-1 space-y-3">
+                    <div className="h-5 bg-surface-variant/60 rounded w-3/4"></div>
+                    <div className="h-4 bg-surface-variant/60 rounded w-1/2"></div>
+                    <div className="mt-auto pt-3 border-t border-border flex justify-between">
+                      <div className="h-4 bg-surface-variant/60 rounded w-1/3"></div>
+                      <div className="h-6 bg-surface-variant/60 rounded-lg w-16"></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : error ? (
             <div className="text-center py-12 bg-surface rounded-2xl border border-border">
                <div className="text-4xl mb-4 text-error">⚠️</div>
@@ -304,7 +320,7 @@ const SearchPage = () => {
                   <div className="h-40 w-full relative overflow-hidden bg-surface-variant">
                     {salon.images?.[0] ? (
                       <img 
-                        src={`/uploads/${salon.images[0]}`} 
+                        src={getImageUrl(salon.images[0])} 
                         alt={salon.name} 
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                       />

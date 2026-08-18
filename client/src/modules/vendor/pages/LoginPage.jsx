@@ -25,7 +25,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-soft-primary via-white to-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 font-inter">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           {settings?.appLogo ? (
@@ -33,32 +33,35 @@ const LoginPage = () => {
               <img src={`${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}/uploads/${settings.appLogo}`} alt="App Logo" className="w-16 h-16 rounded-2xl object-contain" />
             </div>
           ) : (
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-2xl shadow-lg mb-4"><span className="text-3xl">💈</span></div>
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl shadow-lg mb-4">
+              <span className="material-symbols-outlined text-[36px] text-white">spa</span>
+            </div>
           )}
-          <h1 className="text-2xl font-bold text-slate-900">{settings?.appName || 'Vendor Portal'}</h1>
-          <p className="text-slate-500 text-sm mt-1">Manage your business</p>
+          <h1 className="text-2xl font-bold text-on-surface">{settings?.appName || 'LuxeSalon'}</h1>
+          <p className="text-muted-text text-sm mt-1">Vendor Management Portal</p>
         </div>
-        <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
-          <h2 className="text-xl font-bold mb-6">Sign In</h2>
-          {error && <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 text-red-600 text-sm">{error}</div>}
+        <div className="bg-surface rounded-2xl shadow-xl p-8 border border-border">
+          <h2 className="text-xl font-bold text-on-surface mb-6">Sign In</h2>
+          {error && <div className="mb-4 px-4 py-3 rounded-xl bg-error/10 text-error text-sm border border-error/20">{error}</div>}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+              <label className="block text-sm font-medium text-muted-text mb-1.5">Email</label>
               <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} required
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" placeholder="vendor@email.com" />
+                className="w-full px-4 py-3 bg-surface text-on-surface rounded-xl border border-border text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary shadow-sm" placeholder="vendor@email.com" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+              <label className="block text-sm font-medium text-muted-text mb-1.5">Password</label>
               <input type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" placeholder="Enter password" />
+                className="w-full px-4 py-3 bg-surface text-on-surface rounded-xl border border-border text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary shadow-sm" placeholder="Enter password" />
             </div>
             <button type="submit" disabled={loading}
-              className="w-full py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark transition-all disabled:opacity-50">
+              className="w-full py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50 shadow-sm flex items-center justify-center gap-1.5">
+              <span className="material-symbols-outlined text-[18px]">login</span>
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
-          <p className="mt-6 text-center text-sm text-slate-500">
-            New vendor? <Link to="/register" className="text-primary font-semibold hover:text-primary-dark">Register</Link>
+          <p className="mt-6 text-center text-sm text-muted-text">
+            New vendor? <Link to="/vendor/register" className="text-primary font-semibold hover:text-primary-dark">Register Business</Link>
           </p>
         </div>
       </div>

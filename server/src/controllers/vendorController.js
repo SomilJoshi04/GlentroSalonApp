@@ -27,12 +27,40 @@ const getVendorById = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+const { processAndStoreImage, deleteImageSafe } = require('../services/imageService');
+
 // @desc    Update vendor profile
 const updateProfile = async (req, res, next) => {
   try {
     const { name, phone, businessName } = req.body;
-    const vendor = await Vendor.findByIdAndUpdate(req.user.id, { name, phone, businessName }, { new: true, runValidators: true }).select('-password');
-    res.json({ success: true, message: 'Profile updated', data: vendor });
+    let newImage = null;
+
+    const vendor = await Vendor.findById(req.user.id);
+    if (!vendor) {
+      return res.status(404).json({ success: false, message: 'Vendor not found' });
+    }
+
+    let oldImage = vendor.avatar;
+
+    if (req.file) {
+      newImage = await processAndStoreImage(req.file.buffer, 'vendor');
+    }
+
+    const updateData = { name, phone, businessName };
+    if (newImage) {
+      updateData.avatar = newImage;
+    } else if (req.body.avatar === '') {
+      updateData.avatar = '';
+    }
+
+    const updatedVendor = await Vendor.findByIdAndUpdate(req.user.id, updateData, { new: true, runValidators: true }).select('-password');
+    
+    // Cleanup old image
+    if ((newImage || req.body.avatar === '') && oldImage && !oldImage.startsWith('data:')) {
+      deleteImageSafe(oldImage);
+    }
+
+    res.json({ success: true, message: 'Profile updated', data: updatedVendor });
   } catch (error) { next(error); }
 };
 

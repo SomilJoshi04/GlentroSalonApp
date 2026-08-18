@@ -62,11 +62,25 @@ const chatSchema = new mongoose.Schema(
       required: true,
       enum: ['user-vendor', 'user-admin'],
     },
+    conversationType: {
+      type: String,
+      enum: ['salon', 'general'],
+      default: 'salon',
+    },
+    salon: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Salon',
+    },
     messages: [messageSchema],
     lastMessage: {
       content: String,
       sender: mongoose.Schema.Types.ObjectId,
       timestamp: Date,
+    },
+    chatDisplayId: {
+      type: String,
+      unique: true,
+      sparse: true,
     },
     isActive: {
       type: Boolean,

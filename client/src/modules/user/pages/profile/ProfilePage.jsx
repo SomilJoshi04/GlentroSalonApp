@@ -1,141 +1,335 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../../context/AuthContext';
+import { useNotifications } from '../../../../context/NotificationContext';
+import { useLocationContext } from '../../../../context/LocationContext';
 import { updateProfile } from '../../../../services/api/authApi';
+import { initiateChat } from '../../services/userApi';
 import Button from '../../../../components/common/Button';
 import Input from '../../../../components/common/Input';
 import PageHeader from '../../../../components/common/PageHeader';
 import ImageUpload from '../../../../components/common/ImageUpload';
+import LocationSelectionModal from '../../../../components/common/LocationSelectionModal';
+import { getImageUrl } from '../../../../utils/imageUtils';
 
 const ProfilePage = () => {
+  const navigate = useNavigate();
   const { user, setUser, logout } = useAuth();
+  const { unreadCount } = useNotifications();
+  const { selectedLocation } = useLocationContext();
+
+  // Modals & Edit States
   const [editing, setEditing] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  
+  // Form State
   const [formData, setFormData] = useState({ 
     name: user?.name || '', 
     phone: user?.phone || '', 
-    city: user?.city || '',
-    city: user?.city || ''
+    email: user?.email || '',
   });
   const [avatarFile, setAvatarFile] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState({ text: '', type: '' });
 
   const handleSave = async () => {
     setSaving(true);
+    setMessage({ text: '', type: '' });
+    
     try {
       const data = new FormData();
       data.append('name', formData.name);
       data.append('phone', formData.phone);
-      data.append('city', formData.city);
+      data.append('email', formData.email);
       
-      // If user uploaded a new compressed file
       if (avatarFile) {
         data.append('avatar', avatarFile);
-      } else if (avatarFile === null && !user?.avatar) {
-         // It means they removed it, but we handle that if they explicitly remove it.
-         // Actually, if we want to remove the existing photo, we send empty string.
-         // Let's check if the user had an avatar, but they cleared it.
-         // To track removal, we can add a flag, but ImageUpload passes null when removed.
-      }
-
-      // To cleanly handle removal:
-      if (avatarFile === null && formData.avatarRemoved) {
-        data.append('avatar', ''); // Explicitly remove
+      } else if (avatarFile === null && formData.avatarRemoved) {
+        data.append('avatar', ''); 
       }
 
       const res = await updateProfile(data);
       setUser(res.data.data);
       localStorage.setItem('user', JSON.stringify(res.data.data));
-      setMessage('Profile updated successfully!');
+      setMessage({ text: 'Profile updated successfully', type: 'success' });
       setEditing(false);
-      setAvatarFile(null); // Reset after save
-      setTimeout(() => setMessage(''), 3000);
+      setAvatarFile(null); 
+      setTimeout(() => setMessage({ text: '', type: '' }), 3000);
     } catch (e) {
-      setMessage(e.response?.data?.message || 'Update failed');
+      setMessage({ 
+        text: e.response?.data?.message || 'Unable to update profile. Please try again.', 
+        type: 'error' 
+      });
     }
     setSaving(false);
   };
 
+  const handleLogout = () => {
+    setShowLogoutConfirm(false);
+    logout();
+  };
+
+  const handleContactAdmin = async () => {
+    try {
+      const res = await initiateChat({
+        recipientRole: 'admin',
+        chatType: 'user-admin',
+      });
+      navigate(`/chat/${res.data.data._id}`);
+    } catch (e) {
+      setMessage({ text: 'Unable to connect with Admin. Please try again.', type: 'error' });
+    }
+  };
+
+  const handleEditCancel = () => {
+    setEditing(false);
+    setFormData({ 
+      name: user?.name || '', 
+      phone: user?.phone || '', 
+      email: user?.email || ''
+    });
+    setAvatarFile(null);
+    setMessage({ text: '', type: '' });
+  };
+
+  // Helper for List Item
+  const ListItem = ({ icon, label, description, onClick, count }) => (
+    <div 
+      onClick={onClick}
+      className="flex items-center p-4 bg-surface rounded-2xl border border-border hover:border-primary/30 hover:bg-surface-variant/50 transition-colors cursor-pointer group shadow-sm"
+    >
+      <div className="w-12 h-12 bg-soft-primary rounded-full flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors shrink-0">
+        <span className="material-symbols-outlined">{icon}</span>
+      </div>
+      <div className="ml-4 flex-1">
+        <h3 className="font-headline-sm text-[16px] text-on-surface font-semibold">{label}</h3>
+        {description && <p className="font-body-sm text-[13px] text-muted-text mt-0.5 line-clamp-1">{description}</p>}
+      </div>
+      {count > 0 && (
+        <div className="mr-3 w-6 h-6 bg-error rounded-full flex items-center justify-center text-white font-bold text-[12px]">
+          {count > 9 ? '9+' : count}
+        </div>
+      )}
+      <span className="material-symbols-outlined text-muted-text">chevron_right</span>
+    </div>
+  );
 
   return (
-    <div className="w-full max-w-lg mx-auto space-y-6 animate-fade-in pb-10">
-      <PageHeader title="My Profile" />
-      <h1 className="hidden md:block font-headline-xl text-[32px] font-bold text-on-surface">My Profile</h1>
+    <div className="w-full max-w-2xl mx-auto animate-fade-in relative flex flex-col pb-4">
+      <div className="md:hidden"><PageHeader title="Profile" fallbackPath="/" /></div>
 
-      {message && (
-        <div className="px-4 py-3 rounded-xl bg-green-50 border border-green-200 text-green-700 text-sm">{message}</div>
+      {message.text && !editing && (
+        <div className={`mt-4 px-4 py-3 rounded-xl border text-sm font-medium ${message.type === 'success' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+          {message.text}
+        </div>
       )}
 
-      {/* Avatar Section */}
-      <div className="flex flex-col items-center bg-surface rounded-[24px] p-8 border border-border">
-        {editing ? (
-          <ImageUpload 
-            currentImage={user?.avatar} 
-            onFileSelect={(file) => {
-              if (file === null) {
-                 setFormData({...formData, avatarRemoved: true});
-                 setAvatarFile(null);
-              } else {
-                 setAvatarFile(file);
-                 setFormData({...formData, avatarRemoved: false});
-              }
-            }} 
-            label=""
-            isAvatar={true}
-          />
-        ) : (
-          <div className="w-24 h-24 md:w-28 md:h-28 bg-gradient-to-br from-primary-400 to-accent-400 rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-lg overflow-hidden border-4 border-surface">
-            {user?.avatar ? (
-              <img src={user.avatar.startsWith('data:') ? user.avatar : `/uploads/${user.avatar}`} alt="Profile" className="w-full h-full object-cover" />
-            ) : (
-              user?.name?.charAt(0)?.toUpperCase() || 'U'
-            )}
+      {/* --- PROFILE VIEW MODE --- */}
+      {!editing && (
+        <>
+          {/* Header Card */}
+          <div className="bg-surface rounded-[32px] p-6 border border-border shadow-sm mt-4 md:mt-8 flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-6">
+            <div className="w-28 h-28 md:w-32 md:h-32 bg-gradient-to-br from-primary-400 to-accent-400 rounded-[28px] flex items-center justify-center text-white text-4xl font-bold shadow-md overflow-hidden border-[6px] border-surface shrink-0">
+              {user?.avatar ? (
+                <img src={getImageUrl(user.avatar)} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                user?.name?.charAt(0)?.toUpperCase() || 'U'
+              )}
+            </div>
+            <div className="flex-1 pt-2">
+              <h1 className="font-headline-md text-[24px] font-bold text-on-surface">{user?.name}</h1>
+              <p className="font-body-md text-muted-text mt-1">{user?.email || 'Email not added'}</p>
+              <p className="font-body-md text-muted-text mt-1">{user?.phone || 'Phone number not added'}</p>
+            </div>
+            <div className="w-full md:w-auto pt-2">
+              <Button 
+                variant="outline" 
+                className="w-full md:w-auto rounded-full font-medium"
+                onClick={() => setEditing(true)}
+              >
+                Edit Profile
+              </Button>
+            </div>
           </div>
-        )}
-        <h2 className="text-[20px] font-headline-sm font-bold mt-4 text-on-surface">{user?.name}</h2>
-        <p className="text-muted-text text-[14px] font-body-sm">{user?.email}</p>
-      </div>
 
-      {/* Profile Form */}
-      <div className="bg-surface rounded-[24px] p-6 border border-border space-y-4">
-        <div className="flex justify-between items-center">
-          <h3 className="font-headline-sm text-[18px] font-semibold text-on-surface">Personal Information</h3>
-          <Button variant="ghost" size="sm" onClick={() => {
-            setEditing(!editing);
-            setFormData({ name: user?.name || '', phone: user?.phone || '', city: user?.city || '' });
-            setAvatarFile(null);
-          }}>
-            {editing ? 'Cancel' : 'Edit'}
-          </Button>
+          <div className="space-y-8 mt-8">
+            {/* My Activity Section */}
+            <section>
+              <h2 className="font-headline-sm text-lg text-on-surface font-semibold mb-4 px-1">My Activity</h2>
+              <div className="flex flex-col gap-3">
+                <ListItem 
+                  icon="calendar_today" 
+                  label="My Bookings" 
+                  description="View your upcoming and previous appointments"
+                  onClick={() => navigate('/bookings')}
+                />
+                <ListItem 
+                  icon="chat" 
+                  label="Messages" 
+                  description="Chat with salons and Admin"
+                  onClick={() => navigate('/chat')}
+                />
+                <ListItem 
+                  icon="notifications" 
+                  label="Notifications" 
+                  description="Booking updates, offers and other alerts"
+                  count={unreadCount}
+                  onClick={() => navigate('/notifications')}
+                />
+              </div>
+            </section>
+
+            {/* Preferences Section */}
+            <section>
+              <h2 className="font-headline-sm text-lg text-on-surface font-semibold mb-4 px-1">Preferences</h2>
+              <div className="flex flex-col gap-3">
+                <ListItem 
+                  icon="location_on" 
+                  label="Location" 
+                  description={selectedLocation?.city ? `📍 ${selectedLocation.city}` : 'Select your city'}
+                  onClick={() => setIsLocationModalOpen(true)}
+                />
+              </div>
+            </section>
+
+            {/* Support Section */}
+            <section>
+              <h2 className="font-headline-sm text-lg text-on-surface font-semibold mb-4 px-1">Support</h2>
+              <div className="flex flex-col gap-3">
+                <ListItem 
+                  icon="headset_mic" 
+                  label="Contact Admin" 
+                  description="Get help with your bookings or account"
+                  onClick={handleContactAdmin}
+                />
+              </div>
+            </section>
+
+            {/* Logout Section */}
+            <section className="pt-4">
+              <Button 
+                variant="ghost" 
+                className="w-full text-error hover:bg-error/10 hover:text-error rounded-2xl py-4 font-semibold"
+                onClick={() => setShowLogoutConfirm(true)}
+              >
+                Log Out
+              </Button>
+            </section>
+          </div>
+        </>
+      )}
+
+      {/* --- EDIT PROFILE MODE --- */}
+      {editing && (
+        <div className="bg-surface rounded-[32px] p-6 border border-border shadow-sm mt-4 md:mt-8">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="font-headline-md text-[20px] font-bold text-on-surface">Edit Profile</h2>
+            <button onClick={handleEditCancel} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-variant text-muted-text">
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          
+          {message.text && (
+            <div className={`mb-6 px-4 py-3 rounded-xl text-sm font-medium ${message.type === 'success' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+              {message.text}
+            </div>
+          )}
+
+          <div className="flex justify-center mb-8">
+            <ImageUpload 
+              currentImage={user?.avatar} 
+              onFileSelect={(file) => {
+                if (file === null) {
+                   setFormData({...formData, avatarRemoved: true});
+                   setAvatarFile(null);
+                } else {
+                   setAvatarFile(file);
+                   setFormData({...formData, avatarRemoved: false});
+                }
+              }} 
+              label=""
+              isAvatar={true}
+            />
+          </div>
+
+          <div className="space-y-5">
+            <Input 
+              label="Full Name" 
+              name="name" 
+              value={formData.name} 
+              onChange={e => setFormData({ ...formData, name: e.target.value })} 
+              required
+            />
+            <Input 
+              label="Mobile Number" 
+              name="phone" 
+              value={formData.phone} 
+              onChange={e => setFormData({ ...formData, phone: e.target.value })} 
+            />
+            <Input 
+              label="Email Address" 
+              name="email" 
+              type="email"
+              value={formData.email} 
+              onChange={e => setFormData({ ...formData, email: e.target.value })} 
+            />
+          </div>
+
+          <div className="mt-8 flex flex-col md:flex-row gap-4">
+            <Button 
+              onClick={handleEditCancel} 
+              variant="outline"
+              className="w-full rounded-xl"
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSave} 
+              loading={saving} 
+              className="w-full rounded-xl"
+            >
+              Save Changes
+            </Button>
+          </div>
         </div>
+      )}
 
-        {editing ? (
-          <div className="space-y-4">
-            <Input label="Name" name="name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
-            <Input label="Phone" name="phone" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
-            <Input label="City" name="city" value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} />
-            <Button onClick={handleSave} loading={saving} className="w-full mt-2">Save Changes</Button>
+      {/* --- LOGOUT CONFIRMATION DIALOG --- */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-surface rounded-3xl w-full max-w-sm p-6 shadow-xl animate-scale-in">
+            <div className="w-12 h-12 rounded-full bg-error/10 flex items-center justify-center text-error mx-auto mb-4">
+              <span className="material-symbols-outlined text-[28px]">logout</span>
+            </div>
+            <h3 className="text-center font-headline-sm text-xl font-bold text-on-surface mb-2">Log Out</h3>
+            <p className="text-center font-body-sm text-muted-text mb-6">Are you sure you want to log out of your account?</p>
+            <div className="flex gap-4">
+              <Button 
+                variant="outline" 
+                className="flex-1 rounded-xl" 
+                onClick={() => setShowLogoutConfirm(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="danger" 
+                className="flex-1 rounded-xl" 
+                onClick={handleLogout}
+              >
+                Log Out
+              </Button>
+            </div>
           </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex justify-between py-3 border-b border-border/50">
-              <span className="text-[14px] font-body-sm text-muted-text">Name</span><span className="text-[14px] font-body-md font-medium text-on-surface">{user?.name}</span>
-            </div>
-            <div className="flex justify-between py-3 border-b border-border/50">
-              <span className="text-[14px] font-body-sm text-muted-text">Email</span><span className="text-[14px] font-body-md font-medium text-on-surface">{user?.email}</span>
-            </div>
-            <div className="flex justify-between py-3 border-b border-border/50">
-              <span className="text-[14px] font-body-sm text-muted-text">Phone</span><span className="text-[14px] font-body-md font-medium text-on-surface">{user?.phone}</span>
-            </div>
-            <div className="flex justify-between py-3">
-              <span className="text-[14px] font-body-sm text-muted-text">City</span><span className="text-[14px] font-body-md font-medium text-on-surface">{user?.city || 'Not set'}</span>
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      <Button variant="danger" onClick={logout} className="w-full">Logout</Button>
-
-
+      {/* Location Modal */}
+      <LocationSelectionModal 
+        isOpen={isLocationModalOpen} 
+        onClose={() => setIsLocationModalOpen(false)} 
+      />
     </div>
   );
 };

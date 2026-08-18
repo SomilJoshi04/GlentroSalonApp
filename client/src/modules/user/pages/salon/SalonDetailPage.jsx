@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getSalonById } from '../../services/userApi';
+import { goBack } from '../../../../utils/navigation';
 import Loader from '../../../../components/common/Loader';
+import { getImageUrl } from '../../../../utils/imageUtils';
 
 const SalonDetailPage = () => {
   const { id } = useParams();
@@ -42,7 +44,7 @@ const SalonDetailPage = () => {
         {/* Hero Section */}
         <section className="relative h-[320px] w-full bg-surface-variant">
           <img 
-            src={salon.images?.[0] ? `/uploads/${salon.images[0]}` : "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80"} 
+            src={salon.images?.[0] ? getImageUrl(salon.images[0]) : "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80"} 
             alt={salon.name} 
             className="object-cover w-full h-full" 
           />
@@ -50,7 +52,7 @@ const SalonDetailPage = () => {
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/10"></div>
           {/* Floating Actions */}
           <div className="absolute top-[max(1.5rem,env(safe-area-inset-top))] left-4 right-4 flex justify-between items-center z-10">
-            <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-surface/90 backdrop-blur-sm flex items-center justify-center shadow-sm text-on-surface hover:bg-surface transition-colors">
+            <button onClick={() => goBack(navigate, '/salons')} className="w-10 h-10 rounded-full bg-surface/90 backdrop-blur-sm flex items-center justify-center shadow-sm text-on-surface hover:bg-surface transition-colors">
               <span className="material-symbols-outlined">arrow_back</span>
             </button>
             <div className="flex gap-3">
@@ -174,7 +176,7 @@ const SalonDetailPage = () => {
                   <div key={s._id} className="flex flex-col items-center p-4 rounded-xl bg-surface border border-border shadow-sm">
                     <div className="w-20 h-20 rounded-full overflow-hidden mb-3 bg-surface-variant flex items-center justify-center">
                       {s.avatar ? (
-                        <img src={`/uploads/${s.avatar}`} alt={s.name} className="w-full h-full object-cover" />
+                        <img src={getImageUrl(s.avatar)} alt={s.name} className="w-full h-full object-cover" />
                       ) : (
                         <span className="material-symbols-outlined text-4xl text-primary/50">person</span>
                       )}

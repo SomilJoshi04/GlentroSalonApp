@@ -4,7 +4,7 @@ import BottomNav from '../../../components/common/BottomNav';
 
 const MainLayout = () => {
   return (
-    <div className="bg-background text-on-background antialiased min-h-screen pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-0 pt-[env(safe-area-inset-top)] md:pt-16 max-w-[100vw] overflow-x-hidden">
+    <div className="bg-background text-on-background antialiased min-h-screen pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0 pt-[env(safe-area-inset-top)] md:pt-16 max-w-[100vw] overflow-x-hidden">
       <TopNav />
       
       {/* Main Content */}

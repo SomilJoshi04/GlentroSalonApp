@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { getComplexAvailability } from '../../services/userApi';
 import Loader from '../../../../components/common/Loader';
+import { goBack } from '../../../../utils/navigation';
 
 const BookingPage = () => {
   const { id: salonId } = useParams();
@@ -49,7 +50,7 @@ const BookingPage = () => {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
         <h2 className="text-[20px] font-headline-sm text-on-surface mb-2">No services selected</h2>
-        <button onClick={() => navigate(`/salon/${salonId}`)} className="text-primary hover:underline">Go Back</button>
+        <button onClick={() => goBack(navigate, `/salon/${salonId}`)} className="text-primary hover:underline">Go Back</button>
       </div>
     );
   }
@@ -90,7 +91,7 @@ const BookingPage = () => {
     <div className="bg-background min-h-screen text-on-surface pb-28 md:max-w-md md:mx-auto relative shadow-2xl">
       {/* Transactional Header */}
       <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-md px-4 md:px-margin-desktop py-4 flex items-center justify-between border-b border-border shadow-sm">
-        <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-variant text-on-surface hover:bg-surface-container-high transition-colors -ml-2">
+        <button onClick={() => goBack(navigate, `/salon/${salonId}`)} className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-variant text-on-surface hover:bg-surface-container-high transition-colors -ml-2">
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
         <h1 className="font-headline-sm text-[20px] text-on-surface">Select Date & Time</h1>

@@ -6,6 +6,7 @@ import { useNotifications } from '../../../../context/NotificationContext';
 import { useLocationContext } from '../../../../context/LocationContext';
 import Loader from '../../../../components/common/Loader';
 import LocationSelectionModal from '../../../../components/common/LocationSelectionModal';
+import { getImageUrl } from '../../../../utils/imageUtils';
 
 const HomePage = () => {
   const [salons, setSalons] = useState([]);
@@ -39,7 +40,7 @@ const HomePage = () => {
     try {
       let salonPromise;
       if (selectedLocation?.lat && selectedLocation?.lng) {
-        salonPromise = getNearbySalons({ lat: selectedLocation.lat, lng: selectedLocation.lng, radius: 50000, limit: 10 });
+        salonPromise = getNearbySalons({ lat: selectedLocation.lat, lng: selectedLocation.lng, limit: 10 });
         setSalonListTitle('Nearby Salons');
       } else {
         salonPromise = getSalons({ city: selectedLocation?.city, limit: 10 });
@@ -97,9 +98,9 @@ const HomePage = () => {
             <span className="material-symbols-outlined text-on-surface text-[28px]">notifications</span>
             {unreadCount > 0 && <span className="absolute top-0 right-0 w-3 h-3 bg-[#E91E63] rounded-full border-2 border-surface"></span>}
           </div>
-          <div className="w-9 h-9 rounded-full bg-primary-100 border-2 border-primary-200 overflow-hidden cursor-pointer" onClick={() => navigate('/profile')}>
+          <div className="w-9 h-9 rounded-full bg-primary-100 border-2 border-primary-200 overflow-hidden cursor-pointer flex items-center justify-center" onClick={() => navigate('/profile')}>
             {user?.avatar ? (
-              <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" />
+              <img src={getImageUrl(user.avatar)} alt="Profile" className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-primary font-bold">{user?.name?.charAt(0) || 'U'}</div>
             )}
@@ -110,7 +111,7 @@ const HomePage = () => {
       {/* Greeting Area */}
       <div>
         <p className="font-body-md text-muted-text mb-1 flex items-center gap-2">
-          {getGreeting()}, {user?.name?.split(' ')[0] || 'Guest'} <span className="text-xl">👋</span>
+          {getGreeting()}, {user?.name?.split(' ')[0] || 'Guest'}
         </p>
         <h1 className="font-headline-xl text-[24px] sm:text-[28px] md:text-[36px] leading-tight text-on-surface">
           Find & Book <br />
@@ -228,7 +229,7 @@ const HomePage = () => {
             >
               <div className="h-[140px] w-full relative overflow-hidden group">
                 <img 
-                  src={salon.images?.[0] ? `/uploads/${salon.images[0]}` : "https://images.unsplash.com/photo-1521590832167-7bfcfaa6362f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"} 
+                  src={salon.images?.[0] ? getImageUrl(salon.images[0]) : "https://images.unsplash.com/photo-1521590832167-7bfcfaa6362f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"} 
                   alt={salon.name} 
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                 />
@@ -245,9 +246,15 @@ const HomePage = () => {
                   </span>
                   <span>1.2 km</span>
                 </div>
-                <div className="mt-2.5 font-label-sm text-primary">
-                  Starting ₹299
-                </div>
+                {salon.minServicePrice !== undefined && salon.minServicePrice !== null ? (
+                  <div className="mt-2.5 font-label-sm text-primary">
+                    Starting ₹{salon.minServicePrice}
+                  </div>
+                ) : (
+                  <div className="mt-2.5 font-label-sm text-muted-text">
+                    Price unavailable
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -292,7 +299,7 @@ const HomePage = () => {
       </section>
 
       {/* Exclusive Offers Banner */}
-      <div className="w-full bg-[#fdf2f8] border border-[#fbcfe8] rounded-[16px] p-4 flex items-center justify-between cursor-pointer mb-24">
+      <div className="w-full bg-[#fdf2f8] border border-[#fbcfe8] rounded-[16px] p-4 flex items-center justify-between cursor-pointer mb-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-[#e11d48] rounded-full flex items-center justify-center text-white transform -rotate-12">
             <span className="material-symbols-outlined text-[20px]">local_offer</span>

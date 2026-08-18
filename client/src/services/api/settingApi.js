@@ -9,3 +9,6 @@ export const updateAppLogo = (formData) =>
 
 export const updateAppName = (name) => 
   axiosInstance.put('/settings/name', { name });
+
+export const updateSearchRadius = (radius) =>
+  axiosInstance.put('/settings/search-radius', { radius });

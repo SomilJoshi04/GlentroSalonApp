@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getBookingById, cancelBooking } from '../../services/userApi';
+import { goBack } from '../../../../utils/navigation';
 import Button from '../../../../components/common/Button';
 import Loader from '../../../../components/common/Loader';
 import Modal from '../../../../components/common/Modal';
@@ -98,10 +99,31 @@ const BookingDetailPage = () => {
 
   const canCancel = ['PENDING', 'CONFIRMED'].includes(booking.status);
 
+  const handleChat = async () => {
+    try {
+      if (!booking?.salon?.vendor) {
+        alert('Vendor information not found for this salon');
+        return;
+      }
+      const { initiateChat } = await import('../../services/userApi');
+      const res = await initiateChat({
+        recipientId: booking.salon.vendor,
+        recipientRole: 'vendor',
+        chatType: 'user-vendor',
+        salonId: booking.salon._id
+      });
+      if (res.data.success && res.data.data._id) {
+        navigate(`/chat/${res.data.data._id}`);
+      }
+    } catch (e) {
+      alert(e.response?.data?.message || 'Failed to initiate chat');
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in w-full">
-      <PageHeader title="Booking Details" />
-      <button onClick={() => navigate(-1)} className="hidden md:flex items-center gap-2 text-text-secondary hover:text-primary-600 text-sm">
+      <PageHeader title="Booking Details" fallbackPath="/bookings" />
+      <button onClick={() => goBack(navigate, '/bookings')} className="hidden md:flex items-center gap-2 text-text-secondary hover:text-primary-600 text-sm">
         ← Back to bookings
       </button>
 
@@ -171,7 +193,7 @@ const BookingDetailPage = () => {
           <Button onClick={handlePayment} className="flex-1 bg-gradient-to-r from-primary-600 to-primary-500 text-white">Pay ₹{booking.finalAmount}</Button>
         )}
         {canCancel && <Button variant="danger" onClick={() => setCancelModal(true)} className="flex-1">Cancel Booking</Button>}
-        <Button variant="secondary" onClick={() => navigate('/chat')} className="flex-1">Chat</Button>
+        <Button variant="secondary" onClick={handleChat} className="flex-1">Chat</Button>
       </div>
 
       {/* Cancel Modal */}

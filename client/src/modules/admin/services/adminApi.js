@@ -80,3 +80,10 @@ export const getUnreadCount = () => api.get('/notifications/unread-count');
 export const markAsRead = (id) => api.patch(`/notifications/${id}/read`);
 export const markAllAsRead = () => api.patch('/notifications/read-all');
 export const deleteNotification = (id) => api.delete(`/notifications/${id}`);
+
+// Chat
+export const initiateChat = (data) => api.post('/chat/initiate', data);
+export const getChats = () => api.get('/chat');
+export const getMessages = (chatId, params) => api.get(`/chat/${chatId}/messages`, { params });
+export const sendMessage = (chatId, data) => api.post(`/chat/${chatId}/messages`, data);
+export const markChatAsRead = (chatId) => api.patch(`/chat/${chatId}/read`);

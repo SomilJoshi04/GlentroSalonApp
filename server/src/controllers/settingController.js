@@ -69,8 +69,30 @@ const updateAppName = async (req, res, next) => {
   }
 };
 
+// @desc    Update salon search radius (Admin)
+const updateSalonSearchRadius = async (req, res, next) => {
+  try {
+    const { radius } = req.body;
+    
+    if (radius === undefined || radius === null || isNaN(radius) || Number(radius) <= 0) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid radius greater than 0' });
+    }
+
+    const updatedSetting = await AppSetting.findOneAndUpdate(
+      { key: 'salonSearchRadius' },
+      { value: String(radius) },
+      { new: true, upsert: true }
+    );
+
+    res.json({ success: true, data: updatedSetting });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getSettings,
   updateAppLogo,
   updateAppName,
+  updateSalonSearchRadius,
 };

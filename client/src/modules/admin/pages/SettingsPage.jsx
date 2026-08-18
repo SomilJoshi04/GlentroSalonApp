@@ -1,21 +1,22 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSettings } from '../../../context/SettingContext';
-import { updateAppLogo, updateAppName } from '../../../services/api/settingApi';
+import { updateAppLogo, updateAppName, updateSearchRadius } from '../../../services/api/settingApi';
 import ImageUpload from '../../../components/common/ImageUpload';
 
 export default function SettingsPage() {
   const { settings, fetchSettings } = useSettings();
   const [logoFile, setLogoFile] = useState(null);
   const [appName, setAppName] = useState('');
+  const [searchRadius, setSearchRadius] = useState('');
   const [loading, setLoading] = useState(false);
   const [nameLoading, setNameLoading] = useState(false);
+  const [radiusLoading, setRadiusLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
   // Initialize app name from settings
   useEffect(() => {
-    if (settings?.appName) {
-      setAppName(settings.appName);
-    }
+    if (settings?.appName) setAppName(settings.appName);
+    if (settings?.salonSearchRadius) setSearchRadius(settings.salonSearchRadius);
   }, [settings]);
 
   const handleSaveLogo = async () => {
@@ -56,6 +57,28 @@ export default function SettingsPage() {
       setMessage({ type: 'error', text: 'Failed to update app name' });
     } finally {
       setNameLoading(false);
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+    }
+  };
+
+  const handleSaveSearchRadius = async () => {
+    if (!searchRadius || isNaN(searchRadius) || Number(searchRadius) <= 0) {
+      setMessage({ type: 'error', text: 'Please enter a valid radius greater than 0' });
+      return;
+    }
+    setRadiusLoading(true);
+    setMessage({ type: '', text: '' });
+    try {
+      const res = await updateSearchRadius(searchRadius);
+      if (res.data?.success) {
+        setMessage({ type: 'success', text: 'Salon search radius updated successfully.' });
+        await fetchSettings();
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage({ type: 'error', text: 'Failed to update salon search radius. Please try again.' });
+    } finally {
+      setRadiusLoading(false);
       setTimeout(() => setMessage({ type: '', text: '' }), 5000);
     }
   };
@@ -131,6 +154,42 @@ export default function SettingsPage() {
                 className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 whitespace-nowrap"
               >
                 {nameLoading ? 'Saving...' : 'Save Name'}
+              </button>
+            </div>
+          </div>
+          
+          <div className="w-32 hidden sm:block shrink-0"></div>
+        </div>
+      </div>
+
+      <div className="bg-surface rounded-2xl border border-border p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-on-surface mb-4">Discovery Configurations</h2>
+        
+        <div className="flex flex-col sm:flex-row gap-6 items-start">
+          <div className="flex-1 space-y-2">
+            <h3 className="text-sm font-medium text-on-surface">Salon Search Radius</h3>
+            <p className="text-xs text-muted-text max-w-md">
+              Controls how far the system searches for nearby salons from the user's location.
+            </p>
+            
+            <div className="pt-4 flex flex-col sm:flex-row gap-3 items-center">
+              <div className="flex items-center gap-2 flex-1">
+                <input 
+                  type="number" 
+                  min="1"
+                  value={searchRadius}
+                  onChange={(e) => setSearchRadius(e.target.value)}
+                  placeholder="e.g. 50"
+                  className="w-full sm:max-w-[150px] px-4 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-background-alt"
+                />
+                <span className="font-label-md text-muted-text">KM</span>
+              </div>
+              <button 
+                onClick={handleSaveSearchRadius}
+                disabled={radiusLoading || !searchRadius}
+                className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                {radiusLoading ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>

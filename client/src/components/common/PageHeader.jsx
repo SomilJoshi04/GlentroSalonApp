@@ -1,12 +1,13 @@
 import { useNavigate } from 'react-router-dom';
+import { goBack } from '../../utils/navigation';
 
-const PageHeader = ({ title }) => {
+const PageHeader = ({ title, fallbackPath = '/' }) => {
   const navigate = useNavigate();
 
   return (
     <div className="flex items-center gap-3 py-3 md:hidden">
       <button 
-        onClick={() => navigate(-1)} 
+        onClick={() => goBack(navigate, fallbackPath)} 
         className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-surface-variant transition-colors -ml-3 text-on-surface"
         aria-label="Go back"
       >

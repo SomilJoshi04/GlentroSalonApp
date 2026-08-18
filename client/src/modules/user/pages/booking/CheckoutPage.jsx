@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { createBooking, validateCoupon } from '../../services/userApi';
 import { useAuth } from '../../../../context/AuthContext';
+import { goBack } from '../../../../utils/navigation';
+import { getImageUrl } from '../../../../utils/imageUtils';
 
 const CheckoutPage = () => {
   const { id: salonId } = useParams();
@@ -115,7 +117,7 @@ const CheckoutPage = () => {
     <div className="bg-background text-on-surface font-body-md antialiased min-h-screen flex flex-col pb-[120px]">
       {/* Top App Bar */}
       <header className="sticky top-[env(safe-area-inset-top)] w-full z-50 bg-background/90 backdrop-blur-md shadow-sm flex justify-between items-center px-4 md:px-margin-desktop h-16">
-        <button onClick={() => navigate(-1)} className="text-on-surface-variant hover:bg-soft-primary p-2 rounded-full transition-colors active:scale-95 duration-150 flex items-center justify-center -ml-2">
+        <button onClick={() => goBack(navigate, `/salon/${salonId}/book`)} className="text-on-surface-variant hover:bg-soft-primary p-2 rounded-full transition-colors active:scale-95 duration-150 flex items-center justify-center -ml-2">
           <span className="material-symbols-outlined text-[24px]">arrow_back</span>
         </button>
         <h1 className="font-headline-sm text-[20px] text-primary text-center absolute left-1/2 -translate-x-1/2">Checkout</h1>
@@ -130,7 +132,7 @@ const CheckoutPage = () => {
             <img 
               alt={salon.name} 
               className="object-cover w-full h-full" 
-              src={salon.images?.[0] ? `/uploads/${salon.images[0]}` : "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80"}
+              src={salon.images?.[0] ? getImageUrl(salon.images[0]) : "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80"}
             />
           </div>
           <div className="flex flex-col">
@@ -192,7 +194,12 @@ const CheckoutPage = () => {
           </button>
         </section>
         {couponError && <p className="text-error text-sm px-1 -mt-4">{couponError}</p>}
-        {couponResult && <p className="text-success text-sm px-1 -mt-4 font-medium">✅ Saved ₹{couponResult.discount}</p>}
+        {couponResult && (
+          <p className="text-success text-sm px-1 -mt-4 font-medium flex items-center gap-1">
+            <span className="material-symbols-outlined text-[16px] text-success">check_circle</span>
+            Saved ₹{couponResult.discount}
+          </p>
+        )}
 
         {/* Price Breakdown */}
         <section className="bg-surface rounded-[18px] border border-border shadow-sm p-5 flex flex-col gap-3">

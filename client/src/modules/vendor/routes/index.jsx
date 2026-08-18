@@ -20,6 +20,8 @@ const BookingDetailPage = lazy(() => import('../pages/BookingDetailPage'));
 const PackageManagePage = lazy(() => import('../pages/PackageManagePage'));
 const OfferManagePage = lazy(() => import('../pages/OfferManagePage'));
 const ProfilePage = lazy(() => import('../pages/ProfilePage'));
+const ChatListPage = lazy(() => import('../pages/ChatListPage'));
+const ChatPage = lazy(() => import('../pages/ChatPage'));
 
 const SuspenseWrapper = ({ children }) => (
   <Suspense fallback={<Loader text="Loading..." />}>
@@ -40,6 +42,8 @@ export default function VendorRoutes() {
         <Route path="services" element={<SuspenseWrapper><ServiceManagePage /></SuspenseWrapper>} />
         <Route path="bookings" element={<SuspenseWrapper><BookingManagePage /></SuspenseWrapper>} />
         <Route path="booking/:id" element={<SuspenseWrapper><BookingDetailPage /></SuspenseWrapper>} />
+        <Route path="chats" element={<SuspenseWrapper><ChatListPage /></SuspenseWrapper>} />
+        <Route path="chat/:chatId" element={<SuspenseWrapper><ChatPage /></SuspenseWrapper>} />
         <Route path="packages" element={<SuspenseWrapper><PackageManagePage /></SuspenseWrapper>} />
         <Route path="offers" element={<SuspenseWrapper><OfferManagePage /></SuspenseWrapper>} />
         <Route path="profile" element={<SuspenseWrapper><ProfilePage /></SuspenseWrapper>} />

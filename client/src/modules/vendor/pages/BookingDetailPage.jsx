@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getBookingById, acceptBooking, rejectBooking, completeBooking } from '../services/vendorApi';
+import { goBack } from '../../../utils/navigation';
 
 const BookingDetailPage = () => {
   const { id } = useParams();
@@ -21,36 +22,136 @@ const BookingDetailPage = () => {
     } catch (e) { alert(e.response?.data?.message || 'Failed'); }
   };
 
-  if (loading) return <div className="flex justify-center py-12"><div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" /></div>;
-  if (!booking) return <div className="text-center py-20">Booking not found</div>;
-
-  const statusColors = { PENDING: 'bg-yellow-100 text-yellow-800', CONFIRMED: 'bg-blue-100 text-blue-800', COMPLETED: 'bg-green-100 text-green-800', CANCELLED: 'bg-red-100 text-red-800', REJECTED: 'bg-gray-100 text-gray-800' };
-
-  return (
-    <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 hover:text-primary">← Back</button>
-      <div className={`rounded-2xl p-6 text-center ${statusColors[booking.status]}`}>
-        <p className="text-sm font-medium">Status</p>
-        <p className="text-2xl font-bold">{booking.status}</p>
-      </div>
-      <div className="bg-white rounded-2xl p-5 border border-slate-100 space-y-3">
-        <h3 className="font-semibold">Customer</h3>
-        <p className="text-sm">{booking.user?.name} • {booking.user?.email} • {booking.user?.phone}</p>
-        <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-50">
-          <div><p className="text-xs text-slate-400">Date</p><p className="font-medium text-sm">{new Date(booking.bookingDate).toLocaleDateString()}</p></div>
-          <div><p className="text-xs text-slate-400">Time</p><p className="font-medium text-sm">{booking.startTime} - {booking.endTime}</p></div>
+  if (loading) {
+    return (
+      <div className="flex flex-col h-[100dvh] sm:h-full max-w-4xl mx-auto w-full bg-surface border border-border overflow-hidden rounded-2xl">
+        <div className="h-16 bg-background-alt animate-pulse border-b border-border" />
+        <div className="flex-1 bg-surface-variant/20 p-6 space-y-6">
+          <div className="h-20 bg-slate-100 rounded-2xl animate-pulse" />
+          <div className="h-44 bg-slate-100 rounded-2xl animate-pulse" />
         </div>
       </div>
-      <div className="bg-white rounded-2xl p-5 border border-slate-100">
-        <h3 className="font-semibold mb-3">Services</h3>
-        {services.map(s => <div key={s._id} className="flex justify-between py-2 border-b border-slate-50 last:border-0 text-sm"><span>{s.service?.name} ({s.duration} min)</span><span className="font-medium">₹{s.price}</span></div>)}
-        <div className="flex justify-between font-bold mt-3 pt-3 border-t border-slate-200"><span>Total</span><span className="text-primary">₹{booking.finalAmount}</span></div>
+    );
+  }
+  if (!booking) return <div className="text-center py-20 text-muted-text">Booking not found</div>;
+
+  const statusColors = { 
+    PENDING: 'bg-yellow-50 text-yellow-800 border-yellow-200', 
+    CONFIRMED: 'bg-blue-50 text-blue-800 border-blue-200', 
+    COMPLETED: 'bg-green-50 text-green-800 border-green-200', 
+    CANCELLED: 'bg-red-50 text-red-800 border-red-200', 
+    REJECTED: 'bg-gray-50 text-gray-800 border-gray-200' 
+  };
+
+  const handleChat = async () => {
+    try {
+      if (!booking?.user?._id) {
+        alert('Customer information not found');
+        return;
+      }
+      const { initiateChat } = await import('../services/vendorApi');
+      const res = await initiateChat({
+        recipientId: booking.user._id,
+        recipientRole: 'user',
+        chatType: 'user-vendor',
+        salonId: booking.salon._id
+      });
+      if (res.data.success && res.data.data._id) {
+        navigate(`/vendor/chat/${res.data.data._id}`);
+      }
+    } catch (e) {
+      alert(e.response?.data?.message || 'Failed to initiate chat');
+    }
+  };
+
+  return (
+    <div className="flex flex-col min-h-[100dvh] sm:min-h-full bg-surface sm:rounded-2xl sm:border border-border max-w-4xl mx-auto w-full overflow-hidden shadow-sm">
+      {/* Header */}
+      <div className="flex items-center gap-4 p-4 border-b border-border bg-surface sticky top-0 z-10">
+        <button onClick={() => goBack(navigate, '/vendor/bookings')} className="p-2 -ml-2 rounded-xl text-on-surface hover:bg-surface-variant transition-colors flex items-center justify-center">
+          <span className="material-symbols-outlined text-[24px]">arrow_back</span>
+        </button>
+        <div>
+          <h2 className="font-semibold text-on-surface text-lg">Booking Details</h2>
+          <p className="text-xs text-muted-text font-medium">#{booking._id.slice(-6).toUpperCase()}</p>
+        </div>
       </div>
-      {booking.status === 'PENDING' && (
-        <div className="flex gap-3"><button onClick={() => handleAction('accept')} className="flex-1 py-3 bg-green-500 text-white rounded-xl font-medium hover:bg-green-600">Accept</button>
-          <button onClick={() => handleAction('reject')} className="flex-1 py-3 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600">Reject</button></div>
-      )}
-      {booking.status === 'CONFIRMED' && <button onClick={() => handleAction('complete')} className="w-full py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary-dark">Mark Complete</button>}
+
+      <div className="flex-1 p-5 space-y-6 animate-fade-in bg-background-alt/50 pb-10">
+        <div className={`rounded-2xl p-6 text-center border ${statusColors[booking.status]}`}>
+          <p className="text-xs font-semibold uppercase tracking-wider opacity-75">Status</p>
+          <p className="text-2xl font-bold mt-1">{booking.status}</p>
+        </div>
+        
+        <div className="bg-surface rounded-2xl p-5 border border-border space-y-4 shadow-sm">
+          <h3 className="font-semibold text-on-surface text-base border-b border-border pb-2 flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[18px] text-muted-text">person</span>
+            Customer Details
+          </h3>
+          <div className="text-sm space-y-1.5 text-on-surface">
+            <p className="font-semibold text-[15px]">{booking.user?.name}</p>
+            <p className="text-muted-text">✉️ {booking.user?.email}</p>
+            <p className="text-muted-text">📞 {booking.user?.phone}</p>
+          </div>
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border bg-background-alt/30 -mx-5 -mb-5 p-5 rounded-b-2xl">
+            <div>
+              <p className="text-xs text-muted-text font-semibold uppercase tracking-wider">Date</p>
+              <p className="font-bold text-on-surface text-[15px] mt-1">
+                {new Date(booking.bookingDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-text font-semibold uppercase tracking-wider">Time Window</p>
+              <p className="font-bold text-on-surface text-[15px] mt-1">{booking.startTime} - {booking.endTime}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-surface rounded-2xl p-5 border border-border shadow-sm">
+          <h3 className="font-semibold text-on-surface text-base border-b border-border pb-2 flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[18px] text-muted-text">content_cut</span>
+            Services Catalog
+          </h3>
+          <div className="divide-y divide-border">
+            {services.map(s => (
+              <div key={s._id} className="flex justify-between py-3 text-sm text-on-surface">
+                <span>{s.service?.name} ({s.duration} min)</span>
+                <span className="font-semibold">₹{s.price}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-between font-bold text-[16px] mt-2 pt-3 border-t border-border">
+            <span className="text-on-surface">Grand Total</span>
+            <span className="text-primary text-lg">₹{booking.finalAmount}</span>
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <button onClick={handleChat} className="flex-1 py-3 bg-surface border border-border text-on-surface rounded-xl font-semibold hover:bg-surface-variant transition-colors shadow-sm flex items-center justify-center gap-1.5">
+            <span className="material-symbols-outlined text-[18px]">chat</span>
+            Chat with Customer
+          </button>
+        </div>
+
+        {booking.status === 'PENDING' && (
+          <div className="flex gap-3">
+            <button onClick={() => handleAction('accept')} className="flex-1 py-3 bg-success/10 border border-success/30 text-success rounded-xl font-semibold hover:bg-success hover:text-white transition-all shadow-sm flex items-center justify-center gap-1.5">
+              <span className="material-symbols-outlined text-[18px]">check_circle</span>
+              Accept
+            </button>
+            <button onClick={() => handleAction('reject')} className="flex-1 py-3 bg-error/10 border border-error/30 text-error rounded-xl font-semibold hover:bg-error hover:text-white transition-all shadow-sm flex items-center justify-center gap-1.5">
+              <span className="material-symbols-outlined text-[18px]">cancel</span>
+              Reject
+            </button>
+          </div>
+        )}
+        {booking.status === 'CONFIRMED' && (
+          <button onClick={() => handleAction('complete')} className="w-full py-3 bg-primary/10 border border-primary/30 text-primary rounded-xl font-semibold hover:bg-primary hover:text-white transition-all shadow-sm flex items-center justify-center gap-1.5">
+            <span className="material-symbols-outlined text-[18px]">task_alt</span>
+            Mark Complete
+          </button>
+        )}
+      </div>
     </div>
   );
 };

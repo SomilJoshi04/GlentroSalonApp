@@ -24,6 +24,7 @@ const BannersPage = lazy(() => import('../pages/BannersPage'));
 const SettingsPage = lazy(() => import('../pages/SettingsPage'));
 const NotificationsPage = lazy(() => import('../pages/NotificationsPage'));
 const SupportPage = lazy(() => import('../pages/SupportPage'));
+const SupportChatPage = lazy(() => import('../pages/SupportChatPage'));
 const ProfilePage = lazy(() => import('../pages/ProfilePage'));
 
 const SuspenseWrapper = ({ children }) => (
@@ -54,6 +55,7 @@ export default function AdminRoutes() {
         <Route path="settings" element={<SuspenseWrapper><SettingsPage /></SuspenseWrapper>} />
         <Route path="notifications" element={<SuspenseWrapper><NotificationsPage /></SuspenseWrapper>} />
         <Route path="support" element={<SuspenseWrapper><SupportPage /></SuspenseWrapper>} />
+        <Route path="support/:chatId" element={<SuspenseWrapper><SupportChatPage /></SuspenseWrapper>} />
         <Route path="profile" element={<SuspenseWrapper><ProfilePage /></SuspenseWrapper>} />
       </Route>
     </Routes>

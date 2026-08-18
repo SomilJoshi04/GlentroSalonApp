@@ -34,7 +34,7 @@ const getVendorOffers = async (req, res, next) => {
     if (status) query.status = status;
     if (search) query.title = { $regex: search, $options: 'i' };
 
-    const offers = await Offer.find(query).populate('applicableServices', 'name price').populate('salon', 'name');
+    const offers = await Offer.find(query).sort({ createdAt: -1 }).populate('applicableServices', 'name price').populate('salon', 'name');
     res.json({ success: true, data: offers });
   } catch (error) { next(error); }
 };

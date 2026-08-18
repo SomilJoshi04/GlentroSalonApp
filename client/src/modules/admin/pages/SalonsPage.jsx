@@ -36,7 +36,10 @@ const SalonsPage = () => {
             {salons.map(s => (
               <tr key={s._id} className="hover:bg-surface-elevated"><td className="px-4 py-3 text-text-primary font-medium">{s.name}</td><td className="px-4 py-3 text-text-secondary">{s.city}</td><td className="px-4 py-3 text-text-secondary">{s.vendor?.name || '-'}</td><td className="px-4 py-3 capitalize text-text-secondary">{s.gender}</td>
                 <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${s.isApproved ? (s.isActive ? 'bg-success/20 text-success' : 'bg-danger/20 text-danger') : 'bg-warning/20 text-warning'}`}>{s.isApproved ? (s.isActive ? 'Active' : 'Suspended') : 'Pending'}</span></td>
-                <td className="px-4 py-3 text-text-secondary">⭐ {s.ratings?.average?.toFixed(1) || '0.0'}</td>
+                <td className="px-4 py-3 text-text-secondary flex items-center">
+                  <span className="material-symbols-outlined text-[16px] text-amber-500 mr-0.5">star</span>
+                  {s.ratings?.average?.toFixed(1) || '0.0'}
+                </td>
                 <td className="px-4 py-3">
                   {!s.isApproved ? (
                     <button onClick={() => handleStatusChange(s._id, true, true)} className="px-3 py-1.5 rounded-lg bg-success text-white font-medium text-xs hover:bg-success/80">Approve</button>

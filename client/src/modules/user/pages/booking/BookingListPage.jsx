@@ -47,9 +47,27 @@ const BookingListPage = () => {
         ))}
       </div>
 
-      {loading ? <Loader /> : bookings.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
-          <div className="text-5xl mb-4">📅</div>
+      {loading ? (
+        <div className="space-y-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-surface rounded-2xl p-5 border border-border animate-pulse shadow-sm">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <div className="h-5 bg-surface-variant rounded w-48"></div>
+                  <div className="h-4 bg-surface-variant rounded w-32"></div>
+                </div>
+                <div className="h-6 bg-surface-variant rounded-full w-20"></div>
+              </div>
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+                <div className="h-4 bg-surface-variant rounded w-24"></div>
+                <div className="h-5 bg-surface-variant rounded w-16"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : bookings.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-2xl border border-gray-100 flex flex-col items-center">
+          <span className="material-symbols-outlined text-4xl text-muted-text/30 mb-2">calendar_month</span>
           <h3 className="text-lg font-semibold">No bookings found</h3>
           <p className="text-text-secondary text-sm mt-1">Book your first appointment!</p>
         </div>
@@ -61,17 +79,23 @@ const BookingListPage = () => {
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="font-semibold text-text-primary">{booking.salon?.name || 'Salon'}</h3>
-                  <p className="text-sm text-text-secondary mt-1">
-                    📅 {new Date(booking.bookingDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    <span className="ml-2">🕐 {booking.startTime} - {booking.endTime}</span>
-                  </p>
+                  <div className="text-sm text-text-secondary mt-1 flex flex-wrap items-center gap-y-1 gap-x-3">
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[16px] text-muted-text">calendar_month</span>
+                      {new Date(booking.bookingDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[16px] text-muted-text">schedule</span>
+                      {booking.startTime} - {booking.endTime}
+                    </span>
+                  </div>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColors[booking.status]}`}>
                   {booking.status}
                 </span>
               </div>
               <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
-                <span className="text-sm text-text-muted">Booking #{booking._id.slice(-6)}</span>
+                <span className="text-sm text-text-muted">Booking #{booking._id.slice(-6).toUpperCase()}</span>
                 <span className="font-semibold text-primary-600">₹{booking.finalAmount}</span>
               </div>
             </div>

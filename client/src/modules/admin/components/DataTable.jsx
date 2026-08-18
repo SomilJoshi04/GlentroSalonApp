@@ -17,11 +17,15 @@ const DataTable = ({ columns, data, loading, error, pagination, onPageChange }) 
           </thead>
           <tbody className="divide-y divide-border">
             {loading ? (
-              <tr>
-                <td colSpan={columns.length} className="px-6 py-12 text-center">
-                  <div className="flex justify-center"><Loader size="md" text="Loading data..." /></div>
-                </td>
-              </tr>
+              Array.from({ length: 5 }).map((_, rowIndex) => (
+                <tr key={`skeleton-${rowIndex}`} className="animate-pulse">
+                  {columns.map((_, colIndex) => (
+                    <td key={colIndex} className="px-6 py-5">
+                      <div className="h-4 bg-surface-variant rounded-lg w-full max-w-[85%]"></div>
+                    </td>
+                  ))}
+                </tr>
+              ))
             ) : error ? (
               <tr>
                 <td colSpan={columns.length} className="px-6 py-16 text-center text-danger">

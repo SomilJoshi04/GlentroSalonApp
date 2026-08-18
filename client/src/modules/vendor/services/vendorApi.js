@@ -58,6 +58,7 @@ export const checkSubscription = () => api.get('/subscriptions/check');
 export const getSubscriptionPlans = () => api.get('/subscriptions');
 
 // Chat
+export const initiateChat = (data) => api.post('/chat/initiate', data);
 export const getChats = () => api.get('/chat');
 export const getMessages = (chatId, params) => api.get(`/chat/${chatId}/messages`, { params });
 export const sendMessage = (chatId, data) => api.post(`/chat/${chatId}/messages`, data);

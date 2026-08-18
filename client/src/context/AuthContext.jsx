@@ -74,6 +74,7 @@ export const AuthProvider = ({ children }) => {
     } else if (role === 'vendor') {
       localStorage.removeItem('vendor_token');
       localStorage.removeItem('vendor');
+      localStorage.removeItem('vendor_selected_salon');
       setVendorToken(null);
       setVendor(null);
     } else if (role === 'admin') {

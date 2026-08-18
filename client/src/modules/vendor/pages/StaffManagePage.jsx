@@ -9,6 +9,7 @@ const StaffManagePage = () => {
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
 
   // Filters
   const [filters, setFilters] = useState({ search: '', isActive: 'all' });
@@ -29,13 +30,23 @@ const StaffManagePage = () => {
   const loadSalons = async () => { 
     try { 
       const r = await getVendorSalons(); 
-      setSalons(r.data.data); 
-      if (r.data.data.length) setSelectedSalon(r.data.data[0]._id); 
+      const loadedSalons = r.data.data;
+      setSalons(loadedSalons); 
+      if (loadedSalons.length > 0) {
+        const savedSalonId = localStorage.getItem('vendor_selected_salon');
+        if (savedSalonId && loadedSalons.some(salon => salon._id === savedSalonId)) {
+          setSelectedSalon(savedSalonId);
+        } else {
+          setSelectedSalon(loadedSalons[0]._id);
+          localStorage.setItem('vendor_selected_salon', loadedSalons[0]._id);
+        }
+      }
     } catch (e) {} 
     setLoading(false); 
   };
 
   const loadStaff = async () => { 
+    setIsFetching(true);
     try { 
       const queryParams = {};
       if (filters.search) queryParams.search = filters.search;
@@ -44,6 +55,7 @@ const StaffManagePage = () => {
       const r = await getSalonStaff(selectedSalon, queryParams); 
       setStaff(r.data.data); 
     } catch (e) {} 
+    setIsFetching(false);
   };
 
   const handleSubmit = async (e) => {
@@ -129,24 +141,40 @@ const StaffManagePage = () => {
     setAvailabilityForm(newForm);
   };
 
-  if (loading) return <div className="flex justify-center py-12"><div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" /></div>;
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="h-10 w-64 bg-slate-200 rounded-lg animate-pulse" />
+        <div className="h-16 bg-slate-100 rounded-2xl animate-pulse border border-border" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1,2,3].map(i => (
+             <div key={i} className="h-44 bg-slate-100 rounded-2xl animate-pulse border border-border"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 animate-fade-in relative">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Staff Management</h1>
+    <div className="space-y-6 animate-fade-in relative max-w-5xl mx-auto w-full pb-10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+        <div>
+          <h1 className="font-headline-md text-[24px] sm:text-[28px] text-on-surface font-bold">Staff Management</h1>
+          <p className="font-body-md text-muted-text mt-1">Manage your team members and schedule availability.</p>
+        </div>
         <button onClick={() => {
           setEditingStaff(null);
           setForm({ name: '', phone: '', specializations: '' });
           setShowForm(!showForm);
-        }} className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-dark transition-colors">
-          {showForm ? 'Cancel' : '+ Add Staff'}
+        }} className={`w-full sm:w-auto shrink-0 justify-center whitespace-nowrap px-4 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm flex items-center gap-1.5 border ${showForm ? 'bg-surface border-border text-on-surface hover:bg-surface-variant' : 'bg-primary text-white hover:bg-primary-dark border-transparent'}`}>
+          <span className="material-symbols-outlined text-[18px]">{showForm ? 'close' : 'add'}</span>
+          {showForm ? 'Cancel' : 'Add Staff'}
         </button>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4">
-        <select value={selectedSalon} onChange={e => setSelectedSalon(e.target.value)}
-          className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:border-primary">
+      <div className="flex flex-col sm:flex-row gap-4 bg-surface p-4 rounded-2xl border border-border shadow-sm">
+        <select value={selectedSalon} onChange={e => { setSelectedSalon(e.target.value); localStorage.setItem('vendor_selected_salon', e.target.value); }}
+          className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm bg-surface text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm">
           {salons.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
         </select>
         <input 
@@ -154,12 +182,12 @@ const StaffManagePage = () => {
           placeholder="Search by name..." 
           value={filters.search}
           onChange={e => setFilters({...filters, search: e.target.value})}
-          className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:border-primary" 
+          className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm bg-surface text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" 
         />
         <select 
           value={filters.isActive}
           onChange={e => setFilters({...filters, isActive: e.target.value})}
-          className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:border-primary">
+          className="px-4 py-2.5 rounded-xl border border-border text-sm bg-surface text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm">
           <option value="all">All Status</option>
           <option value="true">Active</option>
           <option value="false">Inactive</option>
@@ -167,25 +195,26 @@ const StaffManagePage = () => {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm space-y-4 animate-fade-in">
-          <h2 className="text-lg font-semibold">{editingStaff ? 'Edit Staff' : 'Add New Staff'}</h2>
+        <form onSubmit={handleSubmit} className="bg-surface rounded-2xl p-6 border border-border shadow-sm space-y-4 animate-fade-in">
+          <h2 className="text-lg font-semibold text-on-surface">{editingStaff ? 'Edit Staff Details' : 'Add New Staff Member'}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1 text-slate-700">Name*</label>
-              <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-primary" />
+              <label className="block text-sm font-medium mb-1 text-muted-text">Name*</label>
+              <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required className="w-full px-3 py-2.5 bg-surface text-on-surface rounded-xl border border-border text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1 text-slate-700">Phone*</label>
-              <input type="text" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} required className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-primary" />
+              <label className="block text-sm font-medium mb-1 text-muted-text">Phone*</label>
+              <input type="text" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} required className="w-full px-3 py-2.5 bg-surface text-on-surface rounded-xl border border-border text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1 text-slate-700">Specializations <span className="text-slate-400 font-normal">(comma-separated)</span></label>
-            <input type="text" value={form.specializations} onChange={e => setForm({...form, specializations: e.target.value})} placeholder="e.g. Haircut, Coloring, Facial" className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-primary" />
+            <label className="block text-sm font-medium mb-1 text-muted-text">Specializations <span className="text-muted-text/60 font-normal">(comma-separated)</span></label>
+            <input type="text" value={form.specializations} onChange={e => setForm({...form, specializations: e.target.value})} placeholder="e.g. Haircut, Coloring, Facial" className="w-full px-3 py-2.5 bg-surface text-on-surface rounded-xl border border-border text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" />
           </div>
           <div className="flex gap-3 justify-end pt-2">
-            <button type="button" onClick={() => setShowForm(false)} className="px-5 py-2.5 text-slate-500 hover:text-slate-700 text-sm font-medium">Cancel</button>
-            <button type="submit" disabled={saving} className="px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-medium disabled:opacity-50 transition-colors">
+            <button type="button" onClick={() => setShowForm(false)} className="px-5 py-2.5 text-muted-text hover:bg-surface-variant rounded-xl text-sm font-medium">Cancel</button>
+            <button type="submit" disabled={saving} className="px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-medium disabled:opacity-50 transition-colors shadow-sm flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[18px]">save</span>
               {saving ? 'Saving...' : editingStaff ? 'Save Changes' : 'Add Staff'}
             </button>
           </div>
@@ -193,74 +222,88 @@ const StaffManagePage = () => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-        {staff.length === 0 && !loading && (
-          <div className="col-span-full py-16 text-center text-slate-500 bg-white rounded-2xl border border-slate-100 border-dashed">
-            <span className="text-4xl mb-3 block">👥</span>
-            <p className="font-medium text-slate-700">No staff members found.</p>
-            <p className="text-sm mt-1">Try adjusting filters or add a new staff member.</p>
+        {isFetching ? (
+          Array.from({ length: 3 }).map((_, i) => (
+             <div key={i} className="h-44 bg-surface rounded-2xl animate-pulse border border-border shadow-sm"></div>
+          ))
+        ) : staff.length === 0 && !loading ? (
+          <div className="col-span-full py-16 text-center text-muted-text bg-surface rounded-2xl border border-border flex flex-col items-center">
+            <span className="material-symbols-outlined text-4xl text-muted-text/30 mb-2">group</span>
+            <p className="font-medium text-on-surface text-lg">No staff members found.</p>
+            <p className="text-sm mt-1">Try adjusting filters or register a new staff member.</p>
           </div>
-        )}
-        {staff.map(s => (
-          <div key={s._id} className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+        ) : (
+          staff.map(s => (
+          <div key={s._id} className="bg-surface rounded-2xl p-5 border border-border shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
             <div>
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-primary/40 rounded-full flex items-center justify-center text-primary text-lg font-bold">
-                    {s.name.charAt(0)}
+                  <div className="w-10 h-10 bg-soft-primary rounded-full flex items-center justify-center text-primary text-[15px] font-bold">
+                    {s.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <h4 className="font-semibold text-slate-800">{s.name}</h4>
-                    <p className="text-xs text-slate-500">{s.phone}</p>
+                    <h4 className="font-semibold text-on-surface text-sm">{s.name}</h4>
+                    <p className="text-xs text-muted-text mt-0.5">{s.phone}</p>
                   </div>
                 </div>
-                <span className={`text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-full ${s.isActive ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>
+                <span className={`text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-full border ${s.isActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
                   {s.isActive ? 'Active' : 'Inactive'}
                 </span>
               </div>
               <div className="flex flex-wrap gap-1.5 mt-4">
                 {s.specializations?.map(sp => (
-                  <span key={sp} className="text-[10px] px-2.5 py-1 bg-slate-50 text-slate-600 border border-slate-100 rounded-md font-medium">
+                  <span key={sp} className="text-[10px] px-2.5 py-1 bg-background-alt text-muted-text border border-border rounded-md font-medium">
                     {sp}
                   </span>
                 ))}
-                {!s.specializations?.length && <span className="text-xs text-slate-400 italic">No specializations</span>}
+                {!s.specializations?.length && <span className="text-xs text-muted-text/60 italic">No specializations</span>}
               </div>
             </div>
             
-            <div className="mt-5 pt-4 border-t border-slate-50 grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <button onClick={() => openEditForm(s)} className="col-span-1 text-xs py-1.5 font-medium text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors">Edit</button>
-              <button onClick={() => openAvailability(s)} className="col-span-2 text-xs py-1.5 font-medium text-primary bg-soft-primary hover:bg-primary/20 rounded-lg transition-colors">Availability</button>
-              <button onClick={() => handleToggleStatus(s._id)} className={`col-span-1 text-xs py-1.5 font-medium rounded-lg transition-colors ${s.isActive ? 'text-red-500 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}`}>{s.isActive ? 'Disable' : 'Enable'}</button>
+            <div className="mt-5 pt-4 border-t border-border grid grid-cols-4 gap-2">
+              <button onClick={() => openEditForm(s)} title="Edit" className="col-span-1 py-1.5 font-medium text-muted-text hover:bg-surface-variant rounded-lg transition-colors flex items-center justify-center border border-border">
+                <span className="material-symbols-outlined text-[18px]">edit</span>
+              </button>
+              <button onClick={() => openAvailability(s)} className="col-span-2 text-xs py-1.5 font-semibold text-primary bg-soft-primary hover:bg-primary/20 rounded-lg transition-colors flex items-center justify-center gap-1 border border-primary/10">
+                <span className="material-symbols-outlined text-[16px]">schedule</span>
+                Availability
+              </button>
+              <button onClick={() => handleToggleStatus(s._id)} title={s.isActive ? 'Disable' : 'Enable'} className={`col-span-1 py-1.5 font-medium rounded-lg transition-colors border ${s.isActive ? 'border-error/20 text-error hover:bg-error/10' : 'border-success/20 text-success hover:bg-success/10'} flex items-center justify-center`}>
+                <span className="material-symbols-outlined text-[18px]">{s.isActive ? 'toggle_on' : 'toggle_off'}</span>
+              </button>
             </div>
           </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* Availability Modal */}
       {showAvailability && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl animate-fade-in">
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white rounded-t-3xl z-10">
+          <div className="bg-surface rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl animate-fade-in border border-border overflow-hidden">
+            <div className="px-6 py-5 border-b border-border flex items-center justify-between sticky top-0 bg-surface z-10">
               <div>
-                <h3 className="text-lg font-bold text-slate-800">Manage Availability</h3>
-                <p className="text-sm text-slate-500">{selectedStaffForAvailability?.name}</p>
+                <h3 className="text-lg font-bold text-on-surface">Manage Availability</h3>
+                <p className="text-sm text-muted-text mt-0.5">{selectedStaffForAvailability?.name}</p>
               </div>
-              <button onClick={() => setShowAvailability(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 transition-colors">✕</button>
+              <button onClick={() => setShowAvailability(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-variant text-muted-text transition-colors">
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
             </div>
             
             <div className="p-6 overflow-y-auto space-y-4">
               {DAYS.map((day, index) => {
                 const dayData = availabilityForm.find(d => d.dayOfWeek === index) || { dayOfWeek: index, isWorking: false, startTime: '10:00', endTime: '19:00' };
                 return (
-                  <div key={day} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border transition-colors ${dayData.isWorking ? 'border-primary/20 bg-primary/5' : 'border-slate-100 bg-slate-50'}`}>
+                  <div key={day} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border transition-colors ${dayData.isWorking ? 'border-primary/20 bg-soft-primary/20' : 'border-border bg-background-alt'}`}>
                     <div className="flex items-center gap-3 mb-3 sm:mb-0">
                       <input 
                         type="checkbox" 
                         checked={dayData.isWorking} 
                         onChange={(e) => handleAvailabilityChange(index, 'isWorking', e.target.checked)}
-                        className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary"
+                        className="w-5 h-5 rounded border-border text-primary focus:ring-primary"
                       />
-                      <span className={`font-semibold ${dayData.isWorking ? 'text-slate-800' : 'text-slate-400'}`}>{day}</span>
+                      <span className={`font-semibold ${dayData.isWorking ? 'text-on-surface' : 'text-muted-text/50'}`}>{day}</span>
                     </div>
                     
                     {dayData.isWorking ? (
@@ -269,27 +312,28 @@ const StaffManagePage = () => {
                           type="time" 
                           value={dayData.startTime}
                           onChange={(e) => handleAvailabilityChange(index, 'startTime', e.target.value)}
-                          className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm focus:border-primary outline-none"
+                          className="px-3 py-1.5 bg-surface text-on-surface rounded-lg border border-border text-sm focus:border-primary outline-none shadow-sm"
                         />
-                        <span className="text-slate-400">to</span>
+                        <span className="text-muted-text">to</span>
                         <input 
                           type="time" 
                           value={dayData.endTime}
                           onChange={(e) => handleAvailabilityChange(index, 'endTime', e.target.value)}
-                          className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm focus:border-primary outline-none"
+                          className="px-3 py-1.5 bg-surface text-on-surface rounded-lg border border-border text-sm focus:border-primary outline-none shadow-sm"
                         />
                       </div>
                     ) : (
-                      <span className="text-sm text-slate-400 font-medium px-4">Not Working</span>
+                      <span className="text-sm text-muted-text/55 font-medium px-4">Not Scheduled</span>
                     )}
                   </div>
                 );
               })}
             </div>
             
-            <div className="px-6 py-5 border-t border-slate-100 flex justify-end gap-3 rounded-b-3xl bg-slate-50">
-              <button onClick={() => setShowAvailability(false)} className="px-6 py-2.5 font-medium text-slate-600 hover:bg-slate-200 bg-slate-200/50 rounded-xl transition-colors">Cancel</button>
-              <button onClick={handleSaveAvailability} disabled={saving} className="px-8 py-2.5 font-medium text-white bg-primary hover:bg-primary-dark rounded-xl transition-colors disabled:opacity-50 shadow-sm shadow-primary/20">
+            <div className="px-6 py-5 border-t border-border flex justify-end gap-3 bg-background-alt">
+              <button onClick={() => setShowAvailability(false)} className="px-6 py-2.5 font-medium text-muted-text hover:bg-surface-variant rounded-xl transition-colors">Cancel</button>
+              <button onClick={handleSaveAvailability} disabled={saving} className="px-8 py-2.5 font-semibold text-white bg-primary hover:bg-primary-dark rounded-xl transition-colors disabled:opacity-50 shadow-sm flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[18px]">save</span>
                 {saving ? 'Saving...' : 'Save Schedule'}
               </button>
             </div>

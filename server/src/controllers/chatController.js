@@ -2,10 +2,19 @@ const chatService = require('../services/chatService');
 
 const initiateChat = async (req, res, next) => {
   try {
-    const { recipientId, recipientRole, chatType } = req.body;
+    let { recipientId, recipientRole, chatType, salonId } = req.body;
+    
+    if (chatType === 'user-admin' && recipientRole === 'admin' && !recipientId) {
+      const admin = await require('../models/User').findOne({ role: 'admin' });
+      if (!admin) {
+        return res.status(404).json({ success: false, message: 'No admin available' });
+      }
+      recipientId = admin._id;
+    }
+
     const participant1 = { userId: req.user.id, role: req.user.role };
     const participant2 = { userId: recipientId, role: recipientRole };
-    const chat = await chatService.getOrCreateChat(participant1, participant2, chatType);
+    const chat = await chatService.getOrCreateChat(participant1, participant2, chatType, salonId);
     res.json({ success: true, data: chat });
   } catch (error) { next(error); }
 };

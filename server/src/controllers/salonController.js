@@ -4,6 +4,32 @@ const Staff = require('../models/Staff');
 const Package = require('../models/Package');
 const Offer = require('../models/Offer');
 const Category = require('../models/Category');
+const AppSetting = require('../models/AppSetting');
+
+const { processAndStoreImage, deleteImageSafe } = require('../services/imageService');
+
+// Helper function to attach the minimum valid service price to a list of salons
+const attachMinServicePrices = async (salons) => {
+  if (!salons || salons.length === 0) return salons;
+
+  const salonIds = salons.map(s => s._id);
+
+  const minPrices = await Service.aggregate([
+    { $match: { salon: { $in: salonIds }, isActive: true } },
+    { $group: { _id: '$salon', minPrice: { $min: '$price' } } }
+  ]);
+
+  const priceMap = {};
+  minPrices.forEach(p => {
+    priceMap[p._id.toString()] = p.minPrice;
+  });
+
+  return salons.map(salon => {
+    const salonObj = salon.toObject ? salon.toObject() : salon;
+    salonObj.minServicePrice = priceMap[salon._id.toString()] || null;
+    return salonObj;
+  });
+};
 
 // @desc    Create salon (Vendor)
 const createSalon = async (req, res, next) => {
@@ -12,6 +38,12 @@ const createSalon = async (req, res, next) => {
     if (req.body.latitude && req.body.longitude) {
       salonData.location = { type: 'Point', coordinates: [parseFloat(req.body.longitude), parseFloat(req.body.latitude)] };
     }
+    
+    if (req.file) {
+      const filename = await processAndStoreImage(req.file.buffer, 'salon');
+      salonData.images = [filename];
+    }
+
     const salon = await Salon.create(salonData);
     res.status(201).json({ success: true, message: 'Salon created successfully', data: salon });
   } catch (error) { next(error); }
@@ -65,18 +97,24 @@ const getSalons = async (req, res, next) => {
       }
     }
 
-    const salons = await Salon.find(query).sort({ 'ratings.average': -1, createdAt: -1 }).skip((page - 1) * limit).limit(parseInt(limit));
+    const salons = await Salon.find(query).sort({ createdAt: -1, 'ratings.average': -1 }).skip((page - 1) * limit).limit(parseInt(limit));
+    const salonsWithPrices = await attachMinServicePrices(salons);
     const total = await Salon.countDocuments(query);
 
-    res.json({ success: true, data: { salons, total, page: parseInt(page), totalPages: Math.ceil(total / limit) } });
+    res.json({ success: true, data: { salons: salonsWithPrices, total, page: parseInt(page), totalPages: Math.ceil(total / limit) } });
   } catch (error) { next(error); }
 };
 
 // @desc    Get nearby salons (geospatial)
 const getNearbySalons = async (req, res, next) => {
   try {
-    const { lat, lng, radius = 10000, page = 1, limit = 20, category, search } = req.query;
+    const { lat, lng, page = 1, limit = 20, category, search } = req.query;
     if (!lat || !lng) return res.status(400).json({ success: false, message: 'Latitude and longitude are required' });
+
+    // Fetch dynamic search radius from AppSetting (default to 50 KM)
+    const radiusSetting = await AppSetting.findOne({ key: 'salonSearchRadius' }).lean();
+    const radiusInKm = radiusSetting ? parseFloat(radiusSetting.value) : 50;
+    const maxDistanceInMeters = radiusInKm * 1000;
 
     const query = {
       isActive: true,
@@ -84,7 +122,7 @@ const getNearbySalons = async (req, res, next) => {
       location: {
         $nearSphere: {
           $geometry: { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] },
-          $maxDistance: parseInt(radius),
+          $maxDistance: maxDistanceInMeters,
         },
       },
     };
@@ -121,8 +159,9 @@ const getNearbySalons = async (req, res, next) => {
     }
 
     const salons = await Salon.find(query).skip((page - 1) * limit).limit(parseInt(limit));
+    const salonsWithPrices = await attachMinServicePrices(salons);
 
-    res.json({ success: true, data: { salons, page: parseInt(page) } });
+    res.json({ success: true, data: { salons: salonsWithPrices, page: parseInt(page) } });
   } catch (error) { next(error); }
 };
 
@@ -166,9 +205,10 @@ const getSalonsByCity = async (req, res, next) => {
     }
 
     const salons = await Salon.find(query).sort({ 'ratings.average': -1 }).skip((page - 1) * limit).limit(parseInt(limit));
+    const salonsWithPrices = await attachMinServicePrices(salons);
     const total = await Salon.countDocuments(query);
 
-    res.json({ success: true, data: { salons, total, page: parseInt(page), totalPages: Math.ceil(total / limit) } });
+    res.json({ success: true, data: { salons: salonsWithPrices, total, page: parseInt(page), totalPages: Math.ceil(total / limit) } });
   } catch (error) { next(error); }
 };
 
@@ -203,6 +243,18 @@ const updateSalon = async (req, res, next) => {
       updateData.location = { type: 'Point', coordinates: [parseFloat(req.body.longitude), parseFloat(req.body.latitude)] };
     }
 
+    if (req.file) {
+      const filename = await processAndStoreImage(req.file.buffer, 'salon');
+      const oldImages = salon.images;
+      updateData.images = [filename];
+      
+      if (oldImages && oldImages.length > 0) {
+        oldImages.forEach(img => {
+          if (!img.startsWith('data:')) deleteImageSafe(img);
+        });
+      }
+    }
+
     const updated = await Salon.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
     res.json({ success: true, message: 'Salon updated', data: updated });
   } catch (error) { next(error); }
@@ -212,7 +264,8 @@ const updateSalon = async (req, res, next) => {
 const getVendorSalons = async (req, res, next) => {
   try {
     const salons = await Salon.find({ vendor: req.user.id }).sort({ createdAt: -1 });
-    res.json({ success: true, data: salons });
+    const salonsWithPrices = await attachMinServicePrices(salons);
+    res.json({ success: true, data: salonsWithPrices });
   } catch (error) { next(error); }
 };
 
@@ -225,9 +278,10 @@ const getAllSalons = async (req, res, next) => {
     if (isApproved !== undefined) query.isApproved = isApproved === 'true';
 
     const salons = await Salon.find(query).populate('vendor', 'name businessName').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(parseInt(limit));
+    const salonsWithPrices = await attachMinServicePrices(salons);
     const total = await Salon.countDocuments(query);
 
-    res.json({ success: true, data: { salons, total, page: parseInt(page), totalPages: Math.ceil(total / limit) } });
+    res.json({ success: true, data: { salons: salonsWithPrices, total, page: parseInt(page), totalPages: Math.ceil(total / limit) } });
   } catch (error) { next(error); }
 };
 

@@ -5,6 +5,7 @@ import { useNotifications } from '../../../context/NotificationContext';
 import { getPendingCounts } from '../services/adminApi';
 import NotificationDropdown from '../components/NotificationDropdown';
 import { useSettings } from '../../../context/SettingContext';
+import { getImageUrl } from '../../../utils/imageUtils';
 
 const AdminLayout = () => {
   const { admin: user, logout } = useAuth();
@@ -54,7 +55,8 @@ const AdminLayout = () => {
     { to: '/admin/categories', label: 'Categories', icon: 'category' },
     { to: '/admin/services', label: 'Services', icon: 'cut' },
     { to: '/admin/bookings', label: 'Bookings', icon: 'calendar_today', count: pendingCounts.bookings },
-    { to: '/admin/packages', label: 'Packages & Offers', icon: 'redeem', count: pendingCounts.packages + pendingCounts.offers },
+    { to: '/admin/packages', label: 'Packages', icon: 'inventory_2', count: pendingCounts.packages },
+    { to: '/admin/offers', label: 'Offers', icon: 'local_offer', count: pendingCounts.offers },
     { to: '/admin/subscriptions', label: 'Subscriptions', icon: 'workspace_premium' },
     { to: '/admin/coupons', label: 'Coupons', icon: 'local_activity' },
     { to: '/admin/banners', label: 'Banners', icon: 'view_carousel' },
@@ -151,7 +153,7 @@ const AdminLayout = () => {
             <NavLink to="/admin/profile" className="hidden sm:flex items-center gap-2 pl-2 border-l border-border hover:bg-surface-variant p-1 pr-3 rounded-full transition-colors">
                {!avatarError && user?.avatar ? (
                  <img 
-                   src={`${baseUrl}/uploads/${user.avatar}`} 
+                   src={user.avatar.startsWith('data:') ? user.avatar : getImageUrl(user.avatar)} 
                    alt="Profile" 
                    onError={() => setAvatarError(true)}
                    className="w-8 h-8 rounded-full object-cover shrink-0 border border-border"
