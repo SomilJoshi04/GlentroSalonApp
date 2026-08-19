@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { getComplexAvailability } from '../../services/userApi';
-import Loader from '../../../../components/common/Loader';
 import { goBack } from '../../../../utils/navigation';
+import { Skeleton, SkeletonText } from '../../../../components/common/Skeleton';
 
 const BookingPage = () => {
   const { id: salonId } = useParams();
   const { state } = useLocation();
   const navigate = useNavigate();
-  
+
   const salon = state?.salon;
   const selectedServices = state?.selectedServices || [];
   const availableStaff = state?.staff || [];
-  
+
   const [serviceStaff, setServiceStaff] = useState(state?.serviceStaff || {});
   const [date, setDate] = useState(state?.date || '');
   const [time, setTime] = useState(state?.time || '');
@@ -68,7 +68,10 @@ const BookingPage = () => {
   const handleProceed = () => {
     if (!date || !time) return;
     navigate(`/salon/${salonId}/checkout`, {
-      state: { salon, selectedServices, staff: availableStaff, serviceStaff, date, time }
+      state: { 
+        salon, selectedServices, staff: availableStaff, serviceStaff, date, time, 
+        packageId: state?.packageId, packageDoc: state?.packageDoc 
+      }
     });
   };
 
@@ -89,7 +92,7 @@ const BookingPage = () => {
 
       // Filter out past slots dynamically
       if (isToday && slotMinutes <= currentMinutes) {
-        return; 
+        return;
       }
 
       if (slot === time) isSelectedTimeStillValid = true;
@@ -108,7 +111,7 @@ const BookingPage = () => {
   };
 
   const { morning, afternoon, evening } = groupSlots();
-  
+
   // Calculate if we have any valid slots left after real-time filtering
   const hasValidSlots = morning.length > 0 || afternoon.length > 0 || evening.length > 0;
 
@@ -121,7 +124,7 @@ const BookingPage = () => {
   };
 
   return (
-    <div className="bg-background min-h-screen text-on-surface pb-28 md:max-w-md md:mx-auto relative shadow-2xl">
+    <div className="bg-background min-h-screen text-on-surface pb-[180px] w-full max-w-container-max mx-auto relative">
       {/* Transactional Header */}
       <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-md px-4 md:px-margin-desktop py-4 flex items-center justify-between border-b border-border shadow-sm">
         <button onClick={() => goBack(navigate, `/salon/${salonId}`)} className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-variant text-on-surface hover:bg-surface-container-high transition-colors -ml-2">
@@ -131,10 +134,10 @@ const BookingPage = () => {
         <div className="w-10"></div>
       </header>
 
-      <main className="pt-4 px-4 md:px-margin-desktop">
+      <main className="pt-4">
         {/* Staff Selection (Optional) */}
         {availableStaff.length > 0 && selectedServices.map(s => (
-          <section key={s._id} className="mb-6">
+          <section key={s._id} className="mb-6 px-4 md:px-margin-desktop">
             <p className="font-label-sm text-[12px] text-muted-text uppercase tracking-wider mb-2">Staff for {s.name}</p>
             <div className="flex items-center gap-4 p-4 rounded-xl border border-border bg-white shadow-sm">
               <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 border border-border bg-surface-variant flex items-center justify-center">
@@ -161,16 +164,16 @@ const BookingPage = () => {
         ))}
 
         {/* Horizontal Date Picker */}
-        <section className="mb-8 -mx-4 md:mx-0">
-          <div className="px-4 flex justify-between items-end mb-4">
+        <section className="mb-8">
+          <div className="px-4 md:px-margin-desktop flex justify-between items-end mb-4">
             <h3 className="font-headline-sm text-[20px] text-on-surface">Select Date</h3>
           </div>
-          <div className="flex overflow-x-auto gap-3 px-4 pb-2 hide-scrollbar">
+          <div className="flex overflow-x-auto gap-3 px-4 md:px-margin-desktop pb-2 hide-scrollbar">
             {dates.map(d => {
               const dateStr = d.toISOString().split('T')[0];
               const isSelected = date === dateStr;
               return (
-                <button 
+                <button
                   key={dateStr}
                   onClick={() => { setDate(dateStr); setTime(''); }}
                   className={`flex flex-col items-center justify-center w-[64px] h-[84px] shrink-0 rounded-[18px] transition-transform active:scale-95 shadow-sm border ${isSelected ? 'bg-primary text-white border-primary shadow-md transform scale-[1.02]' : 'bg-white border-border text-on-surface hover:bg-soft-primary'}`}
@@ -186,13 +189,30 @@ const BookingPage = () => {
         </section>
 
         {/* Time Slots Grid */}
-        <section className="flex flex-col gap-6">
+        <section className="flex flex-col gap-6 px-4 md:px-margin-desktop">
           {!date ? (
-             <div className="text-center py-8 text-muted-text bg-surface-variant/30 rounded-xl border border-dashed border-border">
-               Please select a date to view available times
-             </div>
+            <div className="text-center py-8 text-muted-text bg-surface-variant/30 rounded-xl border border-dashed border-border">
+              Please select a date to view available times
+            </div>
           ) : slotsLoading ? (
-            <Loader text="Loading slots..." />
+            <div className="flex flex-col gap-6">
+              <div>
+                <SkeletonText lines={1} className="w-24 mb-3" lineClassName="h-4" />
+                <div className="grid grid-cols-3 gap-3">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Skeleton key={i} className="h-12 rounded-xl" />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <SkeletonText lines={1} className="w-24 mb-3 mt-2" lineClassName="h-4" />
+                <div className="grid grid-cols-3 gap-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-12 rounded-xl" />
+                  ))}
+                </div>
+              </div>
+            </div>
           ) : !hasValidSlots ? (
             <div className="text-center py-8 text-muted-text bg-surface-variant/30 rounded-xl border border-dashed border-border">
               No available time slots for this date
@@ -250,8 +270,8 @@ const BookingPage = () => {
       </main>
 
       {/* Sticky Footer CTA */}
-      <div className="fixed bottom-[72px] md:bottom-0 left-0 w-full md:w-full md:max-w-md md:left-1/2 md:-translate-x-1/2 bg-surface/95 backdrop-blur-xl border-t border-border p-4 pb-6 shadow-elevated z-40">
-        <button 
+      <div className="fixed bottom-[72px] md:bottom-0 left-0 w-full max-w-container-max md:left-1/2 md:-translate-x-1/2 bg-surface/95 backdrop-blur-xl border-t border-border p-4 pb-6 shadow-elevated z-40">
+        <button
           onClick={handleProceed}
           disabled={!date || !time}
           className="w-full bg-primary text-white py-4 rounded-xl font-label-md text-[16px] shadow-sm active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"

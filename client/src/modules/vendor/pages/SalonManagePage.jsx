@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { getVendorSalons, createSalon, updateSalon } from '../services/vendorApi';
 import LocationPicker from '../../../components/common/LocationPicker';
 import ImageUpload from '../../../components/common/ImageUpload';
+import Modal from '../../../components/common/Modal';
 import toast from 'react-hot-toast';
+import { getImageUrl } from '../../../utils/imageUtils';
 
 const SalonManagePage = () => {
   const [salons, setSalons] = useState([]);
@@ -77,10 +79,13 @@ const SalonManagePage = () => {
         </button>
       </div>
 
-      {showForm && (
-        <form onSubmit={handleSubmit} className="bg-surface rounded-2xl p-6 border border-border space-y-5 animate-fade-in shadow-sm">
-          <h3 className="font-semibold text-lg text-on-surface">{editingSalon ? 'Edit Salon Profile' : 'Register New Salon'}</h3>
-          
+      <Modal 
+        isOpen={showForm} 
+        onClose={() => { setShowForm(false); setEditingSalon(null); setImageFile(null); }}
+        title={editingSalon ? 'Edit Salon Profile' : 'Register New Salon'}
+        size="lg"
+      >
+        <form onSubmit={handleSubmit} className="space-y-5 max-h-[80vh] overflow-y-auto px-2 pb-4 hide-scrollbar">
           <div className="mb-4 p-4 border border-border rounded-xl bg-background-alt">
             <h4 className="text-sm font-medium text-on-surface mb-3 flex items-center gap-1.5">
               <span className="material-symbols-outlined text-[18px] text-muted-text">image</span>
@@ -152,19 +157,33 @@ const SalonManagePage = () => {
             <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} rows={3}
               className="w-full px-3 py-2.5 bg-surface text-on-surface rounded-xl border border-border text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none shadow-sm" />
           </div>
-          <button type="submit" disabled={saving} className="px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 shadow-sm flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[18px]">save</span>
-            {saving ? 'Saving...' : editingSalon ? 'Update Salon' : 'Register Salon'}
-          </button>
+          
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border mt-4">
+            <button 
+              type="button" 
+              onClick={() => { setShowForm(false); setEditingSalon(null); setImageFile(null); }}
+              className="px-6 py-2.5 bg-surface-variant text-on-surface rounded-xl text-sm font-medium hover:bg-surface-variant-hover transition-colors shadow-sm"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              disabled={saving} 
+              className="px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 shadow-sm flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-[18px]">save</span>
+              {saving ? 'Saving...' : editingSalon ? 'Update Salon' : 'Register Salon'}
+            </button>
+          </div>
         </form>
-      )}
+      </Modal>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {salons.map(s => (
           <div key={s._id} className="bg-surface rounded-2xl p-5 border border-border hover:shadow-md transition-all flex flex-col sm:flex-row gap-4 shadow-sm">
             <div className="w-full sm:w-24 h-24 rounded-xl bg-background-alt border border-border overflow-hidden shrink-0">
               {s.images?.[0] ? (
-                <img src={s.images[0].startsWith('http') || s.images[0].startsWith('data:') ? s.images[0] : `${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}/uploads/${s.images[0]}`} alt={s.name} className="w-full h-full object-cover" />
+                <img src={getImageUrl(s.images[0])} alt={s.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-muted-text/40"><span className="material-symbols-outlined text-3xl">storefront</span></div>
               )}

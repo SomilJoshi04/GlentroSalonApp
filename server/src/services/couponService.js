@@ -3,7 +3,7 @@ const Coupon = require('../models/Coupon');
 /**
  * Validate a coupon code
  */
-const validateCoupon = async (code, orderAmount) => {
+const validateCoupon = async (code, orderAmount, packageId = null) => {
   const coupon = await Coupon.findOne({ code: code.toUpperCase() });
 
   if (!coupon) {
@@ -22,6 +22,10 @@ const validateCoupon = async (code, orderAmount) => {
     throw new Error('Coupon has expired');
   }
 
+  if (packageId && coupon.applicableToOffers === false) {
+    throw new Error('This coupon is not applicable to discounted offers or packages');
+  }
+
   if (coupon.usageLimit !== null && coupon.usedCount >= coupon.usageLimit) {
     throw new Error('Coupon usage limit reached');
   }
@@ -36,8 +40,8 @@ const validateCoupon = async (code, orderAmount) => {
 /**
  * Apply coupon and calculate discount
  */
-const applyCoupon = async (code, orderAmount) => {
-  const coupon = await validateCoupon(code, orderAmount);
+const applyCoupon = async (code, orderAmount, packageId = null) => {
+  const coupon = await validateCoupon(code, orderAmount, packageId);
 
   let discount = 0;
   if (coupon.discountType === 'percentage') {

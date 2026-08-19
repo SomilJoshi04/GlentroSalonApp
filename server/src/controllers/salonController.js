@@ -2,7 +2,6 @@ const Salon = require('../models/Salon');
 const Service = require('../models/Service');
 const Staff = require('../models/Staff');
 const Package = require('../models/Package');
-const Offer = require('../models/Offer');
 const Category = require('../models/Category');
 const AppSetting = require('../models/AppSetting');
 
@@ -221,9 +220,8 @@ const getSalonById = async (req, res, next) => {
     const services = await Service.find({ salon: salon._id, isActive: true }).populate('category', 'name').populate('subcategory', 'name');
     const staff = await Staff.find({ salon: salon._id, isActive: true });
     const packages = await Package.find({ salon: salon._id, status: 'ACTIVE', isActive: true }).populate('services');
-    const offers = await Offer.find({ salon: salon._id, status: 'ACTIVE', isActive: true, validTo: { $gte: new Date() } });
 
-    res.json({ success: true, data: { salon, services, staff, packages, offers } });
+    res.json({ success: true, data: { salon, services, staff, packages } });
   } catch (error) { next(error); }
 };
 

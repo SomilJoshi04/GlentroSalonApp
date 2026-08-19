@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   getSalonById, 
-  checkFavorite, 
-  toggleFavorite, 
-  getSalonReviews
+  getSalonReviews,
+  getPackages
 } from '../../services/userApi';
 import { useAuth } from '../../../../context/AuthContext';
 import { goBack } from '../../../../utils/navigation';
@@ -12,6 +11,9 @@ import Loader from '../../../../components/common/Loader';
 import { getImageUrl } from '../../../../utils/imageUtils';
 import toast from 'react-hot-toast';
 import Button from '../../../../components/common/Button';
+import { SalonDetailSkeleton } from '../../components/skeletons/SalonDetailSkeleton';
+import { Skeleton, SkeletonAvatar, SkeletonText } from '../../../../components/common/Skeleton';
+import { useFavorites } from '../../../../context/FavoriteContext';
 
 const SalonDetailPage = () => {
   const { id } = useParams();
@@ -20,13 +22,14 @@ const SalonDetailPage = () => {
   
   const [salon, setSalon] = useState(null);
   const [services, setServices] = useState([]);
+  const [packages, setPackages] = useState([]);
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('services');
   const [selectedServices, setSelectedServices] = useState([]);
   
   // Favorites State
-  const [isFavorite, setIsFavorite] = useState(false);
+  const { isFavorite, toggleFavoriteStatus } = useFavorites();
   const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
 
   // Reviews State
@@ -35,10 +38,7 @@ const SalonDetailPage = () => {
 
   useEffect(() => { 
     loadSalon(); 
-    if (user) {
-      loadFavoriteStatus();
-    }
-  }, [id, user]);
+  }, [id]);
 
   useEffect(() => {
     if (activeTab === 'reviews') {
@@ -53,20 +53,17 @@ const SalonDetailPage = () => {
       setSalon(s); 
       setServices(svc); 
       setStaff(st);
+
+      // Load packages (offers)
+      const pkgsRes = await getPackages({ salon: id, status: 'ACTIVE', isActive: true, checkValidity: true });
+      setPackages(pkgsRes.data.data.packages);
     } catch (e) { 
       console.error(e); 
     }
     setLoading(false);
   };
 
-  const loadFavoriteStatus = async () => {
-    try {
-      const res = await checkFavorite(id);
-      setIsFavorite(res.data.data.isFavorite);
-    } catch (e) {
-      console.error('Failed to check favorite status', e);
-    }
-  };
+
 
   const loadReviews = async () => {
     setReviewsLoading(true);
@@ -81,27 +78,9 @@ const SalonDetailPage = () => {
   };
 
   const handleToggleFavorite = async () => {
-    if (!user) {
-      toast.error('Please login to save salons to your favourites.');
-      return;
-    }
-
-    // Optimistic Update
-    const previousState = isFavorite;
-    setIsFavorite(!isFavorite);
     setIsFavoriteLoading(true);
-
-    try {
-      const res = await toggleFavorite(id);
-      setIsFavorite(res.data.data.isFavorite);
-      toast.success(res.data.message);
-    } catch (e) {
-      // Revert optimistic update
-      setIsFavorite(previousState);
-      toast.error('Unable to update favourites. Please try again.');
-    } finally {
-      setIsFavoriteLoading(false);
-    }
+    await toggleFavoriteStatus(id);
+    setIsFavoriteLoading(false);
   };
 
   const toggleService = (service) => {
@@ -112,13 +91,13 @@ const SalonDetailPage = () => {
 
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
 
-  if (loading) return <Loader text="Loading salon details..." />;
+  if (loading) return <SalonDetailSkeleton />;
   if (!salon) return <div className="text-center py-20 bg-background min-h-screen pt-32"><h2 className="text-[20px] font-semibold text-on-surface">Salon not found</h2></div>;
 
   return (
     <div className="bg-background text-on-background font-body-md antialiased overflow-x-hidden min-h-screen">
       {/* Main Container */}
-      <main className="relative w-full max-w-[480px] md:max-w-[768px] mx-auto bg-background pb-[100px] shadow-2xl min-h-screen">
+      <main className="relative w-full max-w-container-max mx-auto bg-background pb-[100px] shadow-2xl min-h-screen">
         {/* Hero Section */}
         <section className="relative h-[320px] w-full bg-surface-variant">
           <img 
@@ -134,21 +113,24 @@ const SalonDetailPage = () => {
               <span className="material-symbols-outlined">arrow_back</span>
             </button>
             <div className="flex gap-3">
-              <button 
-                onClick={handleToggleFavorite}
-                disabled={isFavoriteLoading}
-                className={`w-10 h-10 rounded-full bg-surface/90 backdrop-blur-sm flex items-center justify-center shadow-sm transition-colors ${isFavorite ? 'text-error' : 'text-on-surface hover:text-error'}`}
-              >
-                <span className="material-symbols-outlined" style={{fontVariationSettings: isFavorite ? "'FILL' 1" : "'FILL' 0"}}>
-                  {isFavorite ? 'favorite' : 'favorite_border'}
-                </span>
-              </button>
+                <button 
+                  onClick={handleToggleFavorite}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-sm ${
+                    isFavorite(id)
+                      ? 'bg-red-500 text-white border-transparent' 
+                      : 'bg-white text-muted-text border border-border hover:bg-surface-variant hover:text-red-500'
+                  } disabled:opacity-50`}
+                >
+                  <span className="material-symbols-outlined" style={{ fontVariationSettings: isFavorite(id) ? "'FILL' 1" : "'FILL' 0", color: isFavorite(id) ? 'white' : 'inherit' }}>
+                    favorite
+                  </span>
+                </button>
             </div>
           </div>
         </section>
 
         {/* Content Canvas (Overlapping Hero) */}
-        <div className="relative -mt-10 bg-background rounded-t-[32px] pt-8 px-4 flex flex-col gap-8 z-20">
+        <div className="relative -mt-10 bg-background rounded-t-[32px] pt-8 px-4 md:px-margin-desktop flex flex-col gap-8 z-20">
           {/* Salon Header */}
           <header className="flex flex-col gap-4">
             <div className="flex justify-between items-start">
@@ -193,8 +175,71 @@ const SalonDetailPage = () => {
 
           {/* Tab Content: Services */}
           {activeTab === 'services' && (
-            <section className="animate-fade-in space-y-4">
-              {services.length === 0 ? <p className="text-center text-muted-text py-8">No services available</p> : 
+            <section className="animate-fade-in space-y-6">
+              {packages.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="font-headline-sm text-[20px] font-bold text-on-surface flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary">local_offer</span>
+                    Offers & Packages
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {packages.map(pkg => (
+                      <div key={pkg._id} className="bg-surface rounded-2xl p-5 border border-border shadow-sm flex flex-col justify-between">
+                        <div>
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-bold text-on-surface text-[18px]">{pkg.name}</h4>
+                            <span className="text-xs font-semibold text-success bg-success/10 px-2.5 py-1 rounded-lg shrink-0">
+                              Save ₹{pkg.totalPrice - pkg.discountedPrice}
+                            </span>
+                          </div>
+                          
+                          {pkg.description && <p className="text-sm text-muted-text mb-4 line-clamp-2">{pkg.description}</p>}
+                          
+                          <div className="space-y-2 mb-5">
+                            <p className="text-[12px] font-bold text-muted-text uppercase tracking-wider">Includes:</p>
+                            <div className="flex flex-col gap-1.5">
+                              {pkg.services?.map(s => (
+                                <div key={s._id} className="flex justify-between items-center text-sm">
+                                  <span className="text-on-surface">• {s.name}</span>
+                                  <span className="text-muted-text line-through text-xs">₹{s.price}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-end justify-between pt-4 border-t border-border mt-auto">
+                          <div>
+                            <p className="text-xs text-muted-text mb-0.5">Offer Price</p>
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-[22px] font-bold text-primary">₹{pkg.discountedPrice}</span>
+                              <span className="text-sm text-muted-text line-through">₹{pkg.totalPrice}</span>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => navigate(`/salon/${salon._id}/book`, {
+                              state: { 
+                                salon, 
+                                selectedServices: pkg.services, 
+                                staff, 
+                                packageId: pkg._id,
+                                packageDoc: pkg 
+                              }
+                            })}
+                            className="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm whitespace-nowrap"
+                          >
+                            Book Offer
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-4 pt-2">
+                <h3 className="font-headline-sm text-[20px] font-bold text-on-surface">All Services</h3>
+                {services.length === 0 ? <p className="text-center text-muted-text py-8">No services available</p> : 
                 services.map(service => {
                   const isSelected = selectedServices.some(s => s._id === service._id);
                   return (
@@ -222,6 +267,7 @@ const SalonDetailPage = () => {
                   )
                 })
               }
+              </div>
             </section>
           )}
 
@@ -286,7 +332,18 @@ const SalonDetailPage = () => {
                 <h3 className="font-headline-sm text-[20px] font-semibold text-on-surface">Customer Reviews</h3>
                 
                 {reviewsLoading ? (
-                  <div className="flex justify-center py-8"><Loader size="sm" /></div>
+                  <div className="flex flex-col gap-4">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="bg-surface border border-border rounded-xl p-4 shadow-sm flex gap-3">
+                        <SkeletonAvatar size="w-10 h-10" className="shrink-0" />
+                        <div className="flex flex-col w-full gap-2">
+                          <SkeletonText lines={1} className="w-1/3" lineClassName="h-4" />
+                          <SkeletonText lines={1} className="w-1/4" lineClassName="h-3" />
+                          <SkeletonText lines={2} className="w-full mt-2" lineClassName="h-3.5" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 ) : reviews.length === 0 ? (
                   <p className="font-body-sm text-[14px] text-muted-text text-center py-8 bg-surface-variant rounded-xl border border-dashed border-border">
                     No reviews yet. Book an appointment to be the first!
@@ -336,7 +393,7 @@ const SalonDetailPage = () => {
       {/* Sticky Bottom CTA */}
       {selectedServices.length > 0 && (
         <div className="fixed bottom-[72px] md:bottom-0 left-0 w-full bg-surface border-t border-border shadow-[0_-10px_30px_rgba(109,62,168,0.08)] z-40 flex justify-center pb-safe">
-          <div className="w-full max-w-[480px] md:max-w-[768px] px-4 py-4 flex justify-between items-center bg-surface">
+          <div className="w-full max-w-container-max px-4 py-4 flex justify-between items-center bg-surface">
             <div className="flex flex-col">
               <span className="font-label-sm text-[12px] text-muted-text">{selectedServices.length} service{selectedServices.length > 1 ? 's' : ''} selected</span>
               <span className="font-headline-sm text-[20px] font-bold text-on-surface mt-0.5">₹{totalPrice}</span>

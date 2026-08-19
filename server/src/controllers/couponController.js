@@ -54,8 +54,8 @@ const toggleCouponStatus = async (req, res, next) => {
 
 const validateCoupon = async (req, res, next) => {
   try {
-    const { code, amount } = req.body;
-    const result = await couponService.applyCoupon(code, amount);
+    const { code, amount, packageId } = req.body;
+    const result = await couponService.applyCoupon(code, amount, packageId);
     res.json({ success: true, data: result });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });

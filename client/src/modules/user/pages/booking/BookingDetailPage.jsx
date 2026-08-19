@@ -4,6 +4,7 @@ import { getBookingById, cancelBooking } from '../../services/userApi';
 import { goBack } from '../../../../utils/navigation';
 import Button from '../../../../components/common/Button';
 import Loader from '../../../../components/common/Loader';
+import { Skeleton, SkeletonText } from '../../../../components/common/Skeleton';
 import Modal from '../../../../components/common/Modal';
 import PageHeader from '../../../../components/common/PageHeader';
 
@@ -100,7 +101,23 @@ const BookingDetailPage = () => {
     }
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return (
+    <div className="max-w-2xl mx-auto space-y-6 animate-fade-in w-full px-4 pt-4 pb-[100px]">
+      <div className="flex items-center gap-4 mb-4">
+        <Skeleton className="w-10 h-10 rounded-full" />
+        <SkeletonText lines={1} className="w-32" lineClassName="h-6" />
+      </div>
+      <Skeleton className="w-full h-32 rounded-2xl" />
+      <Skeleton className="w-full h-24 rounded-2xl" />
+      <Skeleton className="w-full h-24 rounded-2xl" />
+      <Skeleton className="w-full h-40 rounded-2xl" />
+      <Skeleton className="w-full h-48 rounded-2xl" />
+      <div className="flex gap-3">
+        <Skeleton className="flex-1 h-12 rounded-xl" />
+        <Skeleton className="flex-1 h-12 rounded-xl" />
+      </div>
+    </div>
+  );
   if (!booking) return <div className="text-center py-20"><h2>Booking not found</h2></div>;
 
   const canCancel = ['PENDING', 'CONFIRMED'].includes(booking.status);

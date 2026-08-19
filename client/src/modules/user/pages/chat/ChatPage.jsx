@@ -5,7 +5,7 @@ import { useSocket } from '../../../../context/SocketContext';
 import { useAuth } from '../../../../context/AuthContext';
 import { goBack } from '../../../../utils/navigation';
 import Button from '../../../../components/common/Button';
-import Loader from '../../../../components/common/Loader';
+import { ChatSkeleton } from '../../components/skeletons/ChatSkeleton';
 
 const ChatPage = () => {
   const { chatId } = useParams();
@@ -85,7 +85,7 @@ const ChatPage = () => {
     typingTimeout.current = setTimeout(() => { socket?.emit('chat:stop-typing', { chatId }); }, 2000);
   };
 
-  if (loading) return <Loader />;
+  if (loading) return <ChatSkeleton />;
 
   const isAdminChat = chatDetails?.chatType === 'user-admin';
   const otherParticipant = chatDetails?.participants?.find(p => p.role === (isAdminChat ? 'admin' : 'vendor'));
@@ -94,7 +94,7 @@ const ChatPage = () => {
   const displayId = chatDetails?.chatDisplayId || `CHAT-${chatId.slice(-6).toUpperCase()}`;
 
   return (
-    <div className="flex flex-col h-[100dvh] sm:h-[calc(100vh-120px)] animate-fade-in max-w-4xl mx-auto w-full bg-white sm:rounded-2xl shadow-sm sm:border border-slate-100 overflow-hidden">
+    <div className="flex flex-col h-[calc(100dvh-72px-env(safe-area-inset-bottom))] md:h-[calc(100vh-120px)] animate-fade-in max-w-4xl mx-auto w-full bg-white sm:rounded-2xl shadow-sm sm:border border-slate-100 overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-4 p-4 border-b border-slate-100 bg-white sticky top-0 z-10">
         <button onClick={() => goBack(navigate, '/chat')} className="p-2 -ml-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors flex items-center justify-center">

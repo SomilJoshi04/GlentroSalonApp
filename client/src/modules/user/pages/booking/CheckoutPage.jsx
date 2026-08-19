@@ -10,7 +10,7 @@ const CheckoutPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  
+
   // Hydrate from state OR sessionStorage
   const [bookingContext] = useState(() => {
     if (location.state?.salon) return location.state;
@@ -23,6 +23,8 @@ const CheckoutPage = () => {
   const serviceStaff = bookingContext?.serviceStaff || {};
   const date = bookingContext?.date || '';
   const time = bookingContext?.time || '';
+  const packageId = bookingContext?.packageId || null;
+  const packageDoc = bookingContext?.packageDoc || null;
 
   const [couponCode, setCouponCode] = useState(bookingContext?.couponCode || '');
   const [couponResult, setCouponResult] = useState(bookingContext?.couponResult || null);
@@ -35,13 +37,15 @@ const CheckoutPage = () => {
   useEffect(() => {
     if (salon && date && time && selectedServices.length > 0) {
       sessionStorage.setItem('pendingBooking', JSON.stringify({
-        salon, selectedServices, date, time, serviceStaff, couponCode, couponResult
+        salon, selectedServices, date, time, serviceStaff, couponCode, couponResult, packageId, packageDoc
       }));
     }
-  }, [salon, selectedServices, date, time, serviceStaff, couponCode, couponResult]);
+  }, [salon, selectedServices, date, time, serviceStaff, couponCode, couponResult, packageId, packageDoc]);
 
-  const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
-  const finalAmount = couponResult ? couponResult.finalAmount : totalPrice;
+  const originalTotalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
+  const baseAmount = packageDoc ? packageDoc.discountedPrice : originalTotalPrice;
+  const packageDiscount = packageDoc ? (originalTotalPrice - packageDoc.discountedPrice) : 0;
+  const finalAmount = couponResult ? couponResult.finalAmount : baseAmount;
 
   if (!salon || !date || !time || selectedServices.length === 0) {
     return (
@@ -56,7 +60,7 @@ const CheckoutPage = () => {
     if (!couponCode) return;
     setCouponError('');
     try {
-      const res = await validateCoupon({ code: couponCode, amount: totalPrice });
+      const res = await validateCoupon({ code: couponCode, amount: baseAmount, packageId });
       setCouponResult(res.data.data);
     } catch (e) {
       setCouponError(e.response?.data?.message || 'Invalid coupon');
@@ -79,7 +83,7 @@ const CheckoutPage = () => {
     try {
       const bookingData = {
         salon: salonId,
-        services: selectedServices.map(s => ({ 
+        services: selectedServices.map(s => ({
           service: s._id,
           staff: serviceStaff[s._id] || null
         })),
@@ -87,11 +91,12 @@ const CheckoutPage = () => {
         startTime: time,
         paymentMethod: paymentMethod,
         ...(couponResult && { couponCode }),
+        ...(packageId && { packageId }),
       };
-      
+
       const res = await createBooking(bookingData);
       const booking = res.data.data.booking;
-      
+
       if (paymentMethod === 'AT_SALON') {
         sessionStorage.removeItem('pendingBooking');
         setSuccess(true);
@@ -100,7 +105,7 @@ const CheckoutPage = () => {
         // Create Razorpay Order
         const orderRes = await createPaymentOrder({ bookingId: booking._id });
         const { order, key_id } = orderRes.data.data;
-        
+
         // Initialize Razorpay Checkout
         const options = {
           key: key_id,
@@ -138,7 +143,7 @@ const CheckoutPage = () => {
           }
         };
         const rzp = new window.Razorpay(options);
-        rzp.on('payment.failed', function (response){
+        rzp.on('payment.failed', function (response) {
           alert(response.error.description || "Payment failed. Please try again.");
           setSubmitting(false);
         });
@@ -183,9 +188,9 @@ const CheckoutPage = () => {
         {/* Salon Summary Card */}
         <section className="bg-surface rounded-[18px] border border-border shadow-sm p-4 flex gap-4 items-center">
           <div className="w-16 h-16 rounded-lg bg-surface-variant flex-shrink-0 overflow-hidden relative">
-            <img 
-              alt={salon.name} 
-              className="object-cover w-full h-full" 
+            <img
+              alt={salon.name}
+              className="object-cover w-full h-full"
               src={salon.images?.[0] ? getImageUrl(salon.images[0]) : "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80"}
             />
           </div>
@@ -201,7 +206,7 @@ const CheckoutPage = () => {
         {/* Appointment Summary */}
         <section className="bg-surface rounded-[18px] border border-border shadow-sm p-5 flex flex-col gap-4">
           <h3 className="font-label-md text-[14px] text-muted-text uppercase tracking-wider">Appointment Summary</h3>
-          
+
           <div className="flex gap-4 mb-2">
             <div className="bg-soft-primary p-3 rounded-lg flex flex-col items-center justify-center min-w-[70px]">
               <span className="font-label-sm text-[12px] text-primary uppercase">{d.toLocaleDateString('en', { month: 'short' })}</span>
@@ -214,7 +219,7 @@ const CheckoutPage = () => {
           </div>
 
           <div className="h-[1px] w-full bg-border"></div>
-          
+
           <div className="flex flex-col gap-3 pt-2">
             {selectedServices.map(s => (
               <div key={s._id} className="flex justify-between items-start">
@@ -232,15 +237,15 @@ const CheckoutPage = () => {
         <section className="flex gap-3">
           <div className="relative flex-grow">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted-text">sell</span>
-            <input 
+            <input
               value={couponCode}
               onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponError(''); setCouponResult(null); }}
-              className="w-full pl-10 pr-4 py-3 bg-background-alt border border-border rounded-lg font-body-md text-[16px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors" 
-              placeholder="Promo code" 
+              className="w-full pl-10 pr-4 py-3 bg-background-alt border border-border rounded-lg font-body-md text-[16px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+              placeholder="Promo code"
               type="text"
             />
           </div>
-          <button 
+          <button
             onClick={handleValidateCoupon}
             className="bg-surface-variant text-primary font-label-md text-[14px] px-6 py-3 rounded-lg hover:bg-soft-primary active:scale-95 transition-all"
           >
@@ -258,12 +263,18 @@ const CheckoutPage = () => {
         {/* Price Breakdown */}
         <section className="bg-surface rounded-[18px] border border-border shadow-sm p-5 flex flex-col gap-3">
           <div className="flex justify-between items-center">
-            <span className="font-body-md text-[16px] text-muted-text">Subtotal</span>
-            <span className="font-body-md text-[16px] text-on-surface">₹{totalPrice}</span>
+            <span className="font-body-md text-[16px] text-muted-text">Original Total</span>
+            <span className="font-body-md text-[16px] text-on-surface">₹{originalTotalPrice}</span>
           </div>
+          {packageDoc && (
+            <div className="flex justify-between items-center text-success">
+              <span className="font-body-md text-[16px]">{packageDoc.name} Discount</span>
+              <span className="font-body-md text-[16px]">-₹{packageDiscount}</span>
+            </div>
+          )}
           {couponResult && (
             <div className="flex justify-between items-center text-success">
-              <span className="font-body-md text-[16px]">Discount</span>
+              <span className="font-body-md text-[16px]">Coupon Discount</span>
               <span className="font-body-md text-[16px]">-₹{couponResult.discount}</span>
             </div>
           )}
@@ -300,12 +311,12 @@ const CheckoutPage = () => {
             </label>
           </div>
         </section>
-        
+
         {/* Policy Note */}
         <section className="flex items-start gap-2 bg-inverse-on-surface p-4 rounded-lg">
           <span className="material-symbols-outlined text-[20px] text-primary shrink-0 mt-0.5">info</span>
           <p className="font-body-sm text-[14px] text-on-surface-variant">
-            {paymentMethod === 'AT_SALON' 
+            {paymentMethod === 'AT_SALON'
               ? "Pay at the salon after your service is completed. You can cancel your booking anytime."
               : "Securely pay online now. Cancellation policies apply."}
           </p>
@@ -315,7 +326,7 @@ const CheckoutPage = () => {
       {/* Sticky Bottom Action */}
       <div className="fixed bottom-[72px] md:bottom-0 left-0 w-full bg-surface shadow-[0px_-10px_20px_rgba(109,62,168,0.08)] px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] z-40 border-t border-border/50">
         <div className="w-full max-w-md mx-auto">
-          <button 
+          <button
             onClick={handleSubmit}
             disabled={submitting}
             className="w-full bg-primary text-white font-label-md text-[16px] py-4 rounded-xl shadow-sm hover:bg-primary-dark active:scale-[0.98] transition-all flex justify-center items-center gap-2 disabled:opacity-70"

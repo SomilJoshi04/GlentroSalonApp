@@ -46,29 +46,47 @@ const calculateCancellationFee = async (booking) => {
  * 
  * @param {Array} services - Array of service objects with price
  * @param {Object|null} coupon - Coupon document or null
- * @returns {Object} { totalAmount, discountAmount, finalAmount }
+ * @param {Object|null} pkg - Package document or null
+ * @returns {Object} { totalAmount, discountAmount, finalAmount, packageDiscount }
  */
-const calculateBookingTotal = (services, coupon = null) => {
-  const totalAmount = services.reduce((sum, s) => sum + s.price, 0);
-  let discountAmount = 0;
+const calculateBookingTotal = (services, coupon = null, pkg = null) => {
+  const originalTotal = services.reduce((sum, s) => sum + s.price, 0);
+  let baseAmount = originalTotal;
+  let packageDiscount = 0;
+
+  if (pkg) {
+    baseAmount = pkg.discountedPrice;
+    packageDiscount = originalTotal - baseAmount;
+    if (packageDiscount < 0) packageDiscount = 0; // Guard against bad data
+  }
+
+  let couponDiscount = 0;
 
   if (coupon) {
-    if (coupon.discountType === 'percentage') {
-      discountAmount = (totalAmount * coupon.discountValue) / 100;
-      if (coupon.maxDiscount && discountAmount > coupon.maxDiscount) {
-        discountAmount = coupon.maxDiscount;
-      }
+    // If a package is applied and the coupon is NOT applicable to offers, skip coupon
+    if (pkg && coupon.applicableToOffers === false) {
+      couponDiscount = 0;
     } else {
-      discountAmount = coupon.discountValue;
+      if (coupon.discountType === 'percentage') {
+        couponDiscount = (baseAmount * coupon.discountValue) / 100;
+        if (coupon.maxDiscount && couponDiscount > coupon.maxDiscount) {
+          couponDiscount = coupon.maxDiscount;
+        }
+      } else {
+        couponDiscount = coupon.discountValue;
+      }
     }
   }
 
-  discountAmount = Math.min(discountAmount, totalAmount);
-  const finalAmount = Math.round((totalAmount - discountAmount) * 100) / 100;
+  couponDiscount = Math.min(couponDiscount, baseAmount);
+  const finalAmount = Math.round((baseAmount - couponDiscount) * 100) / 100;
+  const totalDiscount = Math.round((packageDiscount + couponDiscount) * 100) / 100;
 
   return {
-    totalAmount: Math.round(totalAmount * 100) / 100,
-    discountAmount: Math.round(discountAmount * 100) / 100,
+    totalAmount: Math.round(originalTotal * 100) / 100,
+    discountAmount: totalDiscount,
+    couponDiscount: Math.round(couponDiscount * 100) / 100,
+    packageDiscount: Math.round(packageDiscount * 100) / 100,
     finalAmount,
   };
 };

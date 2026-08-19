@@ -51,6 +51,10 @@ const couponSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    applicableToOffers: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,

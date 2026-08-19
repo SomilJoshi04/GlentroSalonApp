@@ -6,6 +6,7 @@ import { goBack } from '../../../../utils/navigation';
 import Loader from '../../../../components/common/Loader';
 import { getImageUrl } from '../../../../utils/imageUtils';
 import SalonMapView from '../../../../components/common/SalonMapView';
+import { SalonCardSkeleton } from '../../components/skeletons/HomeSkeleton';
 
 const SalonListPage = () => {
   const [salons, setSalons] = useState([]);
@@ -130,17 +131,7 @@ const SalonListPage = () => {
         ) : loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="bg-surface rounded-[18px] border border-border shadow-sm overflow-hidden flex flex-col animate-pulse">
-                <div className="h-40 w-full bg-surface-variant/60"></div>
-                <div className="p-4 flex flex-col flex-1 space-y-3">
-                  <div className="h-5 bg-surface-variant/60 rounded w-3/4"></div>
-                  <div className="h-4 bg-surface-variant/60 rounded w-1/2"></div>
-                  <div className="mt-auto pt-3 border-t border-border flex justify-between">
-                    <div className="h-4 bg-surface-variant/60 rounded w-1/3"></div>
-                    <div className="h-6 bg-surface-variant/60 rounded-lg w-16"></div>
-                  </div>
-                </div>
-              </div>
+              <SalonCardSkeleton key={i} />
             ))}
           </div>
         ) : salons.length === 0 ? (

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getMyBookings } from '../../services/userApi';
 import Loader from '../../../../components/common/Loader';
 import PageHeader from '../../../../components/common/PageHeader';
+import { BookingListSkeleton } from '../../components/skeletons/BookingListSkeleton';
 
 const statusColors = {
   PENDING: 'bg-yellow-100 text-yellow-700',
@@ -33,11 +34,11 @@ const BookingListPage = () => {
   const filters = ['', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'];
 
   return (
-    <div className="space-y-6 animate-fade-in w-full">
-      <PageHeader title="My Bookings" />
+    <div className="space-y-6 animate-fade-in w-full px-4 md:px-margin-desktop pb-[100px]">
+      <div className="md:hidden"><PageHeader title="My Bookings" fallbackPath="/" /></div>
       <h1 className="hidden md:block font-headline-xl text-[32px] font-bold text-on-surface">My Bookings</h1>
 
-      <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
+      <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
         {filters.map(f => (
           <button key={f} onClick={() => setFilter(f)}
             className={`px-4 py-2 rounded-full text-[14px] font-label-md whitespace-nowrap transition-all ${
@@ -48,23 +49,7 @@ const BookingListPage = () => {
       </div>
 
       {loading ? (
-        <div className="space-y-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="bg-surface rounded-2xl p-5 border border-border animate-pulse shadow-sm">
-              <div className="flex items-start justify-between">
-                <div className="space-y-2">
-                  <div className="h-5 bg-surface-variant rounded w-48"></div>
-                  <div className="h-4 bg-surface-variant rounded w-32"></div>
-                </div>
-                <div className="h-6 bg-surface-variant rounded-full w-20"></div>
-              </div>
-              <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-                <div className="h-4 bg-surface-variant rounded w-24"></div>
-                <div className="h-5 bg-surface-variant rounded w-16"></div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <BookingListSkeleton />
       ) : bookings.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100 flex flex-col items-center">
           <span className="material-symbols-outlined text-4xl text-muted-text/30 mb-2">calendar_month</span>

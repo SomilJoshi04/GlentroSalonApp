@@ -114,7 +114,7 @@ exports.createReview = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
-    if (booking.user.toString() !== userId) {
+    if (booking.user.toString() !== userId.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized to review this booking' });
     }
 

@@ -22,8 +22,7 @@ const VendorLayout = () => {
     { to: '/vendor/chats', label: 'Chats', icon: 'chat' },
     { to: '/vendor/staff', label: 'Staff', icon: 'group' },
     { to: '/vendor/services', label: 'Services', icon: 'cut' },
-    { to: '/vendor/packages', label: 'Packages', icon: 'redeem' },
-    { to: '/vendor/offers', label: 'Offers', icon: 'local_offer' },
+    { to: '/vendor/packages', label: 'Offers & Packages', icon: 'redeem' },
     { to: '/vendor/reviews', label: 'Reviews', icon: 'star_rate' },
     { to: '/vendor/notifications', label: 'Notifications', icon: 'notifications', count: unreadCount },
     { to: '/vendor/profile', label: 'Profile', icon: 'person' },
@@ -35,7 +34,7 @@ const VendorLayout = () => {
       <aside className={`fixed inset-y-0 left-0 z-50 w-[260px] bg-surface border-r border-border transform transition-transform duration-300 lg:translate-x-0 lg:static flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center gap-3 px-6 py-6 border-b border-border">
           {settings?.appLogo ? (
-            <img src={`${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}/uploads/${settings.appLogo}`} alt="App Logo" className="w-10 h-10 rounded-lg object-contain" />
+            <img src={getImageUrl(settings.appLogo)} alt="App Logo" className="w-10 h-10 rounded-lg object-contain" />
           ) : (
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white">
               <span className="material-symbols-outlined text-[20px]">spa</span>
@@ -96,7 +95,7 @@ const VendorLayout = () => {
             </div>
           </header>
         )}
-        <main className={`flex-1 ${hideHeader ? '' : 'p-6 md:p-8 max-w-[1600px] mx-auto w-full'}`}>
+        <main className={`flex-1 ${hideHeader ? '' : 'p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto w-full'}`}>
           <Outlet />
         </main>
       </div>

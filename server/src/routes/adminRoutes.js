@@ -6,6 +6,7 @@ const {
   getRecentBookings,
   getBookingStats,
   getUsers,
+  updateUserStatus,
   getVendors,
   updateVendorStatus,
   getPendingCounts,
@@ -27,6 +28,7 @@ router.get('/pending-counts', getPendingCounts);
 
 // Users Management
 router.get('/users', getUsers);
+router.put('/users/:id/status', updateUserStatus);
 
 // Bookings Management
 router.get('/bookings', getAllBookings);

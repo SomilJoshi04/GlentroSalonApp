@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getSubscriptionPlans, createSubscriptionPlan, updateSubscriptionPlan, assignSubscription, getVendors } from '../services/adminApi';
+import Modal from '../../../components/common/Modal';
 
 const SubscriptionsPage = () => {
   const [plans, setPlans] = useState([]);
@@ -52,9 +53,9 @@ const SubscriptionsPage = () => {
         </div>
       </div>
 
-      {showPlanForm && (
-        <form onSubmit={handlePlanSubmit} className="bg-surface-card rounded-2xl p-6 border border-border space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <Modal isOpen={showPlanForm} onClose={() => setShowPlanForm(false)} title="New Plan" size="md">
+        <form onSubmit={handlePlanSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div><label className="text-sm font-medium text-text-secondary">Name*</label><input value={planForm.name} onChange={e => setPlanForm({...planForm, name: e.target.value})} required className="w-full mt-1 px-3 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-sm" /></div>
             <div><label className="text-sm font-medium text-text-secondary">Price (₹)*</label><input type="number" value={planForm.price} onChange={e => setPlanForm({...planForm, price: e.target.value})} required className="w-full mt-1 px-3 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-sm" /></div>
             <div><label className="text-sm font-medium text-text-secondary">Duration (Days)*</label><input type="number" value={planForm.durationDays} onChange={e => setPlanForm({...planForm, durationDays: e.target.value})} required className="w-full mt-1 px-3 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-sm" /></div>
@@ -62,17 +63,23 @@ const SubscriptionsPage = () => {
             <div><label className="text-sm font-medium text-text-secondary">Max Staff/Salon</label><input type="number" value={planForm.maxStaffPerSalon} onChange={e => setPlanForm({...planForm, maxStaffPerSalon: e.target.value})} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-sm" /></div>
           </div>
           <div><label className="text-sm font-medium text-text-secondary">Features (comma-separated)</label><input value={planForm.features} onChange={e => setPlanForm({...planForm, features: e.target.value})} placeholder="e.g. Analytics, Priority Support" className="w-full mt-1 px-3 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-sm" /></div>
-          <button type="submit" disabled={saving} className="px-6 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-medium disabled:opacity-50">Create Plan</button>
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={() => setShowPlanForm(false)} className="px-5 py-2.5 text-text-muted hover:bg-surface-variant rounded-xl text-sm font-medium">Cancel</button>
+            <button type="submit" disabled={saving} className="px-6 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-medium disabled:opacity-50">Create Plan</button>
+          </div>
         </form>
-      )}
+      </Modal>
 
-      {showAssignForm && (
-        <form onSubmit={handleAssignSubmit} className="bg-surface-card rounded-2xl p-6 border border-border flex flex-col sm:flex-row gap-4 items-end">
-          <div className="flex-1 w-full"><label className="text-sm font-medium text-text-secondary">Vendor*</label><select value={assignForm.vendor} onChange={e => setAssignForm({...assignForm, vendor: e.target.value})} required className="w-full mt-1 px-3 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-sm"><option value="">Select Vendor</option>{vendors.map(v => <option key={v._id} value={v._id}>{v.name} - {v.businessName}</option>)}</select></div>
-          <div className="flex-1 w-full"><label className="text-sm font-medium text-text-secondary">Plan*</label><select value={assignForm.plan} onChange={e => setAssignForm({...assignForm, plan: e.target.value})} required className="w-full mt-1 px-3 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-sm"><option value="">Select Plan</option>{plans.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}</select></div>
-          <button type="submit" disabled={saving} className="w-full sm:w-auto px-6 py-2.5 bg-success text-white rounded-xl text-sm font-medium hover:bg-success/80">Assign</button>
+      <Modal isOpen={showAssignForm} onClose={() => setShowAssignForm(false)} title="Assign Plan" size="md">
+        <form onSubmit={handleAssignSubmit} className="flex flex-col gap-4">
+          <div className="w-full"><label className="text-sm font-medium text-text-secondary">Vendor*</label><select value={assignForm.vendor} onChange={e => setAssignForm({...assignForm, vendor: e.target.value})} required className="w-full mt-1 px-3 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-sm"><option value="">Select Vendor</option>{vendors.map(v => <option key={v._id} value={v._id}>{v.name} - {v.businessName}</option>)}</select></div>
+          <div className="w-full"><label className="text-sm font-medium text-text-secondary">Plan*</label><select value={assignForm.plan} onChange={e => setAssignForm({...assignForm, plan: e.target.value})} required className="w-full mt-1 px-3 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-sm"><option value="">Select Plan</option>{plans.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}</select></div>
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={() => setShowAssignForm(false)} className="px-5 py-2.5 text-text-muted hover:bg-surface-variant rounded-xl text-sm font-medium">Cancel</button>
+            <button type="submit" disabled={saving} className="px-6 py-2.5 bg-success text-white rounded-xl text-sm font-medium hover:bg-success/80">Assign</button>
+          </div>
         </form>
-      )}
+      </Modal>
 
       {error ? (
         <div className="bg-danger/10 border border-danger/20 text-danger p-4 rounded-xl">

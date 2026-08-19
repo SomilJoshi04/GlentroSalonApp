@@ -6,7 +6,6 @@ const Booking = require('../models/Booking');
 const Service = require('../models/Service');
 const Staff = require('../models/Staff');
 const Package = require('../models/Package');
-const Offer = require('../models/Offer');
 const Category = require('../models/Category');
 const Subcategory = require('../models/Subcategory');
 
@@ -18,7 +17,7 @@ const getDashboardStats = async (req, res, next) => {
     const [
       totalUsers, totalVendors, totalSalons, totalBookings,
       pendingBookings, completedBookings, totalServices, totalStaff,
-      pendingPackages, pendingOffers, activeVendors, revenueData,
+      pendingPackages, activeVendors, revenueData,
     ] = await Promise.all([
       User.countDocuments({ role: 'user' }),
       Vendor.countDocuments(),
@@ -29,7 +28,6 @@ const getDashboardStats = async (req, res, next) => {
       Service.countDocuments(),
       Staff.countDocuments(),
       Package.countDocuments({ status: 'PENDING' }),
-      Offer.countDocuments({ status: 'PENDING' }),
       Vendor.countDocuments({ isActive: true, isApproved: true }),
       Booking.aggregate([
         { $match: { status: 'COMPLETED' } },
@@ -44,7 +42,7 @@ const getDashboardStats = async (req, res, next) => {
       data: {
         totalUsers, totalVendors, totalSalons, totalBookings,
         pendingBookings, completedBookings, totalServices, totalStaff,
-        pendingPackages, pendingOffers, activeVendors,
+        pendingPackages, activeVendors,
         totalRevenue: revenue.totalRevenue,
         totalCommission: revenue.totalCommission,
         totalPlatformFee: revenue.totalPlatformFee,
@@ -145,6 +143,25 @@ const getUsers = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+// @desc    Update user status (Activate/Deactivate)
+// @route   PUT /api/admin/users/:id/status
+// @access  Private/Admin
+const updateUserStatus = async (req, res, next) => {
+  try {
+    const { isActive } = req.body;
+    
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (isActive !== undefined) user.isActive = isActive;
+    await user.save();
+
+    res.json({ success: true, data: user });
+  } catch (error) { next(error); }
+};
+
 // @desc    Get all vendors with pagination and filtering
 // @route   GET /api/admin/vendors
 // @access  Private/Admin
@@ -178,19 +195,24 @@ const getVendors = async (req, res, next) => {
     // Populate salon and stats
     const vendorIds = vendors.map(v => v._id);
     const salons = await Salon.find({ vendor: { $in: vendorIds } }).select('vendor name address city location');
+    const salonIds = salons.map(s => s._id);
     
     const bookingsCount = await Booking.aggregate([
-      { $match: { vendor: { $in: vendorIds } } },
-      { $group: { _id: '$vendor', count: { $sum: 1 } } }
+      { $match: { salon: { $in: salonIds } } },
+      { $group: { _id: '$salon', count: { $sum: 1 } } }
     ]);
 
     const vendorsWithStats = vendors.map(vendor => {
       const vSalon = salons.find(s => s.vendor.toString() === vendor._id.toString());
-      const bCount = bookingsCount.find(b => b._id.toString() === vendor._id.toString());
+      let bCount = 0;
+      if (vSalon) {
+        const foundCount = bookingsCount.find(b => b._id.toString() === vSalon._id.toString());
+        if (foundCount) bCount = foundCount.count;
+      }
       return {
         ...vendor.toObject(),
         salon: vSalon || null,
-        totalBookings: bCount ? bCount.count : 0
+        totalBookings: bCount
       };
     });
 
@@ -231,16 +253,15 @@ const updateVendorStatus = async (req, res, next) => {
 // @access  Private/Admin
 const getPendingCounts = async (req, res, next) => {
   try {
-    const [vendors, packages, offers, bookings] = await Promise.all([
+    const [vendors, packages, bookings] = await Promise.all([
       Vendor.countDocuments({ isApproved: false }),
       Package.countDocuments({ status: 'PENDING' }),
-      Offer.countDocuments({ status: 'PENDING' }),
       Booking.countDocuments({ status: 'PENDING' })
     ]);
 
     res.json({
       success: true,
-      data: { vendors, packages, offers, bookings }
+      data: { vendors, packages, bookings }
     });
   } catch (error) { next(error); }
 };
@@ -396,6 +417,7 @@ module.exports = {
   getRecentBookings,
   getBookingStats,
   getUsers,
+  updateUserStatus,
   getVendors,
   updateVendorStatus,
   getPendingCounts,

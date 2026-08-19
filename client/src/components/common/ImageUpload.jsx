@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import imageCompression from 'browser-image-compression';
+import { getImageUrl } from '../../utils/imageUtils';
 
 const ImageUpload = ({ 
   onFileSelect, 
@@ -18,11 +19,20 @@ const ImageUpload = ({
   useEffect(() => {
     if (currentImage) {
       // Handle either Base64 or URL paths
-      setPreview(currentImage.startsWith('data:') || currentImage.startsWith('http') || currentImage.startsWith('blob:') ? currentImage : `/uploads/${currentImage}`);
+      setPreview(getImageUrl(currentImage));
     } else {
       setPreview('');
     }
   }, [currentImage]);
+
+  // Clean up object URLs to avoid memory leaks
+  useEffect(() => {
+    return () => {
+      if (preview && preview.startsWith('blob:')) {
+        URL.revokeObjectURL(preview);
+      }
+    };
+  }, [preview]);
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -49,10 +59,11 @@ const ImageUpload = ({
       // Pass the actual File object back to parent
       if (onFileSelect) {
         onFileSelect(compressedFile);
-      } else {
-        const previewUrl = URL.createObjectURL(compressedFile);
-        setPreview(previewUrl);
       }
+      
+      // Always generate and display the local preview immediately
+      const previewUrl = URL.createObjectURL(compressedFile);
+      setPreview(previewUrl);
     } catch (err) {
       console.error('Image compression error:', err);
       setError('Failed to process image. Please try a different one.');

@@ -54,8 +54,7 @@ const AdminLayout = () => {
     { to: '/admin/categories', label: 'Categories', icon: 'category' },
     { to: '/admin/services', label: 'Services', icon: 'cut' },
     { to: '/admin/bookings', label: 'Bookings', icon: 'calendar_today', count: pendingCounts.bookings },
-    { to: '/admin/packages', label: 'Packages', icon: 'inventory_2', count: pendingCounts.packages },
-    { to: '/admin/offers', label: 'Offers', icon: 'local_offer', count: pendingCounts.offers },
+    { to: '/admin/packages', label: 'Offers & Packages', icon: 'inventory_2', count: pendingCounts.packages },
     { to: '/admin/subscriptions', label: 'Subscriptions', icon: 'workspace_premium' },
     { to: '/admin/reviews', label: 'Reviews', icon: 'star_rate' },
     { to: '/admin/coupons', label: 'Coupons', icon: 'local_activity' },
@@ -170,7 +169,7 @@ const AdminLayout = () => {
 
         {/* Page Content */}
         <main className="flex-1 overflow-x-hidden bg-background">
-          <div className="p-6 md:p-8 max-w-[1600px] mx-auto">
+          <div className="p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto">
              <Outlet />
           </div>
         </main>

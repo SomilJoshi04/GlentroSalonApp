@@ -16,7 +16,7 @@ const BookingsPage = lazy(() => import('../pages/BookingsPage'));
 const CategoriesPage = lazy(() => import('../pages/CategoriesPage'));
 const ServicesPage = lazy(() => import('../pages/ServicesPage'));
 const PackagesPage = lazy(() => import('../pages/PackagesPage'));
-const OffersPage = lazy(() => import('../pages/OffersPage'));
+
 const CouponsPage = lazy(() => import('../pages/CouponsPage'));
 const SubscriptionsPage = lazy(() => import('../pages/SubscriptionsPage'));
 const CommissionsPage = lazy(() => import('../pages/CommissionsPage'));
@@ -48,7 +48,7 @@ export default function AdminRoutes() {
         <Route path="categories" element={<SuspenseWrapper><CategoriesPage /></SuspenseWrapper>} />
         <Route path="services" element={<SuspenseWrapper><ServicesPage /></SuspenseWrapper>} />
         <Route path="packages" element={<SuspenseWrapper><PackagesPage /></SuspenseWrapper>} />
-        <Route path="offers" element={<SuspenseWrapper><OffersPage /></SuspenseWrapper>} />
+
         <Route path="coupons" element={<SuspenseWrapper><CouponsPage /></SuspenseWrapper>} />
         <Route path="subscriptions" element={<SuspenseWrapper><SubscriptionsPage /></SuspenseWrapper>} />
         <Route path="commissions" element={<SuspenseWrapper><CommissionsPage /></SuspenseWrapper>} />

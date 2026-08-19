@@ -47,6 +47,17 @@ const bookingSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Coupon',
     },
+    package: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Package',
+    },
+    packageSnapshot: {
+      packageId: mongoose.Schema.Types.ObjectId,
+      name: String,
+      originalPrice: Number,
+      offerPrice: Number,
+      discount: Number,
+    },
     cancellationFee: {
       type: Number,
       default: 0,

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getVendorSalons, getServices, createService, updateService, deleteService, toggleServiceStatus, getCategories, getSubcategories } from '../services/vendorApi';
+import Modal from '../../../components/common/Modal';
 
 const ServiceManagePage = () => {
   const [salons, setSalons] = useState([]);
@@ -178,9 +179,13 @@ const ServiceManagePage = () => {
         </select>
       </div>
 
-      {showForm && (
-        <form onSubmit={handleSubmit} className="bg-surface rounded-2xl p-6 border border-border shadow-sm space-y-4 animate-fade-in">
-          <h2 className="text-lg font-semibold text-on-surface">{editingService ? 'Edit Service Details' : 'Create New Service'}</h2>
+      <Modal 
+        isOpen={showForm} 
+        onClose={() => setShowForm(false)}
+        title={editingService ? 'Edit Service Details' : 'Create New Service'}
+        size="lg"
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div className="sm:col-span-2 md:col-span-1">
               <label className="text-sm font-medium text-muted-text mb-1 block">Name*</label>
@@ -227,7 +232,7 @@ const ServiceManagePage = () => {
             </button>
           </div>
         </form>
-      )}
+      </Modal>
 
       <div className="bg-surface rounded-2xl border border-border overflow-hidden shadow-sm">
         {isFetching ? (

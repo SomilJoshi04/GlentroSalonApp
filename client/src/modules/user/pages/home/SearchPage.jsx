@@ -6,6 +6,7 @@ import { goBack } from '../../../../utils/navigation';
 import PageHeader from '../../../../components/common/PageHeader';
 import Loader from '../../../../components/common/Loader';
 import { getImageUrl } from '../../../../utils/imageUtils';
+import { SalonCardSkeleton } from '../../components/skeletons/HomeSkeleton';
 
 const SearchPage = () => {
   const { selectedLocation } = useLocationContext();
@@ -134,9 +135,9 @@ const SearchPage = () => {
   };
 
   return (
-    <div className="animate-fade-in space-y-6 w-full">
+    <div className="animate-fade-in space-y-6 w-full px-4 md:px-margin-desktop pb-[100px]">
       {/* Header */}
-      <header className="sticky top-[env(safe-area-inset-top)] z-40 bg-surface/90 backdrop-blur-md pb-4 pt-2 -mx-4 px-4 md:mx-0 md:px-0">
+      <header className="sticky top-[env(safe-area-inset-top)] z-40 bg-surface/90 backdrop-blur-md pb-4 pt-2 md:mx-0 md:px-0">
         <div className="md:hidden"><PageHeader title="Search" fallbackPath="/" /></div>
         <div className="hidden md:block mb-4">
            <button onClick={() => goBack(navigate, '/')} className="p-2 text-on-surface-variant hover:bg-soft-primary transition-colors rounded-full active:scale-95 duration-150 -ml-2 mb-2">
@@ -236,7 +237,7 @@ const SearchPage = () => {
                 <h2 className="font-headline-sm text-[20px] font-semibold text-on-surface">Trending Salons</h2>
                 <button onClick={() => navigate('/salons')} className="font-label-sm text-[12px] font-medium text-primary hover:underline hidden md:block">View All</button>
               </div>
-              <div className="flex overflow-x-auto gap-4 pb-4 -mx-4 px-4 md:mx-0 md:px-0 snap-x hide-scrollbar">
+              <div className="flex overflow-x-auto gap-4 pb-4 px-4 md:px-margin-desktop snap-x hide-scrollbar">
                 {trendingSalons.map(salon => (
                   <div 
                     key={salon._id}
@@ -280,17 +281,7 @@ const SearchPage = () => {
           {loadingResults ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="bg-surface rounded-[18px] border border-border shadow-sm overflow-hidden flex flex-col animate-pulse">
-                  <div className="h-40 w-full bg-surface-variant/60"></div>
-                  <div className="p-4 flex flex-col flex-1 space-y-3">
-                    <div className="h-5 bg-surface-variant/60 rounded w-3/4"></div>
-                    <div className="h-4 bg-surface-variant/60 rounded w-1/2"></div>
-                    <div className="mt-auto pt-3 border-t border-border flex justify-between">
-                      <div className="h-4 bg-surface-variant/60 rounded w-1/3"></div>
-                      <div className="h-6 bg-surface-variant/60 rounded-lg w-16"></div>
-                    </div>
-                  </div>
-                </div>
+                <SalonCardSkeleton key={i} />
               ))}
             </div>
           ) : error ? (

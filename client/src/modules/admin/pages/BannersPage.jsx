@@ -2,11 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { getBanners, createBanner, updateBanner, deleteBanner, toggleBannerStatus } from '../services/adminApi';
 import ImageUpload from '../../../components/common/ImageUpload';
 import { getImageUrl } from '../../../utils/imageUtils';
+import Modal from '../../../components/common/Modal';
 
 const BannersPage = () => {
   const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   
   const [form, setForm] = useState({ title: '', link: '' });
   const [selectedFile, setSelectedFile] = useState(null);
@@ -42,6 +44,7 @@ const BannersPage = () => {
       // Reset form
       setForm({ title: '', link: '' });
       setSelectedFile(null);
+      setShowForm(false);
       
       loadBanners();
     } catch (error) {
@@ -76,12 +79,13 @@ const BannersPage = () => {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <h1 className="text-2xl font-bold text-text-primary">Banner Management</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-text-primary">Banner Management</h1>
+        <button onClick={() => setShowForm(true)} className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90">+ Add Banner</button>
+      </div>
 
-      {/* Add New Banner */}
-      <div className="bg-surface-card rounded-2xl p-6 border border-border">
-        <h3 className="font-semibold text-text-primary mb-4">Add New Banner</h3>
-        <form onSubmit={handleSubmit} className="space-y-4 max-w-2xl">
+      <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Add New Banner" size="md">
+        <form onSubmit={handleSubmit} className="space-y-4">
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -102,11 +106,14 @@ const BannersPage = () => {
             />
           </div>
 
-          <button type="submit" disabled={saving || !selectedFile} className="px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors">
-            {saving ? 'Uploading...' : 'Upload Banner'}
-          </button>
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={() => setShowForm(false)} className="px-5 py-2.5 text-text-muted hover:bg-surface-variant rounded-xl text-sm font-medium">Cancel</button>
+            <button type="submit" disabled={saving || !selectedFile} className="px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors">
+              {saving ? 'Uploading...' : 'Upload Banner'}
+            </button>
+          </div>
         </form>
-      </div>
+      </Modal>
 
       {/* Existing Banners */}
       <div className="bg-surface-card rounded-2xl border border-border overflow-hidden">

@@ -4,11 +4,14 @@ import { getFavoriteSalons } from '../../services/userApi';
 import { getImageUrl } from '../../../../utils/imageUtils';
 import PageHeader from '../../../../components/common/PageHeader';
 import Loader from '../../../../components/common/Loader';
+import { SalonCardSkeleton } from '../../components/skeletons/HomeSkeleton';
+import { useFavorites } from '../../../../context/FavoriteContext';
 
 const FavoritesPage = () => {
   const [salons, setSalons] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { isFavorite, toggleFavoriteStatus } = useFavorites();
 
   useEffect(() => {
     loadFavorites();
@@ -34,16 +37,10 @@ const FavoritesPage = () => {
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-surface rounded-[18px] border border-border shadow-sm overflow-hidden flex flex-col animate-pulse">
-                <div className="h-40 w-full bg-surface-variant/60"></div>
-                <div className="p-4 flex flex-col flex-1 space-y-3">
-                  <div className="h-5 bg-surface-variant/60 rounded w-3/4"></div>
-                  <div className="h-4 bg-surface-variant/60 rounded w-1/2"></div>
-                </div>
-              </div>
+              <SalonCardSkeleton key={i} />
             ))}
           </div>
-        ) : salons.length === 0 ? (
+        ) : salons.filter(salon => isFavorite(salon._id)).length === 0 ? (
           <div className="text-center py-20 bg-surface rounded-[24px] border border-border shadow-sm mt-4 mx-2">
             <span className="material-symbols-outlined text-6xl text-primary/30 mb-4" style={{fontVariationSettings: "'FILL' 1"}}>favorite</span>
             <h3 className="font-headline-sm text-[20px] font-bold text-on-surface mb-2">No Favourites Yet</h3>
@@ -59,7 +56,7 @@ const FavoritesPage = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-2">
-            {salons.map(salon => (
+            {salons.filter(salon => isFavorite(salon._id)).map(salon => (
               <div 
                 key={salon._id} 
                 onClick={() => navigate(`/salon/${salon._id}`)}
@@ -77,10 +74,16 @@ const FavoritesPage = () => {
                   )}
                   {/* Top Right Actions */}
                   <div className="absolute top-3 right-3 flex items-center gap-2">
-                    {/* Loved Tag */}
-                    <div className="bg-error/90 backdrop-blur-sm w-8 h-8 rounded-full flex items-center justify-center shadow-sm">
+                    {/* Loved Tag / Button */}
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavoriteStatus(salon._id);
+                      }}
+                      className="bg-red-500 hover:bg-red-600 transition-colors backdrop-blur-sm w-8 h-8 rounded-full flex items-center justify-center shadow-sm cursor-pointer"
+                    >
                       <span className="material-symbols-outlined text-white text-[18px]" style={{fontVariationSettings: "'FILL' 1"}}>favorite</span>
-                    </div>
+                    </button>
                     {/* Rating Badge */}
                     {salon.ratings?.average > 0 && (
                       <div className="bg-surface/90 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm h-8">

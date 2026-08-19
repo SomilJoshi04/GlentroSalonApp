@@ -14,11 +14,17 @@ const createPackage = async (req, res, next) => {
 
 const getPackages = async (req, res, next) => {
   try {
-    const { salon, status, page = 1, limit = 20 } = req.query;
+    const { salon, status, isActive, checkValidity, page = 1, limit = 20 } = req.query;
     const query = {};
     if (salon) query.salon = salon;
     if (status) query.status = status;
-    const packages = await Package.find(query).populate('services', 'name price duration').populate('salon', 'name').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(parseInt(limit));
+    if (isActive !== undefined) query.isActive = isActive === 'true';
+    if (checkValidity === 'true') {
+      const now = new Date();
+      query.validFrom = { $lte: now };
+      query.validTo = { $gte: now };
+    }
+    const packages = await Package.find(query).populate('services', 'name price duration gender category').populate('salon', 'name').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(parseInt(limit));
     const total = await Package.countDocuments(query);
     res.json({ success: true, data: { packages, total, page: parseInt(page), totalPages: Math.ceil(total / limit) } });
   } catch (error) { next(error); }

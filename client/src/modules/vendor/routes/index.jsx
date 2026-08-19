@@ -18,7 +18,6 @@ const ServiceManagePage = lazy(() => import('../pages/ServiceManagePage'));
 const BookingManagePage = lazy(() => import('../pages/BookingManagePage'));
 const BookingDetailPage = lazy(() => import('../pages/BookingDetailPage'));
 const PackageManagePage = lazy(() => import('../pages/PackageManagePage'));
-const OfferManagePage = lazy(() => import('../pages/OfferManagePage'));
 const ProfilePage = lazy(() => import('../pages/ProfilePage'));
 const ChatListPage = lazy(() => import('../pages/ChatListPage'));
 const ChatPage = lazy(() => import('../pages/ChatPage'));
@@ -46,7 +45,7 @@ export default function VendorRoutes() {
         <Route path="chats" element={<SuspenseWrapper><ChatListPage /></SuspenseWrapper>} />
         <Route path="chat/:chatId" element={<SuspenseWrapper><ChatPage /></SuspenseWrapper>} />
         <Route path="packages" element={<SuspenseWrapper><PackageManagePage /></SuspenseWrapper>} />
-        <Route path="offers" element={<SuspenseWrapper><OfferManagePage /></SuspenseWrapper>} />
+
         <Route path="profile" element={<SuspenseWrapper><ProfilePage /></SuspenseWrapper>} />
         <Route path="reviews" element={<SuspenseWrapper><ReviewsPage /></SuspenseWrapper>} />
       </Route>

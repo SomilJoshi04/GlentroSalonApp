@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { getSettings } from '../services/api/settingApi';
+import { getImageUrl } from '../utils/imageUtils';
 
 const SettingContext = createContext();
 
@@ -31,7 +32,7 @@ export const SettingProvider = ({ children }) => {
     if (settings.appLogo) {
       const favicon = document.getElementById('favicon');
       if (favicon) {
-        favicon.href = `${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}/uploads/${settings.appLogo}`;
+        favicon.href = getImageUrl(settings.appLogo);
       }
     }
     

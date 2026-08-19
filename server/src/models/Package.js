@@ -43,6 +43,26 @@ const packageSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    validFrom: {
+      type: Date,
+      required: [true, 'Valid from date is required'],
+    },
+    validTo: {
+      type: Date,
+      required: [true, 'Valid to date is required'],
+    },
+    usageLimit: {
+      type: Number,
+      default: 0, // 0 means unlimited
+    },
+    perUserLimit: {
+      type: Number,
+      default: 0, // 0 means unlimited
+    },
+    terms: {
+      type: String,
+      default: '',
+    },
     isActive: {
       type: Boolean,
       default: true,

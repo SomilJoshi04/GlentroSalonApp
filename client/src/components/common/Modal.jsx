@@ -1,4 +1,17 @@
+import { useEffect } from 'react';
+
 const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const sizes = {
@@ -14,7 +27,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" />
       <div className="flex min-h-full items-center justify-center p-4">
         <div
-          className={`relative ${sizes[size]} w-full bg-white rounded-2xl shadow-elevated animate-fade-in`}
+          className={`relative ${sizes[size]} w-full max-h-[90vh] flex flex-col bg-white rounded-2xl shadow-elevated animate-fade-in`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -30,7 +43,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
             </button>
           </div>
           {/* Body */}
-          <div className="px-6 py-4">{children}</div>
+          <div className="px-6 py-4 overflow-y-auto">{children}</div>
         </div>
       </div>
     </div>

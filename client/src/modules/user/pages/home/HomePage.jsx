@@ -4,10 +4,11 @@ import { getNearbySalons, getSalons, getCategories, getServices, getBanners } fr
 import { useAuth } from '../../../../context/AuthContext';
 import { useNotifications } from '../../../../context/NotificationContext';
 import { useLocationContext } from '../../../../context/LocationContext';
-import Loader from '../../../../components/common/Loader';
 import LocationSelectionModal from '../../../../components/common/LocationSelectionModal';
 import LocationPermissionModal from '../../../../components/common/LocationPermissionModal';
 import { getImageUrl } from '../../../../utils/imageUtils';
+import { HomeSkeleton } from '../../components/skeletons/HomeSkeleton';
+import { useFavorites } from '../../../../context/FavoriteContext';
 
 const HomePage = () => {
   const [salons, setSalons] = useState([]);
@@ -23,6 +24,18 @@ const HomePage = () => {
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
   const navigate = useNavigate();
+  const { isFavorite, toggleFavoriteStatus } = useFavorites();
+
+  // Banner Auto-Rotation
+  useEffect(() => {
+    let interval;
+    if (banners.length > 1) {
+      interval = setInterval(() => {
+        setCurrentBannerIndex((prevIndex) => (prevIndex + 1) % banners.length);
+      }, 4000);
+    }
+    return () => clearInterval(interval);
+  }, [banners.length]);
 
   // Trigger permission modal on first load if no location exists
   useEffect(() => {
@@ -34,15 +47,6 @@ const HomePage = () => {
   useEffect(() => {
     loadInitialData();
   }, [selectedLocation]);
-
-  // Auto-swipe banners
-  useEffect(() => {
-    if (banners.length <= 1) return;
-    const interval = setInterval(() => {
-      setCurrentBannerIndex((prev) => (prev + 1) % banners.length);
-    }, 4000); // Swipe every 4 seconds
-    return () => clearInterval(interval);
-  }, [banners.length]);
 
   const loadInitialData = async () => {
     setLoading(true);
@@ -62,20 +66,20 @@ const HomePage = () => {
         getServices({ limit: 4 }),
         getBanners().catch(() => ({ data: { data: [] } }))
       ]);
-      
+
       setCategories(catRes.data.data?.slice(0, 4) || []);
       setServices(serviceRes.data.data.services || []);
       setBanners(bannerRes.data?.data || []);
 
       let fetchedSalons = salonRes.data.data.salons || [];
-      
+
       // Smart Fallback: If nearby search returned 0 salons, fetch popular public salons across India
       if (fetchedSalons.length === 0 && selectedLocation?.lat && selectedLocation?.lng) {
         const publicSalonsRes = await getSalons({ limit: 10 });
         fetchedSalons = publicSalonsRes.data.data.salons || [];
         setSalonListTitle('Popular Salons Across India');
       }
-      
+
       setSalons(fetchedSalons);
     } catch (err) {
       console.error(err);
@@ -84,7 +88,7 @@ const HomePage = () => {
     }
   };
 
-  if (loading) return <Loader text="Loading amazing salons..." />;
+  if (loading) return <HomeSkeleton />;
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -93,240 +97,251 @@ const HomePage = () => {
     return 'Good Evening';
   };
 
+  const activeOffer = banners.length > 0 ? banners[currentBannerIndex] : null;
+
   return (
-    <div className="pb-10 pt-4 animate-fade-in space-y-6 box-border w-full">
-      {/* Mobile Header */}
-      <header className="flex justify-between items-center md:hidden mb-4">
-        <div className="flex items-center gap-1 cursor-pointer" onClick={() => setIsLocationModalOpen(true)}>
-          <span className="material-symbols-outlined text-primary" data-icon="location_on" data-weight="fill" style={{fontVariationSettings: "'FILL' 1"}}>location_on</span>
-          <span className="font-label-md text-on-surface max-w-[150px] truncate">{selectedLocation?.formattedAddress || selectedLocation?.city || 'Select Location'}</span>
-          <span className="material-symbols-outlined text-on-surface-variant text-sm">expand_more</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="relative cursor-pointer" onClick={() => navigate('/notifications')}>
-            <span className="material-symbols-outlined text-on-surface text-[28px]">notifications</span>
-            {unreadCount > 0 && <span className="absolute top-0 right-0 w-3 h-3 bg-[#E91E63] rounded-full border-2 border-surface"></span>}
-          </div>
-          <div className="w-9 h-9 rounded-full bg-primary-100 border-2 border-primary-200 overflow-hidden cursor-pointer flex items-center justify-center" onClick={() => navigate('/profile')}>
-            {user?.avatar ? (
-              <img src={getImageUrl(user.avatar)} alt="Profile" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-primary font-bold">{user?.name?.charAt(0) || 'U'}</div>
-            )}
-          </div>
-        </div>
-      </header>
-
-      {/* Greeting Area */}
-      <div>
-        <p className="font-body-md text-muted-text mb-1 flex items-center gap-2">
-          {getGreeting()}, {user?.name?.split(' ')[0] || 'Guest'}
-        </p>
-        <h1 className="font-headline-xl text-[24px] sm:text-[28px] md:text-[36px] leading-tight text-on-surface">
-          Find & Book <br />
-          The Best <span className="text-primary">Salons</span> Near You
-        </h1>
-      </div>
-
-      {/* Search Bar */}
-      <div 
-        className="w-full bg-white border border-border shadow-[0px_2px_8px_rgba(0,0,0,0.04)] rounded-[16px] py-3.5 pl-4 pr-3 flex items-center gap-3 cursor-pointer hover:border-primary-200 transition-colors"
-        onClick={() => navigate('/search')}
-      >
-        <span className="material-symbols-outlined text-outline text-[24px]">search</span>
-        <span className="font-body-md text-outline flex-1 truncate">Search for salon, service or category...</span>
-        <button className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">
-          <span className="material-symbols-outlined text-[20px]">tune</span>
-        </button>
-      </div>
-
-      {/* Promo Banners */}
-      <div className="w-full rounded-[24px] overflow-hidden relative shadow-[0px_4px_16px_rgba(84,35,143,0.15)] h-40">
+    <div className="bg-[#F8F7F5] text-on-surface font-body-md antialiased pb-4 -mx-4 md:mx-0 md:bg-transparent">
+      {/* Hero Section */}
+      <div className="relative w-full h-[320px] bg-inverse-surface flex flex-col pt-10 pb-6 px-6 overflow-hidden rounded-b-[24px]">
         {banners.length > 0 ? (
-          <>
-            {banners.map((banner, index) => (
-              <div 
-                key={banner._id || index} 
-                className={`absolute inset-0 w-full h-full cursor-pointer transition-opacity duration-1000 ${index === currentBannerIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} 
-                onClick={() => banner.link && window.open(banner.link, '_blank')}
+          banners.map((banner, index) => (
+            <img
+              key={banner._id || index}
+              alt={banner.title || "Hero Background"}
+              className={`absolute inset-0 w-full h-full object-cover object-top transition-opacity duration-1000 ease-in-out ${index === currentBannerIndex ? 'opacity-50 z-0' : 'opacity-0 -z-10'}`}
+              src={getImageUrl(banner.image)}
+            />
+          ))
+        ) : (
+          <img
+            alt="Hero Background Fallback"
+            className="absolute inset-0 w-full h-full object-cover object-top opacity-50 z-0"
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAybZNIjciVynWHUV2jUNo04-Ix6IeHMDVLfbwzBzgmBPN6pXRHRH5Omf2ah_iFmfjvgWxksChx4L6WZpvBDQbKW4b_2PTINUCkMIrGiQgcC9X1N5Qe_us9LrtH_8h6PRDNWYrAVuJ6Y1xoQsR-w5ntVXZOOcTg3PsLHT7teFEQ96wEVmWSzUcyNiz8Cb5Oz9I06pflGf143ZOkVShvvOXMcarRtOiRLyeifYHOXTsXEYSID6XIZAbV"
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-[#1A1A1A] z-0"></div>
+
+        {/* Header Nav */}
+        <header className="relative z-10 w-full flex justify-between items-center -mt-2.5">
+          <div
+            onClick={() => setIsLocationModalOpen(true)}
+            className="flex items-center gap-2 bg-black/20 backdrop-blur-md rounded-full px-3 py-2 border border-white/10 cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-white text-[18px]">location_on</span>
+            <span className="font-label-sm text-white max-w-[150px] truncate">
+              {selectedLocation?.formattedAddress || selectedLocation?.city || 'Select Location'}
+            </span>
+            <span className="material-symbols-outlined text-white text-[18px]">expand_more</span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="relative cursor-pointer" onClick={() => navigate('/notifications')}>
+              <span className="material-symbols-outlined text-white text-[24px]">notifications</span>
+              {unreadCount > 0 && <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-hot-pink rounded-full border border-white/20"></span>}
+            </div>
+
+            <div
+              onClick={() => navigate('/profile')}
+              className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.2)] cursor-pointer overflow-hidden"
+            >
+              {user?.avatar ? (
+                <img src={getImageUrl(user.avatar)} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <span className="font-headline-sm text-white">{user?.name?.charAt(0).toUpperCase() || 'U'}</span>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* Greeting & Title */}
+        <div className="relative z-10 mt-auto mb-2">
+          <p className="font-body-sm text-white/80 mb-0.5">{getGreeting()},</p>
+          <h2 className="font-headline-sm text-white mb-2 truncate">{user?.name?.split(' ')[0] || 'Guest'}</h2>
+          <h1 className="font-headline-md text-white font-serif tracking-tight leading-[1.15] max-w-[280px]">
+            Find & Book The<br />Best Salons Near You
+          </h1>
+        </div>
+      </div>
+
+      {/* Search Bar Area */}
+      <div className="px-6 -mt-7 relative z-20">
+        <div className="flex gap-3">
+          <div
+            onClick={() => navigate('/search')}
+            className="flex-1 flex items-center bg-surface-container-lowest rounded-2xl px-4 py-3.5 shadow-[0px_4px_16px_rgba(0,0,0,0.06)] border border-border cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-muted-text mr-3">search</span>
+            <input
+              readOnly
+              className="w-full bg-transparent border-none p-0 focus:ring-0 font-body-sm text-body-sm text-on-surface placeholder-muted-text outline-none cursor-pointer"
+              placeholder="Search for salon, service or category"
+              type="text"
+            />
+          </div>
+          <button onClick={() => navigate('/search')} className="bg-surface-container-lowest text-heading-text rounded-2xl p-3.5 shadow-[0px_4px_16px_rgba(0,0,0,0.06)] border border-border flex items-center justify-center hover:bg-surface-container-low transition-colors">
+            <span className="material-symbols-outlined">tune</span>
+          </button>
+        </div>
+      </div>
+
+      <main className="px-6 space-y-10 mt-8">
+        {/* Top Categories */}
+        <section>
+          <div className="flex justify-between items-center mb-5">
+            <h3 className="font-headline-sm text-headline-sm text-heading-text">Top Categories</h3>
+          </div>
+          <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2">
+            {categories.map(cat => (
+              <div
+                key={cat._id}
+                className="flex flex-col items-center gap-1.5 cursor-pointer shrink-0"
+                onClick={() => navigate(`/search?q=${cat.name}`)}
               >
-                <img 
-                  src={getImageUrl(banner.image)} 
-                  alt={banner.title || 'Promo Banner'} 
-                  className="w-full h-full object-cover object-center" 
-                />
-                {banner.title && (
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-5">
-                    <h2 className="text-white font-headline-sm text-[20px] leading-tight mb-1">{banner.title}</h2>
-                  </div>
-                )}
+                <div className="w-[56px] h-[56px] rounded-[16px] bg-[#EDE4FF] flex items-center justify-center text-primary-container shadow-sm hover:bg-primary-fixed transition-colors border border-primary-container/10 overflow-hidden">
+                  {cat.image ? (
+                    <img src={getImageUrl(cat.image)} alt={cat.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="material-symbols-outlined text-[24px] font-light">{cat.icon || 'category'}</span>
+                  )}
+                </div>
+                <span className="font-label-md text-[11px] text-heading-text font-medium truncate max-w-[56px] text-center">{cat.name}</span>
               </div>
             ))}
-            {/* Pagination Dots */}
-            {banners.length > 1 && (
-              <div className="absolute bottom-3 right-0 left-0 flex justify-center gap-1.5 z-20">
-                {banners.map((_, index) => (
-                  <div 
-                    key={index} 
-                    className={`h-2 rounded-full transition-all duration-300 ${index === currentBannerIndex ? 'w-4 bg-white' : 'w-2 bg-white/40'}`}
-                  ></div>
-                ))}
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="absolute inset-0 w-full h-full cursor-pointer">
-            <img 
-              src="https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
-              alt="Promo" 
-              className="w-full h-full object-cover object-center" 
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-transparent flex flex-col justify-center p-6">
-              <h2 className="text-white font-headline-lg text-[28px] leading-tight mb-1">20% OFF</h2>
-              <p className="text-white/90 font-body-sm mb-4">On Your First Booking</p>
-              <button className="bg-white text-primary font-label-md px-4 py-2 rounded-lg w-max hover:bg-soft-primary transition-colors">
-                BOOK NOW
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
 
-      {/* Top Categories */}
-      <section className="pt-2">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="font-headline-sm text-on-surface">Top Categories</h2>
-          <button onClick={() => navigate('/search')} className="font-label-sm text-primary hover:underline">View all</button>
-        </div>
-        <div className="flex justify-between px-1">
-          {categories.map(cat => (
-            <div key={cat._id} className="flex flex-col items-center gap-2 cursor-pointer" onClick={() => navigate(`/search?q=${cat.name}`)}>
-              <div className="w-14 h-14 bg-soft-primary rounded-2xl flex items-center justify-center text-primary shadow-[0px_2px_8px_rgba(84,35,143,0.05)] border border-primary-100 overflow-hidden">
-                {cat.image ? (
-                  <img src={cat.image} alt={cat.name} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="material-symbols-outlined text-[28px]">{cat.icon || 'category'}</span>
-                )}
-              </div>
-              <span className="font-label-sm text-on-surface">{cat.name}</span>
-            </div>
-          ))}
-          
-          {/* Static More Button */}
-          <div className="flex flex-col items-center gap-2 cursor-pointer" onClick={() => navigate('/search')}>
-            <div className="w-14 h-14 bg-surface-variant rounded-2xl flex items-center justify-center text-on-surface-variant shadow-sm border border-border">
-              <span className="material-symbols-outlined text-[28px]">grid_view</span>
-            </div>
-            <span className="font-label-sm text-on-surface">More</span>
-          </div>
-        </div>
-      </section>
-
-      {/* Salons List */}
-      <section className="pt-2">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="font-headline-sm text-on-surface">{salonListTitle}</h2>
-          <button onClick={() => navigate('/salons')} className="font-label-sm text-primary hover:underline">View all</button>
-        </div>
-        
-        <div className="flex overflow-x-auto gap-4 pb-4 -mx-4 px-4 snap-x hide-scrollbar">
-          {salons.map(salon => (
-            <div 
-              key={salon._id} 
-              onClick={() => navigate(`/salon/${salon._id}`)}
-              className="flex-none w-[240px] bg-white rounded-[20px] border border-border shadow-[0px_4px_12px_rgba(0,0,0,0.03)] overflow-hidden snap-start cursor-pointer hover:shadow-[0px_8px_24px_rgba(84,35,143,0.08)] transition-shadow"
+            {/* More Button */}
+            <div
+              className="flex flex-col items-center gap-1.5 cursor-pointer shrink-0"
+              onClick={() => navigate('/search')}
             >
-              <div className="h-[140px] w-full relative overflow-hidden group">
-                <img 
-                  src={salon.images?.[0] ? getImageUrl(salon.images[0]) : "https://images.unsplash.com/photo-1521590832167-7bfcfaa6362f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"} 
-                  alt={salon.name} 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                />
-                <div className="absolute top-3 right-3 text-white">
-                  <span className="material-symbols-outlined" data-icon="favorite_border">favorite_border</span>
+              <div className="w-[56px] h-[56px] rounded-[16px] bg-surface-container flex items-center justify-center text-muted-text shadow-sm hover:bg-surface-container-high transition-colors border border-border">
+                <span className="material-symbols-outlined text-[24px] font-light">grid_view</span>
+              </div>
+              <span className="font-label-md text-[11px] text-heading-text font-medium text-center">More</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Nearby Salons */}
+        <section>
+          <div className="flex justify-between items-end mb-4">
+            <h3 className="font-headline-sm text-headline-sm text-heading-text">{salonListTitle}</h3>
+            <button onClick={() => navigate('/salons')} className="font-label-sm text-label-sm text-primary-container hover:text-primary-dark">View all</button>
+          </div>
+          <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 -mx-6 px-6">
+            {salons.map(salon => (
+              <div
+                key={salon._id}
+                onClick={() => navigate(`/salon/${salon._id}`)}
+                className="shrink-0 w-[240px] bg-surface-container-lowest rounded-[18px] border border-border shadow-[0px_2px_8px_rgba(0,0,0,0.04)] overflow-hidden flex flex-col cursor-pointer"
+              >
+                <div className="relative h-32 w-full">
+                  <img
+                    alt={salon.name}
+                    className="w-full h-full object-cover"
+                    src={salon.images?.[0] ? getImageUrl(salon.images[0]) : "https://images.unsplash.com/photo-1521590832167-7bfcfaa6362f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"}
+                  />
+                  <button
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      toggleFavoriteStatus(salon._id); 
+                    }}
+                    className={`absolute top-2 right-2 w-8 h-8 rounded-full bg-surface-container-lowest/80 backdrop-blur-sm flex items-center justify-center transition-colors ${
+                      isFavorite(salon._id) ? 'text-red-500' : 'text-muted-text hover:text-red-500'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: isFavorite(salon._id) ? "'FILL' 1" : "'FILL' 0", color: isFavorite(salon._id) ? 'red' : 'inherit' }}>
+                      favorite
+                    </span>
+                  </button>
+                </div>
+                <div className="p-4 flex-1 flex flex-col">
+                  <div className="flex justify-between items-start mb-1.5">
+                    <h4 className="font-headline-sm text-[16px] text-heading-text truncate pr-2">{salon.name}</h4>
+                    <div className="flex items-center gap-1 bg-surface-container rounded-md px-1.5 py-0.5 shrink-0">
+                      <span className="material-symbols-outlined text-rating text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                      <span className="font-label-sm text-label-sm text-muted-text">
+                        {salon.ratings?.average > 0 ? salon.ratings.average.toFixed(1) : 'New'}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="font-body-sm text-body-sm text-muted-text mb-3 flex items-center gap-1 truncate">
+                    <span className="material-symbols-outlined text-sm shrink-0">location_on</span>
+                    <span className="truncate">{salon.address}</span>
+                  </p>
+                  <div className="mt-auto border-t border-border/50 pt-3">
+                    {salon.minServicePrice !== undefined && salon.minServicePrice !== null ? (
+                      <p className="font-label-sm text-label-sm text-primary-container">Starting ₹{salon.minServicePrice}</p>
+                    ) : (
+                      <p className="font-label-sm text-label-sm text-muted-text">Price unavailable</p>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="p-4">
-                <h3 className="font-headline-sm text-[16px] text-on-surface truncate">{salon.name}</h3>
-                <p className="font-body-sm text-muted-text truncate mt-0.5">{salon.address}</p>
-                <div className="flex items-center gap-3 mt-2 font-label-sm text-muted-text">
-                  <span className="flex items-center gap-1 text-on-surface-variant">
-                    <span className="text-rating text-[14px]">★</span> 
-                    {salon.ratings?.average > 0 ? salon.ratings.average.toFixed(1) : 'New'} 
-                    {salon.ratings?.count > 0 && <span className="font-normal">({salon.ratings.count})</span>}
-                  </span>
-                  <span>1.2 km</span>
+            ))}
+          </div>
+        </section>
+
+        {/* Popular Services */}
+        <section>
+          <div className="flex justify-between items-end mb-4">
+            <h3 className="font-headline-sm text-headline-sm text-heading-text">Popular Services</h3>
+            <button onClick={() => navigate('/search')} className="font-label-sm text-label-sm text-primary-container hover:text-primary-dark">View all</button>
+          </div>
+          <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2">
+            {services.map(service => (
+              <div
+                key={service._id}
+                className="flex flex-col items-center shrink-0 w-[72px] cursor-pointer"
+                onClick={() => navigate(`/search?q=${service.name}`)}
+              >
+                <div className="w-14 h-14 rounded-full bg-soft-primary flex items-center justify-center text-primary mb-2 overflow-hidden">
+                  {service.image ? (
+                    <img src={getImageUrl(service.image)} alt={service.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="material-symbols-outlined">spa</span>
+                  )}
                 </div>
-                {salon.minServicePrice !== undefined && salon.minServicePrice !== null ? (
-                  <div className="mt-2.5 font-label-sm text-primary">
-                    Starting ₹{salon.minServicePrice}
-                  </div>
-                ) : (
-                  <div className="mt-2.5 font-label-sm text-muted-text">
-                    Price unavailable
-                  </div>
-                )}
+                <span className="text-[11px] font-medium text-heading-text text-center line-clamp-1 w-full px-1">{service.name}</span>
+                <span className="text-[10px] text-muted-text">₹{service.price}</span>
+              </div>
+            ))}
+
+            <div
+              className="flex flex-col items-center shrink-0 w-[72px] cursor-pointer"
+              onClick={() => navigate('/search')}
+            >
+              <div className="w-14 h-14 rounded-full bg-surface-container flex items-center justify-center text-muted-text mb-2">
+                <span className="material-symbols-outlined">more_horiz</span>
+              </div>
+              <span className="text-[11px] font-medium text-heading-text text-center">More</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Exclusive Offers */}
+        <section className="pb-4">
+          <div 
+            onClick={() => activeOffer?.link ? window.open(activeOffer.link, '_blank') : null}
+            className={`bg-soft-pink rounded-2xl p-4 flex items-center justify-between border border-hot-pink/10 ${activeOffer?.link ? 'cursor-pointer' : ''}`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-full bg-hot-pink flex items-center justify-center text-white shrink-0 transform -rotate-45 shadow-sm">
+                <span className="material-symbols-outlined text-[24px]">sell</span>
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm text-heading-text">Exclusive Offers for You!</h4>
+                <p className="text-[11px] text-muted-text">Grab amazing deals on top services</p>
               </div>
             </div>
-          ))}
-          
-          {/* View More Card */}
-          <div onClick={() => navigate('/salons')} className="flex-none w-[120px] bg-soft-primary rounded-[20px] flex flex-col items-center justify-center snap-start cursor-pointer hover:bg-primary-100 transition-colors">
-            <span className="material-symbols-outlined text-primary text-[32px] mb-2">arrow_forward</span>
-            <span className="font-label-sm text-primary">View More</span>
+            <button className="bg-hot-pink text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm hover:opacity-90 transition-opacity whitespace-nowrap ml-2">
+              View Offers
+            </button>
           </div>
-        </div>
-      </section>
-
-      {/* Popular Services */}
-      <section className="pt-2">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="font-headline-sm text-on-surface">Popular Services</h2>
-          <button onClick={() => navigate('/search')} className="font-label-sm text-primary hover:underline">View all</button>
-        </div>
-        <div className="flex justify-between px-1">
-          {services.map(service => (
-            <div key={service._id} className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => navigate(`/search?q=${service.name}`)}>
-              <div className="w-[60px] h-[60px] rounded-full border border-border bg-white flex items-center justify-center text-primary shadow-sm mb-1 hover:border-primary-200 hover:bg-soft-primary transition-colors overflow-hidden">
-                {service.image ? (
-                  <img src={service.image} alt={service.name} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="material-symbols-outlined text-[28px]">spa</span>
-                )}
-              </div>
-              <span className="font-label-sm text-[12px] text-on-surface text-center max-w-[70px] truncate">{service.name}</span>
-              <span className="font-body-sm text-[11px] text-muted-text">₹{service.price}</span>
-            </div>
-          ))}
-
-          {/* Static More Button */}
-          <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => navigate('/search')}>
-            <div className="w-[60px] h-[60px] rounded-full border border-border bg-surface-variant flex items-center justify-center text-on-surface-variant shadow-sm mb-1">
-              <span className="material-symbols-outlined text-[28px]">more_horiz</span>
-            </div>
-            <span className="font-label-sm text-[12px] text-on-surface">More</span>
-          </div>
-        </div>
-      </section>
-
-      {/* Exclusive Offers Banner */}
-      <div className="w-full bg-[#fdf2f8] border border-[#fbcfe8] rounded-[16px] p-4 flex items-center justify-between cursor-pointer mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#e11d48] rounded-full flex items-center justify-center text-white transform -rotate-12">
-            <span className="material-symbols-outlined text-[20px]">local_offer</span>
-          </div>
-          <div>
-            <h3 className="font-label-md text-on-surface mb-0.5">Exclusive Offers for You!</h3>
-            <p className="font-body-sm text-[12px] text-muted-text">Grab amazing deals on top services</p>
-          </div>
-        </div>
-        <button className="bg-[#e11d48] text-white font-label-sm px-4 py-2 rounded-lg hover:bg-[#be123c] transition-colors">
-          View Offers
-        </button>
-      </div>
+        </section>
+      </main>
 
       {/* Location Modals */}
-      <LocationPermissionModal 
+      <LocationPermissionModal
         isOpen={isPermissionModalOpen}
         onClose={() => {
           setIsPermissionModalOpen(false);
@@ -338,10 +353,10 @@ const HomePage = () => {
           setIsLocationModalOpen(true);
         }}
       />
-      
-      <LocationSelectionModal 
-        isOpen={isLocationModalOpen} 
-        onClose={() => setIsLocationModalOpen(false)} 
+
+      <LocationSelectionModal
+        isOpen={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
       />
     </div>
   );

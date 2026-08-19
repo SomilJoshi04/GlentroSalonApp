@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { getCoupons, createCoupon, deleteCoupon } from '../services/adminApi';
+import Modal from '../../../components/common/Modal';
 
 const CouponsPage = () => {
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ code: '', discountType: 'percentage', discountValue: '', minPurchaseAmount: '0', maxDiscountAmount: '', validFrom: '', validTo: '', usageLimit: '' });
+  const [form, setForm] = useState({ code: '', discountType: 'percentage', discountValue: '', minPurchaseAmount: '0', maxDiscountAmount: '', validFrom: '', validTo: '', usageLimit: '', applicableToOffers: true });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { load(); }, []);
@@ -38,8 +39,8 @@ const CouponsPage = () => {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between"><h1 className="text-2xl font-bold text-text-primary">Coupons</h1><button onClick={() => setShowForm(!showForm)} className="px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-medium">{showForm ? 'Cancel' : '+ Create Coupon'}</button></div>
       
-      {showForm && (
-        <form onSubmit={handleSubmit} className="bg-surface-card rounded-2xl p-6 border border-border space-y-4">
+      <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Create Coupon" size="md">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div><label className="text-sm font-medium text-text-secondary">Code*</label><input value={form.code} onChange={e => setForm({...form, code: e.target.value.toUpperCase()})} required className="w-full mt-1 px-3 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-sm uppercase" /></div>
             <div><label className="text-sm font-medium text-text-secondary">Type</label><select value={form.discountType} onChange={e => setForm({...form, discountType: e.target.value})} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-sm"><option value="percentage">Percentage (%)</option><option value="flat">Flat (₹)</option></select></div>
@@ -47,10 +48,14 @@ const CouponsPage = () => {
             <div><label className="text-sm font-medium text-text-secondary">Min Purchase (₹)</label><input type="number" value={form.minPurchaseAmount} onChange={e => setForm({...form, minPurchaseAmount: e.target.value})} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-sm" /></div>
             <div><label className="text-sm font-medium text-text-secondary">Valid From</label><input type="date" value={form.validFrom} onChange={e => setForm({...form, validFrom: e.target.value})} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-sm" /></div>
             <div><label className="text-sm font-medium text-text-secondary">Valid To</label><input type="date" value={form.validTo} onChange={e => setForm({...form, validTo: e.target.value})} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-sm" /></div>
+            <div className="col-span-1 sm:col-span-2 flex items-center gap-2 mt-2">
+              <input type="checkbox" id="applicableToOffers" checked={form.applicableToOffers} onChange={e => setForm({...form, applicableToOffers: e.target.checked})} className="w-4 h-4 text-primary-600 rounded border-border" />
+              <label htmlFor="applicableToOffers" className="text-sm font-medium text-text-primary cursor-pointer">Allow this coupon to be used on discounted Vendor Offers & Packages</label>
+            </div>
           </div>
           <button type="submit" disabled={saving} className="px-6 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-medium disabled:opacity-50">{saving ? 'Creating...' : 'Create'}</button>
         </form>
-      )}
+      </Modal>
 
       {error ? (
         <div className="bg-danger/10 border border-danger/20 text-danger p-4 rounded-xl">
@@ -71,6 +76,7 @@ const CouponsPage = () => {
               <span>Used: {c.usedCount || 0} times</span>
               <span className={c.isActive ? 'text-success' : 'text-danger'}>{c.isActive ? 'Active' : 'Expired'}</span>
             </div>
+            {!c.applicableToOffers && <div className="mt-2 text-[10px] text-warning bg-warning/10 px-2 py-1 rounded inline-block">Not valid on offers</div>}
           </div>
         ))}
       </div>

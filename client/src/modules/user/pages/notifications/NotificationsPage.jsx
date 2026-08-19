@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { getNotifications, markNotificationRead, markAllNotificationsRead } from '../../services/userApi';
 import { useNotifications } from '../../../../context/NotificationContext';
 import Button from '../../../../components/common/Button';
-import Loader from '../../../../components/common/Loader';
 import PageHeader from '../../../../components/common/PageHeader';
+import { NotificationSkeleton } from '../../components/skeletons/NotificationSkeleton';
 
 const typeIcons = {
   BOOKING_ACCEPTED: 'check_circle',
@@ -41,7 +41,7 @@ const NotificationsPage = () => {
     } catch (e) {}
   };
 
-  if (loading) return <Loader />;
+  if (loading) return <NotificationSkeleton />;
 
   return (
     <div className="space-y-6 animate-fade-in pt-6 md:pt-0 w-full">

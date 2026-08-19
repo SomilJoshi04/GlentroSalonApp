@@ -5,6 +5,7 @@ import { SocketProvider } from './context/SocketContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { LocationProvider } from './context/LocationContext';
 import { SettingProvider } from './context/SettingContext';
+import { FavoriteProvider } from './context/FavoriteContext';
 
 import UserRoutes from './modules/user/routes';
 import VendorRoutes from './modules/vendor/routes';
@@ -19,12 +20,14 @@ function App() {
           <NotificationProvider>
             <LocationProvider>
               <SettingProvider>
-                <Routes>
-                  {/* Module Routes */}
-                  <Route path="/admin/*" element={<AdminRoutes />} />
-                  <Route path="/vendor/*" element={<VendorRoutes />} />
-                  <Route path="/*" element={<UserRoutes />} />
-                </Routes>
+                <FavoriteProvider>
+                  <Routes>
+                    {/* Module Routes */}
+                    <Route path="/admin/*" element={<AdminRoutes />} />
+                    <Route path="/vendor/*" element={<VendorRoutes />} />
+                    <Route path="/*" element={<UserRoutes />} />
+                  </Routes>
+                </FavoriteProvider>
               </SettingProvider>
             </LocationProvider>
           </NotificationProvider>

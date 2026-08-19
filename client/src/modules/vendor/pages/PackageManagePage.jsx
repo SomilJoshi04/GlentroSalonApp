@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getVendorPackages, createPackage, updatePackage, deletePackage, togglePackageStatus, getVendorSalons, getServices } from '../services/vendorApi';
+import Modal from '../../../components/common/Modal';
 
 const PackageManagePage = () => {
   const [packages, setPackages] = useState([]);
@@ -15,7 +16,10 @@ const PackageManagePage = () => {
   // Form
   const [showForm, setShowForm] = useState(false);
   const [editingPackage, setEditingPackage] = useState(null);
-  const [form, setForm] = useState({ name: '', salon: '', services: [], totalPrice: '', discountedPrice: '', description: '' });
+  const [form, setForm] = useState({ 
+    name: '', salon: '', services: [], totalPrice: '', discountedPrice: '', description: '',
+    validFrom: '', validTo: '', usageLimit: 0, perUserLimit: 0, terms: '' 
+  });
 
   useEffect(() => { loadInit(); }, []);
   useEffect(() => { loadPackages(); }, [filters]);
@@ -67,7 +71,10 @@ const PackageManagePage = () => {
 
       setShowForm(false); 
       setEditingPackage(null);
-      setForm({ name: '', salon: '', services: [], totalPrice: '', discountedPrice: '', description: '' });
+      setForm({ 
+        name: '', salon: '', services: [], totalPrice: '', discountedPrice: '', description: '',
+        validFrom: '', validTo: '', usageLimit: 0, perUserLimit: 0, terms: ''
+      });
       loadPackages(); 
     } catch (e) { 
       alert(e.response?.data?.message || 'Failed to save package'); 
@@ -101,7 +108,12 @@ const PackageManagePage = () => {
       services: p.services?.map(s => s._id) || [],
       totalPrice: p.totalPrice,
       discountedPrice: p.discountedPrice,
-      description: p.description || ''
+      description: p.description || '',
+      validFrom: p.validFrom ? new Date(p.validFrom).toISOString().split('T')[0] : '',
+      validTo: p.validTo ? new Date(p.validTo).toISOString().split('T')[0] : '',
+      usageLimit: p.usageLimit || 0,
+      perUserLimit: p.perUserLimit || 0,
+      terms: p.terms || ''
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -119,16 +131,19 @@ const PackageManagePage = () => {
     <div className="space-y-6 animate-fade-in relative">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="font-headline-md text-[24px] sm:text-[28px] text-on-surface font-bold">Service Packages</h1>
-          <p className="font-body-md text-muted-text mt-1">Bundle multiple services together for a discounted price.</p>
+          <h1 className="font-headline-md text-[24px] sm:text-[28px] text-on-surface font-bold">Offers & Packages</h1>
+          <p className="font-body-md text-muted-text mt-1">Create promotional offers or bundle multiple services together.</p>
         </div>
         <button onClick={() => {
           setEditingPackage(null);
-          setForm({ name: '', salon: salons.length > 0 ? salons[0]._id : '', services: [], totalPrice: '', discountedPrice: '', description: '' });
+          setForm({ 
+            name: '', salon: salons.length > 0 ? salons[0]._id : '', services: [], totalPrice: '', discountedPrice: '', description: '',
+            validFrom: '', validTo: '', usageLimit: 0, perUserLimit: 0, terms: ''
+          });
           setShowForm(!showForm);
         }} className={`w-full sm:w-auto shrink-0 justify-center whitespace-nowrap px-4 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm flex items-center gap-1.5 border ${showForm ? 'bg-surface border-border text-on-surface hover:bg-surface-variant' : 'bg-primary text-white hover:bg-primary-dark border-transparent'}`}>
           <span className="material-symbols-outlined text-[18px]">{showForm ? 'close' : 'add'}</span>
-          {showForm ? 'Cancel' : 'Create Package'}
+          {showForm ? 'Cancel' : 'Create Offer/Package'}
         </button>
       </div>
 
@@ -137,7 +152,7 @@ const PackageManagePage = () => {
           <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-text text-[20px]">search</span>
           <input 
             type="text" 
-            placeholder="Search packages by name..." 
+            placeholder="Search offers or packages by name..." 
             value={filters.search}
             onChange={e => setFilters({...filters, search: e.target.value})}
             className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-border text-sm bg-surface text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" 
@@ -154,22 +169,26 @@ const PackageManagePage = () => {
         </select>
       </div>
 
-      {showForm && (
-        <form onSubmit={handleSubmit} className="bg-surface rounded-2xl p-6 border border-border space-y-5 shadow-sm animate-fade-in">
-          <h2 className="text-lg font-semibold text-on-surface">{editingPackage ? 'Edit Package' : 'Create New Package'}</h2>
+      <Modal 
+        isOpen={showForm} 
+        onClose={() => setShowForm(false)} 
+        title={editingPackage ? 'Edit Offer/Package' : 'Create New Offer/Package'} 
+        size="lg"
+      >
+        <form onSubmit={handleSubmit} className="space-y-5">
           
           {editingPackage?.status === 'ACTIVE' && (
             <div className="p-3.5 bg-warning/10 text-warning-dark border border-warning/30 rounded-xl text-sm flex items-start gap-2.5">
               <span className="material-symbols-outlined text-[20px] text-warning shrink-0">warning</span>
               <div>
-                <strong>Warning:</strong> Editing an active package will return it to <strong>PENDING</strong> status and hide it from customers until re-approved by an Admin.
+                <strong>Warning:</strong> Editing an active offer/package will return it to <strong>PENDING</strong> status and hide it from customers until re-approved by an Admin.
               </div>
             </div>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-muted-text mb-1 block">Package Name*</label>
+              <label className="text-sm font-medium text-muted-text mb-1 block">Offer/Package Name*</label>
               <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} required className="w-full px-3.5 py-2.5 bg-surface text-on-surface rounded-xl border border-border text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" />
             </div>
             <div>
@@ -181,11 +200,28 @@ const PackageManagePage = () => {
             </div>
             <div>
               <label className="text-sm font-medium text-muted-text mb-1 block">Original Price (₹)*</label>
-              <input type="number" value={form.totalPrice} onChange={e => setForm({...form, totalPrice: e.target.value})} required className="w-full px-3.5 py-2.5 bg-surface text-on-surface rounded-xl border border-border text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" />
+              <input type="number" value={form.totalPrice} readOnly className="w-full px-3.5 py-2.5 bg-surface-variant text-on-surface rounded-xl border border-border text-sm shadow-sm cursor-not-allowed" />
+              <p className="text-xs text-muted-text mt-1">Calculated automatically from selected services.</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-muted-text mb-1 block">Discounted Price (₹)*</label>
+              <label className="text-sm font-medium text-muted-text mb-1 block">Offer Price (₹)*</label>
               <input type="number" value={form.discountedPrice} onChange={e => setForm({...form, discountedPrice: e.target.value})} required className="w-full px-3.5 py-2.5 bg-surface text-on-surface rounded-xl border border-border text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-text mb-1 block">Valid From*</label>
+              <input type="date" value={form.validFrom} onChange={e => setForm({...form, validFrom: e.target.value})} required className="w-full px-3.5 py-2.5 bg-surface text-on-surface rounded-xl border border-border text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-text mb-1 block">Valid To*</label>
+              <input type="date" value={form.validTo} onChange={e => setForm({...form, validTo: e.target.value})} required className="w-full px-3.5 py-2.5 bg-surface text-on-surface rounded-xl border border-border text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-text mb-1 block">Total Usage Limit</label>
+              <input type="number" placeholder="0 for unlimited" value={form.usageLimit} onChange={e => setForm({...form, usageLimit: e.target.value})} className="w-full px-3.5 py-2.5 bg-surface text-on-surface rounded-xl border border-border text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-text mb-1 block">Usage Limit Per User</label>
+              <input type="number" placeholder="0 for unlimited" value={form.perUserLimit} onChange={e => setForm({...form, perUserLimit: e.target.value})} className="w-full px-3.5 py-2.5 bg-surface text-on-surface rounded-xl border border-border text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" />
             </div>
           </div>
           
@@ -199,7 +235,14 @@ const PackageManagePage = () => {
                       type="checkbox" 
                       className="w-4 h-4 text-primary rounded border-border focus:ring-primary bg-surface"
                       checked={form.services.includes(s._id)} 
-                      onChange={e => setForm({...form, services: e.target.checked ? [...form.services, s._id] : form.services.filter(x => x !== s._id)})} 
+                      onChange={e => {
+                        const newServices = e.target.checked ? [...form.services, s._id] : form.services.filter(x => x !== s._id);
+                        const newTotal = newServices.reduce((sum, id) => {
+                          const service = services.find(srv => srv._id === id);
+                          return sum + (service ? service.price : 0);
+                        }, 0);
+                        setForm({...form, services: newServices, totalPrice: newTotal});
+                      }} 
                     />
                     <div className="flex flex-col">
                       <span className="font-semibold">{s.name}</span>
@@ -228,7 +271,7 @@ const PackageManagePage = () => {
             </button>
           </div>
         </form>
-      )}
+      </Modal>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {isFetching ? (
@@ -238,8 +281,8 @@ const PackageManagePage = () => {
         ) : packages.length === 0 && !loading ? (
           <div className="col-span-full py-16 text-center text-muted-text bg-surface rounded-2xl border border-border border-dashed flex flex-col items-center">
             <span className="material-symbols-outlined text-4xl text-muted-text/30 mb-2">inventory_2</span>
-            <p className="font-semibold text-on-surface">No packages found</p>
-            <p className="text-xs mt-1">Try adjusting your filters or create a new package.</p>
+            <p className="font-semibold text-on-surface">No offers or packages found</p>
+            <p className="text-xs mt-1">Try adjusting your filters or create a new offer/package.</p>
           </div>
         ) : (
           packages.map(p => (
@@ -279,6 +322,13 @@ const PackageManagePage = () => {
                 <div className="mb-4 p-3 bg-error/5 border border-error/15 rounded-xl">
                   <span className="text-[10px] font-bold text-error uppercase tracking-wider block mb-0.5">Rejection Reason</span>
                   <p className="text-xs text-error">{p.adminNote}</p>
+                </div>
+              )}
+
+              {p.validFrom && p.validTo && (
+                <div className="mb-4 flex items-center gap-2 text-xs text-muted-text bg-surface-variant p-2 rounded-lg border border-border">
+                  <span className="material-symbols-outlined text-[16px]">calendar_today</span>
+                  <span>{new Date(p.validFrom).toLocaleDateString()} - {new Date(p.validTo).toLocaleDateString()}</span>
                 </div>
               )}
 

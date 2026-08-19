@@ -85,7 +85,7 @@ const SupportChatPage = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col h-[100dvh] sm:h-[calc(100vh-120px)] max-w-4xl mx-auto w-full bg-surface border border-border overflow-hidden rounded-2xl">
+      <div className="flex flex-col h-[calc(100dvh-72px-env(safe-area-inset-bottom))] sm:h-[calc(100vh-120px)] max-w-4xl mx-auto w-full bg-surface border border-border overflow-hidden rounded-2xl">
         <div className="h-16 bg-background-alt animate-pulse border-b border-border" />
         <div className="flex-1 bg-surface-variant/20 p-4 space-y-4">
           <div className="h-12 w-2/3 bg-slate-100 rounded-2xl animate-pulse" />
@@ -101,7 +101,7 @@ const SupportChatPage = () => {
   const displayId = chatDetails?.chatDisplayId || `CHAT-${chatId.slice(-6).toUpperCase()}`;
 
   return (
-    <div className="flex flex-col h-[100dvh] sm:h-[calc(100vh-120px)] animate-fade-in max-w-4xl mx-auto w-full bg-surface sm:rounded-2xl shadow-sm sm:border border-border overflow-hidden">
+    <div className="flex flex-col h-[calc(100dvh-72px-env(safe-area-inset-bottom))] md:h-[calc(100vh-120px)] animate-fade-in max-w-4xl mx-auto w-full bg-surface sm:rounded-2xl shadow-sm sm:border border-border overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-4 p-4 border-b border-border bg-surface sticky top-0 z-10">
         <button onClick={() => goBack(navigate, '/admin/support')} className="p-2 -ml-2 rounded-xl text-on-surface hover:bg-surface-variant transition-colors flex items-center justify-center">

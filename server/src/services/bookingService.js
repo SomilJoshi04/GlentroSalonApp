@@ -14,7 +14,7 @@ const couponService = require('./couponService');
  * Create a new booking with multiple services
  * Handles staff auto-assignment, conflict prevention, and financial calculations
  */
-const createBooking = async ({ userId, salonId, services, bookingDate, startTime, couponCode, paymentMethod }) => {
+const createBooking = async ({ userId, salonId, services, bookingDate, startTime, couponCode, paymentMethod, packageId }) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -46,6 +46,41 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
       throw new Error("This time slot is no longer available. Please select another time.");
     }
     
+    // Validate Package if provided
+    let pkg = null;
+    if (packageId) {
+      const Package = require('../models/Package');
+      pkg = await Package.findById(packageId);
+      if (!pkg || pkg.salon.toString() !== salonId.toString()) {
+        throw new Error('Offer/Package not found or does not belong to this salon');
+      }
+      if (!pkg.isActive || pkg.status !== 'ACTIVE') {
+        throw new Error('This Offer/Package is currently inactive or not approved');
+      }
+      const nowTime = new Date();
+      if (nowTime < new Date(pkg.validFrom) || nowTime > new Date(pkg.validTo)) {
+        throw new Error('This Offer/Package has expired or is not yet valid');
+      }
+      
+      // Verify services match the package exactly (or is a subset if allowed, but strict match is safer)
+      const requestedServiceIds = services.map(s => s.service.toString()).sort();
+      const packageServiceIds = pkg.services.map(s => s.toString()).sort();
+      
+      // Basic subset/match validation - user must book all services in the package
+      const allPackageServicesIncluded = packageServiceIds.every(id => requestedServiceIds.includes(id));
+      if (!allPackageServicesIncluded) {
+        throw new Error('Booking must include all services from the selected Offer/Package');
+      }
+      
+      // Optional: Check usage limit
+      if (pkg.usageLimit > 0) {
+        const usageCount = await Booking.countDocuments({ package: pkg._id, status: { $ne: 'CANCELLED' } });
+        if (usageCount >= pkg.usageLimit) {
+          throw new Error('This Offer/Package has reached its usage limit');
+        }
+      }
+    }
+
     const bookingServices = [];
     let currentTime = startTime;
 
@@ -110,9 +145,10 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
     }
 
     // Calculate totals
-    const { totalAmount, discountAmount, finalAmount } = calculateBookingTotal(
+    const { totalAmount, discountAmount, finalAmount, packageDiscount, couponDiscount } = calculateBookingTotal(
       bookingServices,
-      coupon
+      coupon,
+      pkg
     );
 
     // Calculate financial breakdown
@@ -132,6 +168,14 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
           discountAmount,
           finalAmount,
           coupon: coupon ? coupon._id : undefined,
+          package: pkg ? pkg._id : undefined,
+          packageSnapshot: pkg ? {
+            packageId: pkg._id,
+            name: pkg.name,
+            originalPrice: pkg.totalPrice,
+            offerPrice: pkg.discountedPrice,
+            discount: packageDiscount,
+          } : undefined,
           paymentMethod: paymentMethod || 'AT_SALON',
           commission: financials.commission,
           platformFee: financials.platformFee,

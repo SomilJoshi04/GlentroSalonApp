@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getVendorSalons, getSalonStaff, addStaff, updateStaff, deleteStaff, updateSchedule, toggleStaffStatus } from '../services/vendorApi';
+import Modal from '../../../components/common/Modal';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -194,9 +195,12 @@ const StaffManagePage = () => {
         </select>
       </div>
 
-      {showForm && (
-        <form onSubmit={handleSubmit} className="bg-surface rounded-2xl p-6 border border-border shadow-sm space-y-4 animate-fade-in">
-          <h2 className="text-lg font-semibold text-on-surface">{editingStaff ? 'Edit Staff Details' : 'Add New Staff Member'}</h2>
+      <Modal 
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+        title={editingStaff ? 'Edit Staff Details' : 'Add New Staff Member'}
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1 text-muted-text">Name*</label>
@@ -219,7 +223,7 @@ const StaffManagePage = () => {
             </button>
           </div>
         </form>
-      )}
+      </Modal>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         {isFetching ? (

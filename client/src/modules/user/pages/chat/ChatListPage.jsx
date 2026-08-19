@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getChats } from '../../services/userApi';
 import { useSocket } from '../../../../context/SocketContext';
-import Loader from '../../../../components/common/Loader';
 import PageHeader from '../../../../components/common/PageHeader';
+import { ChatListSkeleton } from '../../components/skeletons/ChatSkeleton';
 
 const ChatListPage = () => {
   const [chats, setChats] = useState([]);
@@ -28,7 +28,7 @@ const ChatListPage = () => {
     setLoading(false);
   };
 
-  if (loading) return <Loader />;
+  if (loading) return <ChatListSkeleton />;
 
   const filteredChats = chats.filter(chat => {
     const isAdminChat = chat.chatType === 'user-admin';
