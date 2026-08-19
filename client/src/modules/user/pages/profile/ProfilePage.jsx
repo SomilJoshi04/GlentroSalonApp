@@ -67,7 +67,8 @@ const ProfilePage = () => {
 
   const handleLogout = () => {
     setShowLogoutConfirm(false);
-    logout();
+    logout('user');
+    navigate('/login');
   };
 
   const handleContactAdmin = async () => {

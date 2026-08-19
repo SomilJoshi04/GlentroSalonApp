@@ -3,6 +3,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { updateProfile } from '../services/adminApi';
 import imageCompression from 'browser-image-compression';
 import toast from 'react-hot-toast';
+import { getImageUrl } from '../../../utils/imageUtils';
 
 const ProfilePage = () => {
   const { admin, setAdmin, adminToken } = useAuth();
@@ -13,9 +14,8 @@ const ProfilePage = () => {
     city: admin?.city || ''
   });
   const [imageFile, setImageFile] = useState(null);
-  const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace('/api', '');
   const [previewUrl, setPreviewUrl] = useState(
-    admin?.avatar ? `${baseUrl}/uploads/${admin.avatar}` : null
+    admin?.avatar ? getImageUrl(admin.avatar) : null
   );
   
   const [loading, setLoading] = useState(false);
@@ -31,10 +31,10 @@ const ProfilePage = () => {
       });
       // Only sync image if the user hasn't explicitly selected a new local file yet
       if (!imageFile && imageFile !== 'REMOVE') {
-        setPreviewUrl(admin.avatar ? `${baseUrl}/uploads/${admin.avatar}` : null);
+        setPreviewUrl(admin.avatar ? getImageUrl(admin.avatar) : null);
       }
     }
-  }, [admin, imageFile, baseUrl]);
+  }, [admin, imageFile]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -101,7 +101,7 @@ const ProfilePage = () => {
         // Reset local temporary state and force canonical URL
         setImageFile(null);
         if (res.data.data.avatar) {
-          setPreviewUrl(`${baseUrl}/uploads/${res.data.data.avatar}`);
+          setPreviewUrl(getImageUrl(res.data.data.avatar));
         } else {
           setPreviewUrl(null);
         }

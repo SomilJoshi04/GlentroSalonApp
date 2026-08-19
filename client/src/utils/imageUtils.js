@@ -3,6 +3,7 @@ export const getImageUrl = (imagePath) => {
   if (imagePath.startsWith('http') || imagePath.startsWith('data:') || imagePath.startsWith('blob:')) {
     return imagePath;
   }
-  const baseUrl = import.meta.env.VITE_API_URL.replace(/\/api$/, '');
+  const apiUrl = import.meta.env.VITE_API_URL || '';
+  const baseUrl = apiUrl.replace(/\/api$/, '');
   return `${baseUrl}/uploads/${imagePath}`;
 };

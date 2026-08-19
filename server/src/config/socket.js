@@ -1,13 +1,32 @@
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
-const { JWT_SECRET, USER_APP_URL, VENDOR_APP_URL, ADMIN_PANEL_URL } = require('./env');
+const { JWT_SECRET, CLIENT_URL } = require('./env');
 
 let io;
 
+const getAllowedOrigins = () => {
+  if (!CLIENT_URL) return [];
+  return CLIENT_URL.split(',').map(url => {
+    let clean = url.trim();
+    if (clean.endsWith('/')) clean = clean.slice(0, -1);
+    return clean;
+  }).filter(Boolean);
+};
+
 const initializeSocket = (httpServer) => {
+  const allowedOrigins = getAllowedOrigins();
+
   io = new Server(httpServer, {
     cors: {
-      origin: [USER_APP_URL, VENDOR_APP_URL, ADMIN_PANEL_URL],
+      origin: function (origin, callback) {
+        if (!origin) return callback(null, true);
+        
+        let cleanOrigin = origin.endsWith('/') ? origin.slice(0, -1) : origin;
+        if (allowedOrigins.includes(cleanOrigin) || allowedOrigins.includes('*')) {
+          return callback(null, true);
+        }
+        return callback(new Error('Not allowed by CORS'), false);
+      },
       methods: ['GET', 'POST'],
       credentials: true,
     },

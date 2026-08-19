@@ -3,7 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
-const { USER_APP_URL, VENDOR_APP_URL, ADMIN_PANEL_URL, NODE_ENV } = require('./config/env');
+const { CLIENT_URL, NODE_ENV } = require('./config/env');
 const { errorHandler, notFound } = require('./middleware/errorMiddleware');
 
 // Import routes
@@ -36,9 +36,32 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
+// Parse CLIENT_URL safely handling comma-separated lists and trailing slashes
+const getAllowedOrigins = () => {
+  if (!CLIENT_URL) return [];
+  return CLIENT_URL.split(',').map(url => {
+    let clean = url.trim();
+    if (clean.endsWith('/')) clean = clean.slice(0, -1);
+    return clean;
+  }).filter(Boolean);
+};
+
+const allowedOrigins = getAllowedOrigins();
+
 // CORS
 app.use(cors({
-  origin: [USER_APP_URL, VENDOR_APP_URL, ADMIN_PANEL_URL],
+  origin: function (origin, callback) {
+    // allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    let cleanOrigin = origin.endsWith('/') ? origin.slice(0, -1) : origin;
+    
+    if (allowedOrigins.includes(cleanOrigin) || allowedOrigins.includes('*')) {
+      return callback(null, true);
+    }
+    
+    return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],

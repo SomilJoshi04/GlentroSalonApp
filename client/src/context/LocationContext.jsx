@@ -136,10 +136,10 @@ export const LocationProvider = ({ children }) => {
         },
         (error) => {
           console.error("Geolocation error:", error);
-          let errMsg = "Unable to get location.";
-          if (error.code === 1) errMsg = "Location permission denied.";
-          if (error.code === 2) errMsg = "Location unavailable.";
-          if (error.code === 3) errMsg = "Location request timed out.";
+          let errMsg = "Unable to detect your location. Please try again.";
+          if (error.code === 1) errMsg = "Location access is turned off. Please allow location access in your browser settings to discover salons near you.";
+          if (error.code === 2) errMsg = "Location position unavailable. Please try again or select manually.";
+          if (error.code === 3) errMsg = "Location request timed out. Please try again or select manually.";
           setLocationError(errMsg);
           setIsLocating(false);
           resolve(false);

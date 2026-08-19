@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { getBanners, createBanner, updateBanner, deleteBanner, toggleBannerStatus } from '../services/adminApi';
 import ImageUpload from '../../../components/common/ImageUpload';
+import { getImageUrl } from '../../../utils/imageUtils';
 
 const BannersPage = () => {
   const [banners, setBanners] = useState([]);
@@ -132,7 +133,7 @@ const BannersPage = () => {
                 <tr key={banner._id} className="hover:bg-surface-elevated/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="w-32 h-16 rounded-lg overflow-hidden border border-border bg-dark-800">
-                      <img src={`http://localhost:5000/uploads/${banner.image}`} alt={banner.title || 'Banner'} className="w-full h-full object-cover" />
+                      <img src={getImageUrl(banner.image)} alt={banner.title || 'Banner'} className="w-full h-full object-cover" />
                     </div>
                   </td>
                   <td className="px-6 py-4">

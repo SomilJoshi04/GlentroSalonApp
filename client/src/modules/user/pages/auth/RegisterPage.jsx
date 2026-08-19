@@ -52,14 +52,31 @@ const RegisterPage = () => {
     }
   };
 
-  return (
-    <div className="animate-fade-in">
-      <h2 className="text-2xl font-bold text-text-primary mb-1">Create Account</h2>
-      <p className="text-text-secondary text-sm mb-6">Join us to discover amazing salons</p>
+  const handleBack = () => {
+    if (window.history.length > 2 && !state?.from) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
 
-      {error && (
-        <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">{error}</div>
-      )}
+  return (
+    <div className="animate-fade-in relative pt-4">
+      {/* Back Button */}
+      <button 
+        onClick={handleBack}
+        className="absolute top-0 left-0 p-2 -ml-2 mt-0 text-on-surface-variant hover:bg-soft-primary transition-colors rounded-full active:scale-95 duration-150"
+      >
+        <span className="material-symbols-outlined">arrow_back</span>
+      </button>
+
+      <div className="mt-8">
+        <h2 className="text-2xl font-bold text-text-primary mb-1">Create Account</h2>
+        <p className="text-text-secondary text-sm mb-6">Join us to discover amazing salons</p>
+
+        {error && (
+          <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">{error}</div>
+        )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input label="Full Name" name="name" value={formData.name} onChange={handleChange} placeholder="John Doe" required />
@@ -70,10 +87,11 @@ const RegisterPage = () => {
         <Button type="submit" loading={loading} className="w-full" size="lg">Create Account</Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-text-secondary">
-        Already have an account?{' '}
-        <Link to="/login" className="text-primary-600 font-semibold hover:text-primary-700">Sign In</Link>
-      </p>
+        <p className="mt-6 text-center text-sm text-text-secondary">
+          Already have an account?{' '}
+          <Link to="/login" className="text-primary-600 font-semibold hover:text-primary-700">Sign In</Link>
+        </p>
+      </div>
     </div>
   );
 };

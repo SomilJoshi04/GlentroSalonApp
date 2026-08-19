@@ -6,6 +6,7 @@ import { useNotifications } from '../../../../context/NotificationContext';
 import { useLocationContext } from '../../../../context/LocationContext';
 import Loader from '../../../../components/common/Loader';
 import LocationSelectionModal from '../../../../components/common/LocationSelectionModal';
+import LocationPermissionModal from '../../../../components/common/LocationPermissionModal';
 import { getImageUrl } from '../../../../utils/imageUtils';
 
 const HomePage = () => {
@@ -16,11 +17,19 @@ const HomePage = () => {
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
   const [salonListTitle, setSalonListTitle] = useState('Nearby Salons');
   const { selectedLocation } = useLocationContext();
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
   const navigate = useNavigate();
+
+  // Trigger permission modal on first load if no location exists
+  useEffect(() => {
+    if (!selectedLocation && !localStorage.getItem('location_prompt_dismissed')) {
+      setIsPermissionModalOpen(true);
+    }
+  }, [selectedLocation]);
 
   useEffect(() => {
     loadInitialData();
@@ -142,7 +151,7 @@ const HomePage = () => {
                 onClick={() => banner.link && window.open(banner.link, '_blank')}
               >
                 <img 
-                  src={`http://localhost:5000/uploads/${banner.image}`} 
+                  src={getImageUrl(banner.image)} 
                   alt={banner.title || 'Promo Banner'} 
                   className="w-full h-full object-cover object-center" 
                 />
@@ -314,7 +323,20 @@ const HomePage = () => {
         </button>
       </div>
 
-      {/* Location Modal */}
+      {/* Location Modals */}
+      <LocationPermissionModal 
+        isOpen={isPermissionModalOpen}
+        onClose={() => {
+          setIsPermissionModalOpen(false);
+          localStorage.setItem('location_prompt_dismissed', 'true');
+        }}
+        onSelectManually={() => {
+          setIsPermissionModalOpen(false);
+          localStorage.setItem('location_prompt_dismissed', 'true');
+          setIsLocationModalOpen(true);
+        }}
+      />
+      
       <LocationSelectionModal 
         isOpen={isLocationModalOpen} 
         onClose={() => setIsLocationModalOpen(false)} 

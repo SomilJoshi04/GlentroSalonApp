@@ -49,18 +49,35 @@ const LoginPage = () => {
     }
   };
 
+  const handleBack = () => {
+    if (window.history.length > 2 && !state?.from) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
+
   return (
-    <div className="animate-fade-in">
-      <h2 className="text-2xl font-bold text-text-primary mb-1">Welcome back</h2>
-      <p className="text-text-secondary text-sm mb-6">Sign in to continue booking</p>
+    <div className="animate-fade-in relative pt-4">
+      {/* Back Button */}
+      <button 
+        onClick={handleBack}
+        className="absolute top-0 left-0 p-2 -ml-2 mt-0 text-on-surface-variant hover:bg-soft-primary transition-colors rounded-full active:scale-95 duration-150"
+      >
+        <span className="material-symbols-outlined">arrow_back</span>
+      </button>
 
-      {error && (
-        <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">
-          {error}
-        </div>
-      )}
+      <div className="mt-8">
+        <h2 className="text-2xl font-bold text-text-primary mb-1">Welcome back</h2>
+        <p className="text-text-secondary text-sm mb-6">Sign in to continue booking</p>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           label="Email"
           type="email"
@@ -84,12 +101,13 @@ const LoginPage = () => {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-text-secondary">
-        Don't have an account?{' '}
-        <Link to="/register" className="text-primary-600 font-semibold hover:text-primary-700 transition-colors">
-          Sign Up
-        </Link>
-      </p>
+        <p className="mt-6 text-center text-sm text-text-secondary">
+          Don't have an account?{' '}
+          <Link to="/register" className="text-primary-600 font-semibold hover:text-primary-700 transition-colors">
+            Sign Up
+          </Link>
+        </p>
+      </div>
     </div>
   );
 };

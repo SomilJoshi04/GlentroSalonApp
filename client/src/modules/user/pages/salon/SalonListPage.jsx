@@ -5,11 +5,13 @@ import { useLocationContext } from '../../../../context/LocationContext';
 import { goBack } from '../../../../utils/navigation';
 import Loader from '../../../../components/common/Loader';
 import { getImageUrl } from '../../../../utils/imageUtils';
+import SalonMapView from '../../../../components/common/SalonMapView';
 
 const SalonListPage = () => {
   const [salons, setSalons] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
   const [searchParams] = useSearchParams();
   const categoryParam = searchParams.get('category') || '';
   const searchParam = searchParams.get('search') || '';
@@ -25,7 +27,7 @@ const SalonListPage = () => {
     try { const res = await getCategories(); setCategories(res.data.data); } catch (e) {}
   };
 
-  const loadSalons = async () => {
+  const loadSalons = async (customLocation = null) => {
     setLoading(true);
     try {
       const activeFilters = { ...filters, search: searchParams.get('search') || filters.search, category: searchParams.get('category') || filters.category };
@@ -33,17 +35,19 @@ const SalonListPage = () => {
       let params = { limit: 50, ...Object.fromEntries(Object.entries(activeFilters).filter(([_, v]) => v)) };
       let res;
       
-      if (selectedLocation?.lat && selectedLocation?.lng) {
-        params = { ...params, lat: selectedLocation.lat, lng: selectedLocation.lng };
+      const loc = customLocation || selectedLocation;
+
+      if (loc?.lat && loc?.lng) {
+        params = { ...params, lat: loc.lat, lng: loc.lng };
         res = await getNearbySalons(params);
         
         // Smart Fallback
-        if (res.data.data.salons.length === 0) {
+        if (res.data.data.salons.length === 0 && !customLocation) {
           const fallbackParams = { limit: 50, category: params.category, search: params.search };
           res = await getSalons(fallbackParams);
         }
       } else {
-        if (selectedLocation?.city) params.city = selectedLocation.city;
+        if (loc?.city) params.city = loc.city;
         res = await getSalons(params);
       }
       
@@ -52,6 +56,11 @@ const SalonListPage = () => {
       console.error(e);
     }
     setLoading(false);
+  };
+
+  const handleMapMove = (lat, lng) => {
+    // When map moves, fetch salons around the new center
+    loadSalons({ lat, lng });
   };
 
   const currentCategoryName = categories.find(c => c._id === filters.category)?.name || (searchParams.get('search') ? `Search: ${searchParams.get('search')}` : 'All Salons');
@@ -70,12 +79,12 @@ const SalonListPage = () => {
           </button>
         </div>
         
-        {/* Category/Filter Pills */}
-        <div className="px-4 md:px-margin-desktop py-3 overflow-x-auto whitespace-nowrap hide-scrollbar border-t border-border">
-          <div className="flex gap-3">
+        {/* Category/Filter Pills and View Toggle */}
+        <div className="flex justify-between items-center px-4 md:px-margin-desktop py-3 border-t border-border">
+          <div className="flex gap-3 overflow-x-auto whitespace-nowrap hide-scrollbar flex-1 pr-4">
             <button 
               onClick={() => { navigate('/salons'); setFilters({...filters, category: ''}) }}
-              className={`px-4 py-2 rounded-full font-label-md text-[14px] transition-colors ${!filters.category && !searchParams.get('search') ? 'bg-primary text-white shadow-sm' : 'bg-soft-primary text-primary hover:bg-primary-container hover:text-white'}`}
+              className={`px-4 py-2 rounded-full font-label-md text-[14px] transition-colors shrink-0 ${!filters.category && !searchParams.get('search') ? 'bg-primary text-white shadow-sm' : 'bg-soft-primary text-primary hover:bg-primary-container hover:text-white'}`}
             >
               All
             </button>
@@ -83,17 +92,42 @@ const SalonListPage = () => {
               <button 
                 key={cat._id}
                 onClick={() => { navigate(`/salons?category=${cat._id}`); setFilters({...filters, category: cat._id, search: ''}) }}
-                className={`px-4 py-2 rounded-full font-label-md text-[14px] transition-colors ${filters.category === cat._id ? 'bg-primary text-white shadow-sm' : 'bg-soft-primary text-primary hover:bg-primary-container hover:text-white'}`}
+                className={`px-4 py-2 rounded-full font-label-md text-[14px] transition-colors shrink-0 ${filters.category === cat._id ? 'bg-primary text-white shadow-sm' : 'bg-soft-primary text-primary hover:bg-primary-container hover:text-white'}`}
               >
                 {cat.name}
               </button>
             ))}
           </div>
+          
+          <div className="flex bg-surface-variant rounded-lg p-1 shrink-0 ml-2">
+            <button 
+              onClick={() => setViewMode('list')}
+              className={`px-3 py-1.5 rounded-md flex items-center justify-center transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-primary font-bold' : 'text-on-surface-variant hover:text-on-surface'}`}
+            >
+              <span className="material-symbols-outlined text-[20px] mr-1">list</span>
+              <span className="text-[12px] hidden sm:block">List</span>
+            </button>
+            <button 
+              onClick={() => setViewMode('map')}
+              className={`px-3 py-1.5 rounded-md flex items-center justify-center transition-colors ${viewMode === 'map' ? 'bg-white shadow-sm text-primary font-bold' : 'text-on-surface-variant hover:text-on-surface'}`}
+            >
+              <span className="material-symbols-outlined text-[20px] mr-1">map</span>
+              <span className="text-[12px] hidden sm:block">Map</span>
+            </button>
+          </div>
         </div>
       </header>
 
       <main className="px-4 md:px-margin-desktop py-6 space-y-6">
-        {loading ? (
+        {viewMode === 'map' ? (
+          <div className="w-full h-[60vh] sm:h-[70vh] rounded-2xl overflow-hidden shadow-sm">
+            <SalonMapView 
+              salons={salons} 
+              centerLocation={selectedLocation} 
+              onMapMove={handleMapMove}
+            />
+          </div>
+        ) : loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="bg-surface rounded-[18px] border border-border shadow-sm overflow-hidden flex flex-col animate-pulse">

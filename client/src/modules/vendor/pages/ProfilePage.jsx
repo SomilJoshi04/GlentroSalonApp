@@ -3,6 +3,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { updateProfile } from '../services/vendorApi';
 import ImageUpload from '../../../components/common/ImageUpload';
 import toast from 'react-hot-toast';
+import { getImageUrl } from '../../../utils/imageUtils';
 
 const ProfilePage = () => {
   const { vendor: user, setVendor: updateUser } = useAuth();
@@ -46,7 +47,7 @@ const ProfilePage = () => {
       <div className="bg-surface rounded-2xl p-8 border border-border shadow-sm text-center">
         <div className="w-20 h-20 mx-auto bg-soft-primary rounded-full flex items-center justify-center text-primary text-3xl font-bold overflow-hidden border border-border">
           {user?.avatar ? (
-            <img src={user.avatar.startsWith('data:') ? user.avatar : `${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}/uploads/${user.avatar}`} alt="Profile" className="w-full h-full object-cover" />
+            <img src={user.avatar.startsWith('data:') ? user.avatar : getImageUrl(user.avatar)} alt="Profile" className="w-full h-full object-cover" />
           ) : (
             user?.name?.charAt(0).toUpperCase()
           )}

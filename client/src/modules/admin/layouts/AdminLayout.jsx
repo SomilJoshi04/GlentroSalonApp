@@ -14,7 +14,6 @@ const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pendingCounts, setPendingCounts] = useState({ vendors: 0, packages: 0, offers: 0, bookings: 0 });
   const [avatarError, setAvatarError] = useState(false);
-  const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace('/api', '');
 
   useEffect(() => {
     setAvatarError(false);
@@ -73,7 +72,7 @@ const AdminLayout = () => {
         {/* Brand/Logo */}
         <div className="flex items-center gap-3 px-6 py-6 border-b border-border">
           {settings?.appLogo ? (
-            <img src={`${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}/uploads/${settings.appLogo}`} alt="App Logo" className="w-10 h-10 rounded-lg object-contain" />
+            <img src={getImageUrl(settings.appLogo)} alt="App Logo" className="w-10 h-10 rounded-lg object-contain" />
           ) : (
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white">
               <span className="material-symbols-outlined text-[20px]">spa</span>
