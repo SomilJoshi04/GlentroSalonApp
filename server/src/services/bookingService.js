@@ -14,7 +14,7 @@ const couponService = require('./couponService');
  * Create a new booking with multiple services
  * Handles staff auto-assignment, conflict prevention, and financial calculations
  */
-const createBooking = async ({ userId, salonId, services, bookingDate, startTime, couponCode }) => {
+const createBooking = async ({ userId, salonId, services, bookingDate, startTime, couponCode, paymentMethod }) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -118,6 +118,7 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
           discountAmount,
           finalAmount,
           coupon: coupon ? coupon._id : undefined,
+          paymentMethod: paymentMethod || 'AT_SALON',
           commission: financials.commission,
           platformFee: financials.platformFee,
           vendorPayout: financials.vendorPayout,

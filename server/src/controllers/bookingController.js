@@ -9,9 +9,9 @@ const { getIO } = require('../config/socket');
 // @desc    Create booking (User)
 const createBooking = async (req, res, next) => {
   try {
-    const { salon, services, bookingDate, startTime, couponCode } = req.body;
+    const { salon, services, bookingDate, startTime, couponCode, paymentMethod } = req.body;
     const result = await bookingService.createBooking({
-      userId: req.user.id, salonId: salon, services, bookingDate, startTime, couponCode,
+      userId: req.user.id, salonId: salon, services, bookingDate, startTime, couponCode, paymentMethod
     });
 
     // Send notification to vendor

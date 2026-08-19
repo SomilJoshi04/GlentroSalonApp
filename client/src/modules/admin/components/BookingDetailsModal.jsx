@@ -31,7 +31,7 @@ const BookingDetailsModal = ({ booking, onClose }) => {
           <div className="flex items-center justify-between">
             <StatusBadge status={booking.status} />
             <span className="px-3 py-1 bg-surface-variant rounded-full font-label-sm text-[12px] text-on-surface">
-              Payment: <span className="capitalize font-semibold text-primary">{booking.paymentStatus}</span> ({booking.paymentMethod === 'online' ? 'Online' : 'Pay at Salon'})
+              Payment: <span className="capitalize font-semibold text-primary">{booking.paymentStatus}</span> ({['ONLINE', 'online'].includes(booking.paymentMethod) ? 'Online' : 'Pay at Salon'})
             </span>
           </div>
 

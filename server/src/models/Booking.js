@@ -66,8 +66,8 @@ const bookingSchema = new mongoose.Schema(
     // Razorpay payment fields
     paymentMethod: {
       type: String,
-      enum: ['online', 'at_salon'],
-      default: 'at_salon',
+      enum: ['ONLINE', 'AT_SALON', 'CASH', 'online', 'at_salon', 'cash'],
+      default: 'AT_SALON',
     },
     razorpayOrderId: {
       type: String,
@@ -77,8 +77,8 @@ const bookingSchema = new mongoose.Schema(
     },
     paymentStatus: {
       type: String,
-      enum: ['pending', 'paid', 'refunded', 'failed'],
-      default: 'pending',
+      enum: ['PENDING', 'PAID', 'REFUNDED', 'FAILED', 'pending', 'paid', 'refunded', 'failed'],
+      default: 'PENDING',
     },
     // Financial breakdown
     commission: {

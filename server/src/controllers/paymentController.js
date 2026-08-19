@@ -20,9 +20,16 @@ exports.createOrder = async (req, res) => {
 
     const order = await razorpay.orders.create(options);
 
+    // Save the order ID to the booking
+    booking.razorpayOrderId = order.id;
+    await booking.save();
+
     res.status(200).json({
       success: true,
-      data: order
+      data: {
+        order,
+        key_id: process.env.RAZORPAY_KEY_ID
+      }
     });
   } catch (error) {
     console.error('Error in createOrder:', error);

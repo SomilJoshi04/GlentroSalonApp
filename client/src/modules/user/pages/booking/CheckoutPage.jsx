@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { createBooking, validateCoupon } from '../../services/userApi';
+import { createBooking, validateCoupon, createPaymentOrder, verifyPayment } from '../../services/userApi';
 import { useAuth } from '../../../../context/AuthContext';
 import { goBack } from '../../../../utils/navigation';
 import { getImageUrl } from '../../../../utils/imageUtils';
@@ -29,6 +29,7 @@ const CheckoutPage = () => {
   const [couponError, setCouponError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('ONLINE');
 
   // Persist current state to sessionStorage so it survives refresh
   useEffect(() => {
@@ -84,12 +85,65 @@ const CheckoutPage = () => {
         })),
         bookingDate: date,
         startTime: time,
+        paymentMethod: paymentMethod,
         ...(couponResult && { couponCode }),
       };
+      
       const res = await createBooking(bookingData);
-      sessionStorage.removeItem('pendingBooking');
-      setSuccess(true);
-      setTimeout(() => navigate(`/booking/${res.data.data.booking._id}`), 1500);
+      const booking = res.data.data.booking;
+      
+      if (paymentMethod === 'AT_SALON') {
+        sessionStorage.removeItem('pendingBooking');
+        setSuccess(true);
+        setTimeout(() => navigate(`/booking/${booking._id}`), 1500);
+      } else if (paymentMethod === 'ONLINE') {
+        // Create Razorpay Order
+        const orderRes = await createPaymentOrder({ bookingId: booking._id });
+        const { order, key_id } = orderRes.data.data;
+        
+        // Initialize Razorpay Checkout
+        const options = {
+          key: key_id,
+          amount: order.amount,
+          currency: order.currency,
+          name: "SalonBook",
+          description: `Payment for Salon Booking`,
+          order_id: order.id,
+          handler: async function (response) {
+            try {
+              setSubmitting(true); // Keep submitting true while verifying
+              const verifyRes = await verifyPayment({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                bookingId: booking._id
+              });
+              if (verifyRes.data.success) {
+                sessionStorage.removeItem('pendingBooking');
+                setSuccess(true);
+                setTimeout(() => navigate(`/booking/${booking._id}`), 1500);
+              }
+            } catch (err) {
+              alert(err.response?.data?.message || 'Payment verification failed');
+              setSubmitting(false);
+            }
+          },
+          prefill: {
+            name: user.name,
+            email: user.email,
+            contact: user.phone
+          },
+          theme: {
+            color: "#6D3EA8"
+          }
+        };
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', function (response){
+          alert(response.error.description || "Payment failed. Please try again.");
+          setSubmitting(false);
+        });
+        rzp.open();
+      }
     } catch (e) {
       alert(e.response?.data?.message || 'Booking failed');
       setSubmitting(false);
@@ -219,11 +273,42 @@ const CheckoutPage = () => {
             <span className="font-headline-sm text-[20px] text-primary">₹{finalAmount}</span>
           </div>
         </section>
+
+        {/* Payment Method */}
+        <section className="bg-surface rounded-[18px] border border-border shadow-sm p-5 flex flex-col gap-4">
+          <h3 className="font-label-md text-[14px] text-muted-text uppercase tracking-wider">Payment Method</h3>
+          <div className="flex flex-col gap-3">
+            <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${paymentMethod === 'ONLINE' ? 'border-primary bg-primary/5' : 'border-border hover:bg-surface-variant'}`}>
+              <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${paymentMethod === 'ONLINE' ? 'border-primary' : 'border-on-surface-variant'}`}>
+                {paymentMethod === 'ONLINE' && <div className="w-3 h-3 rounded-full bg-primary"></div>}
+              </div>
+              <input type="radio" name="payment" value="ONLINE" checked={paymentMethod === 'ONLINE'} onChange={() => setPaymentMethod('ONLINE')} className="hidden" />
+              <div className="flex flex-col">
+                <span className="font-body-md text-on-surface">Pay Online (Razorpay)</span>
+                <span className="font-body-sm text-muted-text text-[12px]">Credit/Debit Cards, UPI, NetBanking</span>
+              </div>
+            </label>
+            <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${paymentMethod === 'AT_SALON' ? 'border-primary bg-primary/5' : 'border-border hover:bg-surface-variant'}`}>
+              <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${paymentMethod === 'AT_SALON' ? 'border-primary' : 'border-on-surface-variant'}`}>
+                {paymentMethod === 'AT_SALON' && <div className="w-3 h-3 rounded-full bg-primary"></div>}
+              </div>
+              <input type="radio" name="payment" value="AT_SALON" checked={paymentMethod === 'AT_SALON'} onChange={() => setPaymentMethod('AT_SALON')} className="hidden" />
+              <div className="flex flex-col">
+                <span className="font-body-md text-on-surface">Pay at Salon</span>
+                <span className="font-body-sm text-muted-text text-[12px]">Pay by cash or card after service</span>
+              </div>
+            </label>
+          </div>
+        </section>
         
         {/* Policy Note */}
         <section className="flex items-start gap-2 bg-inverse-on-surface p-4 rounded-lg">
           <span className="material-symbols-outlined text-[20px] text-primary shrink-0 mt-0.5">info</span>
-          <p className="font-body-sm text-[14px] text-on-surface-variant">Pay at the salon after your service is completed. You can cancel your booking anytime.</p>
+          <p className="font-body-sm text-[14px] text-on-surface-variant">
+            {paymentMethod === 'AT_SALON' 
+              ? "Pay at the salon after your service is completed. You can cancel your booking anytime."
+              : "Securely pay online now. Cancellation policies apply."}
+          </p>
         </section>
       </main>
 

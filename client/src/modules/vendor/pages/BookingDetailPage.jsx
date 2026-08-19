@@ -126,6 +126,29 @@ const BookingDetailPage = () => {
           </div>
         </div>
 
+        <div className="bg-primary/5 rounded-2xl p-5 border border-primary/20 shadow-sm">
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex flex-col">
+              <h3 className="font-semibold text-on-surface text-base flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[18px] text-primary">payments</span>
+                Payment Details
+              </h3>
+              <span className="text-sm text-muted-text mt-1">Method: {['ONLINE', 'online'].includes(booking.paymentMethod) ? 'Online (Razorpay)' : 'Pay at Salon'}</span>
+            </div>
+            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${booking.paymentStatus === 'PAID' || booking.paymentStatus === 'paid' ? 'bg-success/20 text-success' : 'bg-yellow-500/20 text-yellow-700'}`}>
+              {booking.paymentStatus === 'PAID' || booking.paymentStatus === 'paid' ? 'Paid' : 'Pending'}
+            </span>
+          </div>
+          <div className="space-y-2 text-sm text-on-surface pt-3 border-t border-primary/10">
+            <div className="flex justify-between"><span className="text-muted-text">Subtotal</span><span className="font-medium">₹{booking.totalAmount}</span></div>
+            {booking.discountAmount > 0 && <div className="flex justify-between text-success"><span>Discount (Coupon)</span><span className="font-semibold">-₹{booking.discountAmount}</span></div>}
+            <div className="flex justify-between font-bold text-[16px] pt-3 mt-1 border-t border-primary/10">
+              <span className="text-on-surface">Final Amount</span>
+              <span className="text-primary text-lg">₹{booking.finalAmount}</span>
+            </div>
+          </div>
+        </div>
+
         <div className="flex gap-3">
           <button onClick={handleChat} className="flex-1 py-3 bg-surface border border-border text-on-surface rounded-xl font-semibold hover:bg-surface-variant transition-colors shadow-sm flex items-center justify-center gap-1.5">
             <span className="material-symbols-outlined text-[18px]">chat</span>

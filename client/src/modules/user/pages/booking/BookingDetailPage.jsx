@@ -52,11 +52,11 @@ const BookingDetailPage = () => {
     try {
       // 1. Create order
       const orderRes = await import('../../services/userApi').then(m => m.createPaymentOrder({ bookingId: id }));
-      const order = orderRes.data.data;
+      const { order, key_id } = orderRes.data.data;
 
       // 2. Initialize Razorpay
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_YourTestKey',
+        key: key_id,
         amount: order.amount,
         currency: order.currency,
         name: 'SalonBook',
@@ -174,7 +174,10 @@ const BookingDetailPage = () => {
       {/* Payment */}
       <div className="bg-primary-50 rounded-2xl p-5 border border-primary-100">
         <div className="flex justify-between items-center mb-3">
-          <h3 className="font-semibold">Payment Summary</h3>
+          <div className="flex flex-col">
+            <h3 className="font-semibold">Payment Summary</h3>
+            <span className="text-xs text-text-muted mt-0.5">Method: {['ONLINE', 'online'].includes(booking.paymentMethod) ? 'Online' : 'Pay at Salon'}</span>
+          </div>
           <span className={`px-2 py-0.5 rounded text-xs font-semibold ${booking.paymentStatus === 'PAID' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
             {booking.paymentStatus === 'PAID' ? 'Paid' : 'Pending'}
           </span>
@@ -189,7 +192,7 @@ const BookingDetailPage = () => {
 
       {/* Actions */}
       <div className="flex gap-3">
-        {booking.paymentStatus !== 'PAID' && canCancel && (
+        {booking.paymentStatus !== 'PAID' && canCancel && ['ONLINE', 'online'].includes(booking.paymentMethod) && (
           <Button onClick={handlePayment} className="flex-1 bg-gradient-to-r from-primary-600 to-primary-500 text-white">Pay ₹{booking.finalAmount}</Button>
         )}
         {canCancel && <Button variant="danger" onClick={() => setCancelModal(true)} className="flex-1">Cancel Booking</Button>}

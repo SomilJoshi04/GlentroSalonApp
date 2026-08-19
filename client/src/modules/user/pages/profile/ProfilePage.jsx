@@ -22,11 +22,11 @@ const ProfilePage = () => {
   const [editing, setEditing] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
-  
+
   // Form State
-  const [formData, setFormData] = useState({ 
-    name: user?.name || '', 
-    phone: user?.phone || '', 
+  const [formData, setFormData] = useState({
+    name: user?.name || '',
+    phone: user?.phone || '',
     email: user?.email || '',
   });
   const [avatarFile, setAvatarFile] = useState(null);
@@ -36,17 +36,17 @@ const ProfilePage = () => {
   const handleSave = async () => {
     setSaving(true);
     setMessage({ text: '', type: '' });
-    
+
     try {
       const data = new FormData();
       data.append('name', formData.name);
       data.append('phone', formData.phone);
       data.append('email', formData.email);
-      
+
       if (avatarFile) {
         data.append('avatar', avatarFile);
       } else if (avatarFile === null && formData.avatarRemoved) {
-        data.append('avatar', ''); 
+        data.append('avatar', '');
       }
 
       const res = await updateProfile(data);
@@ -54,12 +54,12 @@ const ProfilePage = () => {
       localStorage.setItem('user', JSON.stringify(res.data.data));
       setMessage({ text: 'Profile updated successfully', type: 'success' });
       setEditing(false);
-      setAvatarFile(null); 
+      setAvatarFile(null);
       setTimeout(() => setMessage({ text: '', type: '' }), 3000);
     } catch (e) {
-      setMessage({ 
-        text: e.response?.data?.message || 'Unable to update profile. Please try again.', 
-        type: 'error' 
+      setMessage({
+        text: e.response?.data?.message || 'Unable to update profile. Please try again.',
+        type: 'error'
       });
     }
     setSaving(false);
@@ -84,9 +84,9 @@ const ProfilePage = () => {
 
   const handleEditCancel = () => {
     setEditing(false);
-    setFormData({ 
-      name: user?.name || '', 
-      phone: user?.phone || '', 
+    setFormData({
+      name: user?.name || '',
+      phone: user?.phone || '',
       email: user?.email || ''
     });
     setAvatarFile(null);
@@ -95,7 +95,7 @@ const ProfilePage = () => {
 
   // Helper for List Item
   const ListItem = ({ icon, label, description, onClick, count }) => (
-    <div 
+    <div
       onClick={onClick}
       className="flex items-center p-4 bg-surface rounded-2xl border border-border hover:border-primary/30 hover:bg-surface-variant/50 transition-colors cursor-pointer group shadow-sm"
     >
@@ -143,8 +143,8 @@ const ProfilePage = () => {
               <p className="font-body-md text-muted-text mt-1">{user?.phone || 'Phone number not added'}</p>
             </div>
             <div className="w-full md:w-auto pt-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full md:w-auto rounded-full font-medium"
                 onClick={() => setEditing(true)}
               >
@@ -158,21 +158,21 @@ const ProfilePage = () => {
             <section>
               <h2 className="font-headline-sm text-lg text-on-surface font-semibold mb-4 px-1">My Activity</h2>
               <div className="flex flex-col gap-3">
-                <ListItem 
-                  icon="calendar_today" 
-                  label="My Bookings" 
+                <ListItem
+                  icon="calendar_today"
+                  label="My Bookings"
                   description="View your upcoming and previous appointments"
                   onClick={() => navigate('/bookings')}
                 />
-                <ListItem 
-                  icon="chat" 
-                  label="Messages" 
+                <ListItem
+                  icon="chat"
+                  label="Messages"
                   description="Chat with salons and Admin"
                   onClick={() => navigate('/chat')}
                 />
-                <ListItem 
-                  icon="notifications" 
-                  label="Notifications" 
+                <ListItem
+                  icon="notifications"
+                  label="Notifications"
                   description="Booking updates, offers and other alerts"
                   count={unreadCount}
                   onClick={() => navigate('/notifications')}
@@ -184,9 +184,9 @@ const ProfilePage = () => {
             <section>
               <h2 className="font-headline-sm text-lg text-on-surface font-semibold mb-4 px-1">Preferences</h2>
               <div className="flex flex-col gap-3">
-                <ListItem 
-                  icon="location_on" 
-                  label="Location" 
+                <ListItem
+                  icon="location_on"
+                  label="Location"
                   description={selectedLocation?.city ? `📍 ${selectedLocation.city}` : 'Select your city'}
                   onClick={() => setIsLocationModalOpen(true)}
                 />
@@ -197,9 +197,9 @@ const ProfilePage = () => {
             <section>
               <h2 className="font-headline-sm text-lg text-on-surface font-semibold mb-4 px-1">Support</h2>
               <div className="flex flex-col gap-3">
-                <ListItem 
-                  icon="headset_mic" 
-                  label="Contact Admin" 
+                <ListItem
+                  icon="headset_mic"
+                  label="Contact Admin"
                   description="Get help with your bookings or account"
                   onClick={handleContactAdmin}
                 />
@@ -208,8 +208,8 @@ const ProfilePage = () => {
 
             {/* Logout Section */}
             <section className="pt-4">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 className="w-full text-error hover:bg-error/10 hover:text-error rounded-2xl py-4 font-semibold"
                 onClick={() => setShowLogoutConfirm(true)}
               >
@@ -229,7 +229,7 @@ const ProfilePage = () => {
               <span className="material-symbols-outlined">close</span>
             </button>
           </div>
-          
+
           {message.text && (
             <div className={`mb-6 px-4 py-3 rounded-xl text-sm font-medium ${message.type === 'success' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
               {message.text}
@@ -237,57 +237,57 @@ const ProfilePage = () => {
           )}
 
           <div className="flex justify-center mb-8">
-            <ImageUpload 
-              currentImage={user?.avatar} 
+            <ImageUpload
+              currentImage={user?.avatar}
               onFileSelect={(file) => {
                 if (file === null) {
-                   setFormData({...formData, avatarRemoved: true});
-                   setAvatarFile(null);
+                  setFormData({ ...formData, avatarRemoved: true });
+                  setAvatarFile(null);
                 } else {
-                   setAvatarFile(file);
-                   setFormData({...formData, avatarRemoved: false});
+                  setAvatarFile(file);
+                  setFormData({ ...formData, avatarRemoved: false });
                 }
-              }} 
+              }}
               label=""
               isAvatar={true}
             />
           </div>
 
           <div className="space-y-5">
-            <Input 
-              label="Full Name" 
-              name="name" 
-              value={formData.name} 
-              onChange={e => setFormData({ ...formData, name: e.target.value })} 
+            <Input
+              label="Full Name"
+              name="name"
+              value={formData.name}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
               required
             />
-            <Input 
-              label="Mobile Number" 
-              name="phone" 
-              value={formData.phone} 
-              onChange={e => setFormData({ ...formData, phone: e.target.value })} 
+            <Input
+              label="Mobile Number"
+              name="phone"
+              value={formData.phone}
+              onChange={e => setFormData({ ...formData, phone: e.target.value })}
             />
-            <Input 
-              label="Email Address" 
-              name="email" 
+            <Input
+              label="Email Address"
+              name="email"
               type="email"
-              value={formData.email} 
-              onChange={e => setFormData({ ...formData, email: e.target.value })} 
+              value={formData.email}
+              onChange={e => setFormData({ ...formData, email: e.target.value })}
             />
           </div>
 
           <div className="mt-8 flex flex-col md:flex-row gap-4">
-            <Button 
-              onClick={handleEditCancel} 
+            <Button
+              onClick={handleEditCancel}
               variant="outline"
               className="w-full rounded-xl"
               disabled={saving}
             >
               Cancel
             </Button>
-            <Button 
-              onClick={handleSave} 
-              loading={saving} 
+            <Button
+              onClick={handleSave}
+              loading={saving}
               className="w-full rounded-xl"
             >
               Save Changes
@@ -306,16 +306,16 @@ const ProfilePage = () => {
             <h3 className="text-center font-headline-sm text-xl font-bold text-on-surface mb-2">Log Out</h3>
             <p className="text-center font-body-sm text-muted-text mb-6">Are you sure you want to log out of your account?</p>
             <div className="flex gap-4">
-              <Button 
-                variant="outline" 
-                className="flex-1 rounded-xl" 
+              <Button
+                variant="outline"
+                className="flex-1 rounded-xl"
                 onClick={() => setShowLogoutConfirm(false)}
               >
                 Cancel
               </Button>
-              <Button 
-                variant="danger" 
-                className="flex-1 rounded-xl" 
+              <Button
+                variant="danger"
+                className="flex-1 rounded-xl"
                 onClick={handleLogout}
               >
                 Log Out
@@ -326,9 +326,9 @@ const ProfilePage = () => {
       )}
 
       {/* Location Modal */}
-      <LocationSelectionModal 
-        isOpen={isLocationModalOpen} 
-        onClose={() => setIsLocationModalOpen(false)} 
+      <LocationSelectionModal
+        isOpen={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
       />
     </div>
   );
