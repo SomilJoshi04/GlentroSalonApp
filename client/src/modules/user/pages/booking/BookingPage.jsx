@@ -19,6 +19,8 @@ const BookingPage = () => {
   const [availableSlots, setAvailableSlots] = useState([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
 
+  const [currentTime, setCurrentTime] = useState(new Date());
+
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
 
   // Generate next 14 days
@@ -27,6 +29,14 @@ const BookingPage = () => {
     d.setDate(d.getDate() + i);
     return d;
   });
+
+  // Real-time clock for active filtering
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (date && totalDuration) loadAvailability();
@@ -67,17 +77,40 @@ const BookingPage = () => {
     const afternoon = [];
     const evening = [];
 
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isToday = date === todayStr;
+    const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+
+    let isSelectedTimeStillValid = false;
+
     availableSlots.forEach(slot => {
       const [hours, mins] = slot.split(':').map(Number);
+      const slotMinutes = hours * 60 + mins;
+
+      // Filter out past slots dynamically
+      if (isToday && slotMinutes <= currentMinutes) {
+        return; 
+      }
+
+      if (slot === time) isSelectedTimeStillValid = true;
+
       if (hours < 12) morning.push(slot);
       else if (hours < 16) afternoon.push(slot);
       else evening.push(slot);
     });
 
+    // Auto clear selected time if it expires while sitting on the page
+    if (time && !isSelectedTimeStillValid && isToday) {
+      setTime('');
+    }
+
     return { morning, afternoon, evening };
   };
 
   const { morning, afternoon, evening } = groupSlots();
+  
+  // Calculate if we have any valid slots left after real-time filtering
+  const hasValidSlots = morning.length > 0 || afternoon.length > 0 || evening.length > 0;
 
   const formatTime = (time24) => {
     const [h, m] = time24.split(':');
@@ -160,9 +193,9 @@ const BookingPage = () => {
              </div>
           ) : slotsLoading ? (
             <Loader text="Loading slots..." />
-          ) : availableSlots.length === 0 ? (
+          ) : !hasValidSlots ? (
             <div className="text-center py-8 text-muted-text bg-surface-variant/30 rounded-xl border border-dashed border-border">
-              No available slots for this date
+              No available time slots for this date
             </div>
           ) : (
             <>

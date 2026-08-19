@@ -172,10 +172,26 @@ const getComplexAvailability = async (salonId, date, services) => {
   }
 
   const allPossibleSlots = [];
+  const requestedDateStr = new Date(date).toISOString().split('T')[0];
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isToday = requestedDateStr === todayStr;
+  
+  // Create current date using local time or standard if configured
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
   for (let i = 0; i < 24; i++) {
     const h = i.toString().padStart(2, '0');
-    allPossibleSlots.push(`${h}:00`);
-    allPossibleSlots.push(`${h}:30`);
+    
+    // Check 00 minute slot
+    if (!isToday || (i * 60) > currentMinutes) {
+      allPossibleSlots.push(`${h}:00`);
+    }
+    
+    // Check 30 minute slot
+    if (!isToday || (i * 60 + 30) > currentMinutes) {
+      allPossibleSlots.push(`${h}:30`);
+    }
   }
 
   const validStartSlots = [];

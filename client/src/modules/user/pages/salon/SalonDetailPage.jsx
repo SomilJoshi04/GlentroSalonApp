@@ -1,29 +1,107 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getSalonById } from '../../services/userApi';
+import { 
+  getSalonById, 
+  checkFavorite, 
+  toggleFavorite, 
+  getSalonReviews
+} from '../../services/userApi';
+import { useAuth } from '../../../../context/AuthContext';
 import { goBack } from '../../../../utils/navigation';
 import Loader from '../../../../components/common/Loader';
 import { getImageUrl } from '../../../../utils/imageUtils';
+import toast from 'react-hot-toast';
+import Button from '../../../../components/common/Button';
 
 const SalonDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  
   const [salon, setSalon] = useState(null);
   const [services, setServices] = useState([]);
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('services');
   const [selectedServices, setSelectedServices] = useState([]);
+  
+  // Favorites State
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
 
-  useEffect(() => { loadSalon(); }, [id]);
+  // Reviews State
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+
+  useEffect(() => { 
+    loadSalon(); 
+    if (user) {
+      loadFavoriteStatus();
+    }
+  }, [id, user]);
+
+  useEffect(() => {
+    if (activeTab === 'reviews') {
+      loadReviews();
+    }
+  }, [activeTab]);
 
   const loadSalon = async () => {
     try {
       const res = await getSalonById(id);
       const { salon: s, services: svc, staff: st } = res.data.data;
-      setSalon(s); setServices(svc); setStaff(st);
-    } catch (e) { console.error(e); }
+      setSalon(s); 
+      setServices(svc); 
+      setStaff(st);
+    } catch (e) { 
+      console.error(e); 
+    }
     setLoading(false);
+  };
+
+  const loadFavoriteStatus = async () => {
+    try {
+      const res = await checkFavorite(id);
+      setIsFavorite(res.data.data.isFavorite);
+    } catch (e) {
+      console.error('Failed to check favorite status', e);
+    }
+  };
+
+  const loadReviews = async () => {
+    setReviewsLoading(true);
+    try {
+      const res = await getSalonReviews(id, { limit: 20 });
+      setReviews(res.data.data);
+    } catch (e) {
+      console.error('Failed to load reviews', e);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!user) {
+      toast.error('Please login to save salons to your favourites.');
+      return;
+    }
+
+    // Optimistic Update
+    const previousState = isFavorite;
+    setIsFavorite(!isFavorite);
+    setIsFavoriteLoading(true);
+
+    try {
+      const res = await toggleFavorite(id);
+      setIsFavorite(res.data.data.isFavorite);
+      toast.success(res.data.message);
+    } catch (e) {
+      // Revert optimistic update
+      setIsFavorite(previousState);
+      toast.error('Unable to update favourites. Please try again.');
+    } finally {
+      setIsFavoriteLoading(false);
+    }
   };
 
   const toggleService = (service) => {
@@ -56,8 +134,14 @@ const SalonDetailPage = () => {
               <span className="material-symbols-outlined">arrow_back</span>
             </button>
             <div className="flex gap-3">
-              <button className="w-10 h-10 rounded-full bg-surface/90 backdrop-blur-sm flex items-center justify-center shadow-sm text-on-surface hover:text-error transition-colors">
-                <span className="material-symbols-outlined">favorite_border</span>
+              <button 
+                onClick={handleToggleFavorite}
+                disabled={isFavoriteLoading}
+                className={`w-10 h-10 rounded-full bg-surface/90 backdrop-blur-sm flex items-center justify-center shadow-sm transition-colors ${isFavorite ? 'text-error' : 'text-on-surface hover:text-error'}`}
+              >
+                <span className="material-symbols-outlined" style={{fontVariationSettings: isFavorite ? "'FILL' 1" : "'FILL' 0"}}>
+                  {isFavorite ? 'favorite' : 'favorite_border'}
+                </span>
               </button>
             </div>
           </div>
@@ -77,7 +161,11 @@ const SalonDetailPage = () => {
                   <div className="flex items-center gap-2 mt-1">
                     <div className="flex items-center text-rating">
                       <span className="material-symbols-outlined text-[16px]" style={{fontVariationSettings: "'FILL' 1"}}>star</span>
-                      <span className="font-label-sm text-[12px] ml-1 text-on-surface">{salon.ratings?.average > 0 ? salon.ratings.average.toFixed(1) : 'New'}</span>
+                      <span className="font-label-sm text-[12px] ml-1 text-on-surface">
+                        {salon.ratings?.average > 0 
+                          ? `${salon.ratings.average.toFixed(1)} (${salon.ratings.count})` 
+                          : 'New'}
+                      </span>
                     </div>
                     <span className="text-outline text-[12px]">•</span>
                     <span className="font-body-sm text-[14px] text-muted-text">{salon.address}</span>
@@ -191,8 +279,54 @@ const SalonDetailPage = () => {
 
           {/* Tab Content: Reviews */}
           {activeTab === 'reviews' && (
-            <section className="animate-fade-in">
-              <p className="font-body-sm text-[14px] text-muted-text text-center py-8">Review content would load here.</p>
+            <section className="animate-fade-in flex flex-col gap-6">
+              
+              {/* Reviews List */}
+              <div className="flex flex-col gap-4 mt-2">
+                <h3 className="font-headline-sm text-[20px] font-semibold text-on-surface">Customer Reviews</h3>
+                
+                {reviewsLoading ? (
+                  <div className="flex justify-center py-8"><Loader size="sm" /></div>
+                ) : reviews.length === 0 ? (
+                  <p className="font-body-sm text-[14px] text-muted-text text-center py-8 bg-surface-variant rounded-xl border border-dashed border-border">
+                    No reviews yet. Book an appointment to be the first!
+                  </p>
+                ) : (
+                  reviews.map(review => (
+                    <div key={review._id} className="bg-surface border border-border rounded-xl p-4 shadow-sm flex gap-3">
+                      <div className="w-10 h-10 rounded-full bg-soft-primary flex items-center justify-center font-bold text-primary overflow-hidden shrink-0">
+                        {review.user?.avatar ? (
+                          <img src={getImageUrl(review.user.avatar)} alt={review.user.name} className="w-full h-full object-cover" />
+                        ) : (
+                          review.user?.name?.charAt(0) || 'U'
+                        )}
+                      </div>
+                      <div className="flex flex-col w-full">
+                        <div className="flex justify-between items-start">
+                          <span className="font-label-md font-bold text-on-surface">{review.user?.name || 'Customer'}</span>
+                          <span className="font-body-sm text-[11px] text-muted-text">
+                            {new Date(review.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="flex items-center text-rating mt-0.5 mb-2">
+                          {[1, 2, 3, 4, 5].map(star => (
+                            <span 
+                              key={star} 
+                              className="material-symbols-outlined text-[14px]" 
+                              style={{fontVariationSettings: star <= review.rating ? "'FILL' 1" : "'FILL' 0"}}
+                            >
+                              star
+                            </span>
+                          ))}
+                        </div>
+                        {review.comment && (
+                          <p className="font-body-sm text-[14px] text-on-surface-variant">{review.comment}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </section>
           )}
 

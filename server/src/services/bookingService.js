@@ -32,6 +32,20 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
     }
 
     // Validate and prepare services
+    const requestedDateStr = new Date(bookingDate).toISOString().split('T')[0];
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isToday = requestedDateStr === todayStr;
+    
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const [h, m] = startTime.split(':').map(Number);
+    const startMinutes = h * 60 + m;
+
+    // Reject past times explicitly
+    if (isToday && startMinutes <= currentMinutes) {
+      throw new Error("This time slot is no longer available. Please select another time.");
+    }
+    
     const bookingServices = [];
     let currentTime = startTime;
 

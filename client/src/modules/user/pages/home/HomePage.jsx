@@ -251,7 +251,9 @@ const HomePage = () => {
                 <p className="font-body-sm text-muted-text truncate mt-0.5">{salon.address}</p>
                 <div className="flex items-center gap-3 mt-2 font-label-sm text-muted-text">
                   <span className="flex items-center gap-1 text-on-surface-variant">
-                    <span className="text-rating text-[14px]">★</span> {salon.ratings?.average?.toFixed(1) || '4.5'} <span className="font-normal">({salon.ratings?.count || '200'})</span>
+                    <span className="text-rating text-[14px]">★</span> 
+                    {salon.ratings?.average > 0 ? salon.ratings.average.toFixed(1) : 'New'} 
+                    {salon.ratings?.count > 0 && <span className="font-normal">({salon.ratings.count})</span>}
                   </span>
                   <span>1.2 km</span>
                 </div>

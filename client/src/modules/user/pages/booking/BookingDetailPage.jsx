@@ -24,6 +24,11 @@ const BookingDetailPage = () => {
   const [cancelModal, setCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  
+  // Reviews State
+  const [review, setReview] = useState(null);
+  const [reviewForm, setReviewForm] = useState({ rating: 0, comment: '' });
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   useEffect(() => { loadBooking(); }, [id]);
 
@@ -32,6 +37,7 @@ const BookingDetailPage = () => {
       const res = await getBookingById(id);
       setBooking(res.data.data.booking);
       setServices(res.data.data.services);
+      setReview(res.data.data.review);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -120,6 +126,31 @@ const BookingDetailPage = () => {
     }
   };
 
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    if (reviewForm.rating < 1 || reviewForm.rating > 5) {
+      alert('Please select a star rating between 1 and 5');
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    try {
+      const { submitReview } = await import('../../services/userApi');
+      const res = await submitReview({
+        salonId: booking.salon._id,
+        bookingId: booking._id,
+        rating: reviewForm.rating,
+        comment: reviewForm.comment
+      });
+      alert('Review submitted successfully!');
+      setReview(res.data.data.review);
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to submit review');
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in w-full">
       <PageHeader title="Booking Details" fallbackPath="/bookings" />
@@ -189,6 +220,53 @@ const BookingDetailPage = () => {
           <div className="flex justify-between font-bold text-lg pt-2 border-t border-primary-200"><span>Total</span><span className="text-primary-700">₹{booking.finalAmount}</span></div>
         </div>
       </div>
+
+      {/* Review Section */}
+      {booking.status === 'COMPLETED' && (
+        <div className="bg-white rounded-2xl p-5 border border-gray-100">
+          <h3 className="font-semibold mb-3">Rate Your Experience</h3>
+          {review ? (
+            <div className="space-y-2">
+              <div className="flex items-center text-yellow-400">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <span key={star} className="material-symbols-outlined text-xl" style={{fontVariationSettings: star <= review.rating ? "'FILL' 1" : "'FILL' 0"}}>star</span>
+                ))}
+              </div>
+              {review.comment && <p className="text-sm text-text-secondary">"{review.comment}"</p>}
+              <div className="text-xs font-medium text-green-600 flex items-center gap-1 mt-2">
+                <span className="material-symbols-outlined text-sm">check_circle</span>
+                Review Submitted
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleReviewSubmit} className="space-y-4">
+              <p className="text-sm text-text-secondary">How was your overall experience at {booking.salon?.name}?</p>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+                    className={`material-symbols-outlined text-3xl transition-colors ${star <= reviewForm.rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                    style={{fontVariationSettings: star <= reviewForm.rating ? "'FILL' 1" : "'FILL' 0"}}
+                  >
+                    star
+                  </button>
+                ))}
+              </div>
+              <textarea 
+                placeholder="Share details of your experience (optional)"
+                value={reviewForm.comment}
+                onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                className="w-full bg-gray-50 border border-gray-200 focus:border-primary-400 focus:ring-1 focus:ring-primary-400 rounded-xl p-3 text-sm resize-none h-24"
+              />
+              <Button type="submit" loading={isSubmittingReview} disabled={reviewForm.rating === 0} className="w-full">
+                Submit Review
+              </Button>
+            </form>
+          )}
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex gap-3">

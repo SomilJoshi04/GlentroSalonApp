@@ -39,6 +39,9 @@ export const acceptBooking = (id) => api.patch(`/bookings/${id}/accept`);
 export const rejectBooking = (id, data) => api.patch(`/bookings/${id}/reject`, data);
 export const completeBooking = (id) => api.patch(`/bookings/${id}/complete`);
 
+// Reviews
+export const getVendorReviews = (params) => api.get('/reviews/vendor', { params });
+
 // Packages
 export const getVendorPackages = (params) => api.get('/packages/vendor/my', { params });
 export const createPackage = (data) => api.post('/packages', data);

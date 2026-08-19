@@ -30,6 +30,10 @@ export const updateSalonStatus = (id, data) => api.put(`/salons/${id}`, data);
 // Bookings
 export const getAllBookings = (params) => api.get('/admin/bookings', { params });
 
+// Reviews
+export const getAllReviews = (params) => api.get('/reviews/admin', { params });
+export const deleteReview = (id) => api.delete(`/reviews/${id}`);
+
 // Categories
 export const getCategories = (params) => api.get('/admin/categories', { params });
 export const createCategory = (data) => api.post('/admin/categories', data, { headers: { 'Content-Type': data instanceof FormData ? 'multipart/form-data' : 'application/json' } });

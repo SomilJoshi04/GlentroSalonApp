@@ -9,6 +9,16 @@ export const getCities = () => api.get('/salons/cities');
 export const getZones = (city) => api.get(`/salons/cities/${city}/zones`);
 export const getBanners = () => api.get('/banners/public');
 
+// Favorites
+export const getFavoriteSalons = () => api.get('/favorites');
+export const checkFavorite = (salonId) => api.get(`/favorites/check/${salonId}`);
+export const toggleFavorite = (salonId) => api.post(`/favorites/toggle/${salonId}`);
+
+// Reviews
+export const getSalonReviews = (salonId, params) => api.get(`/reviews/salon/${salonId}`, { params });
+export const checkReviewEligibility = (salonId) => api.get(`/reviews/eligibility/${salonId}`);
+export const submitReview = (data) => api.post('/reviews', data);
+
 // Services
 export const getServices = (params) => api.get('/services', { params });
 

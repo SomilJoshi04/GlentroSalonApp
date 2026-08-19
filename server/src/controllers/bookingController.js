@@ -72,8 +72,9 @@ const getBookingById = async (req, res, next) => {
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
 
     const services = await BookingService.find({ booking: booking._id }).populate('service', 'name price duration category').populate('staff', 'name avatar');
+    const review = await require('../models/Review').findOne({ booking: booking._id });
 
-    res.json({ success: true, data: { booking, services } });
+    res.json({ success: true, data: { booking, services, review } });
   } catch (error) { next(error); }
 };
 

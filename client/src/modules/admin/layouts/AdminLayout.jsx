@@ -57,6 +57,7 @@ const AdminLayout = () => {
     { to: '/admin/packages', label: 'Packages', icon: 'inventory_2', count: pendingCounts.packages },
     { to: '/admin/offers', label: 'Offers', icon: 'local_offer', count: pendingCounts.offers },
     { to: '/admin/subscriptions', label: 'Subscriptions', icon: 'workspace_premium' },
+    { to: '/admin/reviews', label: 'Reviews', icon: 'star_rate' },
     { to: '/admin/coupons', label: 'Coupons', icon: 'local_activity' },
     { to: '/admin/banners', label: 'Banners', icon: 'view_carousel' },
     { to: '/admin/notifications', label: 'Notifications', icon: 'notifications' },

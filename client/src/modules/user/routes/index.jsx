@@ -20,6 +20,7 @@ const ChatListPage = lazy(() => import('../pages/chat/ChatListPage'));
 const ChatPage = lazy(() => import('../pages/chat/ChatPage'));
 const NotificationsPage = lazy(() => import('../pages/notifications/NotificationsPage'));
 const ProfilePage = lazy(() => import('../pages/profile/ProfilePage'));
+const FavoritesPage = lazy(() => import('../pages/profile/FavoritesPage'));
 
 const SuspenseWrapper = ({ children }) => (
   <Suspense fallback={<Loader text="Loading page..." />}>
@@ -53,6 +54,7 @@ export default function UserRoutes() {
         <Route path="/chat/:chatId" element={<SuspenseWrapper><ChatPage /></SuspenseWrapper>} />
         <Route path="/notifications" element={<SuspenseWrapper><NotificationsPage /></SuspenseWrapper>} />
         <Route path="/profile" element={<SuspenseWrapper><ProfilePage /></SuspenseWrapper>} />
+        <Route path="/favorites" element={<SuspenseWrapper><FavoritesPage /></SuspenseWrapper>} />
       </Route>
     </Routes>
   );

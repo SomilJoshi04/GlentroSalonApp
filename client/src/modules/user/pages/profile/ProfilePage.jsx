@@ -166,6 +166,12 @@ const ProfilePage = () => {
                   onClick={() => navigate('/bookings')}
                 />
                 <ListItem
+                  icon="favorite"
+                  label="My Favourites"
+                  description="View salons you have liked and saved"
+                  onClick={() => navigate('/favorites')}
+                />
+                <ListItem
                   icon="chat"
                   label="Messages"
                   description="Chat with salons and Admin"
