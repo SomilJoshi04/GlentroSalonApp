@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { getSubscriptionPlans, createSubscriptionPlan, updateSubscriptionPlan, assignSubscription, getVendors } from '../services/adminApi';
 import Modal from '../../../components/common/Modal';
+import Pagination from '../../../components/common/Pagination';
+import AdminPageLayout from '../components/layout/AdminPageLayout';
+import AdminPageHeader from '../components/layout/AdminPageHeader';
 
 const SubscriptionsPage = () => {
   const [plans, setPlans] = useState([]);
@@ -13,15 +16,46 @@ const SubscriptionsPage = () => {
   const [assignForm, setAssignForm] = useState({ vendor: '', plan: '' });
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { load(); }, []);
-  const load = async () => { 
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    total: 0,
+    limit: 6
+  });
+
+  useEffect(() => { load(1); }, []);
+
+  const load = async (page = 1) => { 
     setLoading(true);
     setError(null);
     try { 
-      const [p, v] = await Promise.all([getSubscriptionPlans(), getVendors()]); 
+      const [p, v] = await Promise.all([
+        getSubscriptionPlans({ page, limit: pagination.limit }), 
+        getVendors({ limit: 1000 })
+      ]); 
+      
       const pData = p.data?.data;
-      setPlans(Array.isArray(pData) ? pData : (pData?.plans || [])); 
-      setVendors(v.data.data); 
+      const list = pData?.plans || pData || [];
+      setPlans(Array.isArray(list) ? list : []); 
+
+      if (pData && pData.plans) {
+        setPagination({
+          currentPage: pData.page || page,
+          totalPages: pData.totalPages || 1,
+          total: pData.total || list.length,
+          limit: pagination.limit
+        });
+      } else {
+        setPagination({
+          currentPage: 1,
+          totalPages: 1,
+          total: Array.isArray(list) ? list.length : 0,
+          limit: pagination.limit
+        });
+      }
+
+      const vendorData = v.data?.data;
+      setVendors(Array.isArray(vendorData?.vendors) ? vendorData.vendors : (Array.isArray(vendorData) ? vendorData : [])); 
     } catch (e) {
       setError('Unable to load subscriptions. Please try again.');
     } 
@@ -29,29 +63,56 @@ const SubscriptionsPage = () => {
   };
 
   const handlePlanSubmit = async (e) => {
-    e.preventDefault(); setSaving(true);
+    e.preventDefault(); 
+    setSaving(true);
     try {
-      await createSubscriptionPlan({ ...planForm, price: Number(planForm.price), durationDays: Number(planForm.durationDays), maxSalons: Number(planForm.maxSalons), maxStaffPerSalon: Number(planForm.maxStaffPerSalon), features: planForm.features.split(',').map(f => f.trim()).filter(Boolean) });
-      setShowPlanForm(false); load();
+      await createSubscriptionPlan({ 
+        ...planForm, 
+        price: Number(planForm.price), 
+        durationDays: Number(planForm.durationDays), 
+        maxSalons: Number(planForm.maxSalons), 
+        maxStaffPerSalon: Number(planForm.maxStaffPerSalon), 
+        features: planForm.features.split(',').map(f => f.trim()).filter(Boolean) 
+      });
+      setShowPlanForm(false); 
+      load(1);
       setPlanForm({ name: '', price: '', durationDays: '', maxSalons: '1', maxStaffPerSalon: '5', features: '' });
-    } catch (e) { alert(e.response?.data?.message || 'Failed'); } setSaving(false);
+    } catch (e) { 
+      alert(e.response?.data?.message || 'Failed'); 
+    } 
+    setSaving(false);
   };
 
   const handleAssignSubmit = async (e) => {
-    e.preventDefault(); setSaving(true);
-    try { await assignSubscription(assignForm); setShowAssignForm(false); alert('Assigned successfully'); } catch (e) { alert(e.response?.data?.message || 'Failed'); } setSaving(false);
+    e.preventDefault(); 
+    setSaving(true);
+    try { 
+      await assignSubscription(assignForm); 
+      setShowAssignForm(false); 
+      alert('Assigned successfully'); 
+      load(pagination.currentPage);
+    } catch (e) { 
+      alert(e.response?.data?.message || 'Failed'); 
+    } 
+    setSaving(false);
   };
 
-  if (loading) return <div className="flex justify-center py-12"><div className="w-10 h-10 border-4 border-dark-700 border-t-primary-500 rounded-full animate-spin" /></div>;
-
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between"><h1 className="text-2xl font-bold text-text-primary">Subscriptions</h1>
-        <div className="flex gap-2">
-          <button onClick={() => { setShowAssignForm(!showAssignForm); setShowPlanForm(false); }} className="px-4 py-2 bg-surface-elevated text-text-primary rounded-xl text-sm font-medium border border-border hover:bg-surface-card">Assign Plan</button>
-          <button onClick={() => { setShowPlanForm(!showPlanForm); setShowAssignForm(false); }} className="px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700">+ New Plan</button>
-        </div>
-      </div>
+    <AdminPageLayout>
+      <AdminPageHeader 
+        title="Subscriptions"
+        description="Manage vendor subscription plans and assignments."
+        actions={
+          <div className="flex gap-2">
+            <button onClick={() => { setShowAssignForm(!showAssignForm); setShowPlanForm(false); }} className="px-4 py-2 bg-surface border border-border text-on-surface rounded-xl text-[14px] font-medium hover:bg-surface-variant transition-colors shadow-sm">
+              Assign Plan
+            </button>
+            <button onClick={() => { setShowPlanForm(!showPlanForm); setShowAssignForm(false); }} className="px-4 py-2 bg-primary text-white rounded-xl text-[14px] font-medium hover:bg-primary-600 transition-colors shadow-sm">
+              + New Plan
+            </button>
+          </div>
+        }
+      />
 
       <Modal isOpen={showPlanForm} onClose={() => setShowPlanForm(false)} title="New Plan" size="md">
         <form onSubmit={handlePlanSubmit} className="space-y-4">
@@ -86,23 +147,36 @@ const SubscriptionsPage = () => {
           {error}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {plans.length === 0 ? <p className="text-text-muted col-span-full py-8 text-center">No subscription plans found.</p> :
-          plans.map(p => (
-          <div key={p._id} className="bg-gradient-to-b from-surface-card to-surface-elevated border border-border rounded-2xl p-6 relative overflow-hidden">
-            <h3 className="text-xl font-bold text-text-primary">{p.name}</h3>
-            <p className="mt-4"><span className="text-3xl font-bold text-text-primary">₹{p.price}</span><span className="text-text-muted"> / {p.durationDays} days</span></p>
-            <ul className="mt-6 space-y-3 text-sm text-text-secondary">
-              <li className="flex items-center gap-2">✓ Up to {p.maxSalons} salon(s)</li>
-              <li className="flex items-center gap-2">✓ Up to {p.maxStaffPerSalon} staff per salon</li>
-              {p.features?.map((f, i) => <li key={i} className="flex items-center gap-2">✓ {f}</li>)}
-            </ul>
-            <div className={`mt-6 inline-block px-3 py-1 rounded-full text-xs font-semibold ${p.isActive ? 'bg-success/20 text-success' : 'bg-danger/20 text-danger'}`}>{p.isActive ? 'Active Plan' : 'Inactive Plan'}</div>
+        <div className="flex-1 overflow-y-auto min-h-0 pr-2 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {plans.length === 0 ? <p className="text-text-muted col-span-full py-8 text-center">No subscription plans found.</p> :
+            plans.map(p => (
+              <div key={p._id} className="bg-surface rounded-2xl p-6 border border-border relative overflow-hidden shadow-sm flex flex-col hover:border-primary/50 transition-colors">
+                <h3 className="text-xl font-bold text-on-surface">{p.name}</h3>
+                <p className="mt-4"><span className="text-3xl font-extrabold text-primary">₹{p.price}</span><span className="text-muted-text font-medium"> / {p.durationDays} days</span></p>
+                <ul className="mt-6 space-y-3 text-sm text-text-secondary flex-1">
+                  <li className="flex items-center gap-2 text-on-surface"><span className="material-symbols-outlined text-[18px] text-primary">check</span> Up to {p.maxSalons} salon(s)</li>
+                  <li className="flex items-center gap-2 text-on-surface"><span className="material-symbols-outlined text-[18px] text-primary">check</span> Up to {p.maxStaffPerSalon} staff per salon</li>
+                  {p.features?.map((f, i) => <li key={i} className="flex items-center gap-2 text-on-surface"><span className="material-symbols-outlined text-[18px] text-primary">check</span> {f}</li>)}
+                </ul>
+                <div className={`mt-6 self-start px-3 py-1 rounded-full text-[12px] font-bold tracking-wide uppercase ${p.isActive ? 'bg-success/10 text-success border border-success/20' : 'bg-error/10 text-error border border-error/20'}`}>
+                  {p.isActive ? 'Active Plan' : 'Inactive Plan'}
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+          
+          <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            limit={pagination.limit}
+            onPageChange={load}
+          />
+        </div>
       )}
-    </div>
+    </AdminPageLayout>
   );
 };
+
 export default SubscriptionsPage;

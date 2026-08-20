@@ -90,8 +90,8 @@ const BookingDetailPage = () => {
           </h3>
           <div className="text-sm space-y-1.5 text-on-surface">
             <p className="font-semibold text-[15px]">{booking.user?.name}</p>
-            <p className="text-muted-text">✉️ {booking.user?.email}</p>
-            <p className="text-muted-text">📞 {booking.user?.phone}</p>
+            <p className="text-muted-text"> {booking.user?.email}</p>
+            <p className="text-muted-text"> {booking.user?.phone}</p>
           </div>
           <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border bg-background-alt/30 -mx-5 -mb-5 p-5 rounded-b-2xl">
             <div>
@@ -145,6 +145,26 @@ const BookingDetailPage = () => {
             <div className="flex justify-between font-bold text-[16px] pt-3 mt-1 border-t border-primary/10">
               <span className="text-on-surface">Final Amount</span>
               <span className="text-primary text-lg">₹{booking.finalAmount}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-surface rounded-2xl p-5 border border-border shadow-sm">
+          <h3 className="font-semibold text-on-surface text-base border-b border-border pb-2 flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[18px] text-muted-text">account_balance_wallet</span>
+            Financial Settlement
+          </h3>
+          <div className="space-y-2 text-sm text-on-surface pt-3">
+            <div className="flex justify-between"><span className="text-muted-text">Customer Paid (Final Amount)</span><span className="font-medium">₹{booking.finalAmount}</span></div>
+            <div className="flex justify-between text-error"><span className="text-muted-text">Platform Fee ({booking.platformFeePercentage ? booking.platformFeePercentage + '%' : ''})</span><span className="font-semibold">-₹{booking.platformFee || 0}</span></div>
+            {booking.vendorPlanType === 'SUBSCRIPTION' ? (
+               <div className="flex justify-between text-success"><span className="text-muted-text">Admin Commission (Subscription)</span><span className="font-semibold">-₹0</span></div>
+            ) : (
+               <div className="flex justify-between text-error"><span className="text-muted-text">Admin Commission ({booking.adminCommissionPercentage ? booking.adminCommissionPercentage + '%' : (booking.commission > 0 ? '' : '0%')})</span><span className="font-semibold">-₹{booking.commission || 0}</span></div>
+            )}
+            <div className="flex justify-between font-bold text-[16px] pt-3 mt-1 border-t border-border">
+              <span className="text-on-surface">Your Net Earning</span>
+              <span className="text-success text-lg">₹{booking.vendorPayout || 0}</span>
             </div>
           </div>
         </div>

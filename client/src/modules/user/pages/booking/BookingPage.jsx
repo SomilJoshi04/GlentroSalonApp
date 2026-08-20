@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { getComplexAvailability } from '../../services/userApi';
+import { getComplexAvailability, getSalonStaff } from '../../services/userApi';
 import { goBack } from '../../../../utils/navigation';
 import { Skeleton, SkeletonText } from '../../../../components/common/Skeleton';
 
@@ -11,7 +11,7 @@ const BookingPage = () => {
 
   const salon = state?.salon;
   const selectedServices = state?.selectedServices || [];
-  const availableStaff = state?.staff || [];
+  const [availableStaff, setAvailableStaff] = useState(state?.staff || []);
 
   const [serviceStaff, setServiceStaff] = useState(state?.serviceStaff || {});
   const [date, setDate] = useState(state?.date || '');
@@ -20,6 +20,14 @@ const BookingPage = () => {
   const [slotsLoading, setSlotsLoading] = useState(false);
 
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    if (!state?.staff && salonId) {
+      getSalonStaff(salonId)
+        .then(res => setAvailableStaff(res.data.data || []))
+        .catch(err => console.error('Failed to load staff in BookingPage', err));
+    }
+  }, [salonId, state]);
 
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
 

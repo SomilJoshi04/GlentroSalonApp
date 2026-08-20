@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 import { getVendorSalons, getSalonStaff, addStaff, updateStaff, deleteStaff, updateSchedule, toggleStaffStatus } from '../services/vendorApi';
 import Modal from '../../../components/common/Modal';
+import Pagination from '../../../components/common/Pagination';
+import VendorPageLayout from '../../../components/vendor/layout/VendorPageLayout';
+import VendorPageHeader from '../../../components/vendor/layout/VendorPageHeader';
+import VendorListToolbar from '../../../components/vendor/layout/VendorListToolbar';
+import VendorTableContainer from '../../../components/vendor/layout/VendorTableContainer';
+import VendorPagination from '../../../components/vendor/layout/VendorPagination';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -11,6 +17,7 @@ const StaffManagePage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
+  const [pagination, setPagination] = useState({ page: 1, limit: 12, total: 0, totalPages: 1 });
 
   // Filters
   const [filters, setFilters] = useState({ search: '', isActive: 'all' });
@@ -26,12 +33,12 @@ const StaffManagePage = () => {
   const [selectedStaffForAvailability, setSelectedStaffForAvailability] = useState(null);
 
   useEffect(() => { loadSalons(); }, []);
-  useEffect(() => { if (selectedSalon) loadStaff(); }, [selectedSalon, filters]);
+  useEffect(() => { if (selectedSalon) loadStaff(1); }, [selectedSalon, filters]);
 
   const loadSalons = async () => { 
     try { 
       const r = await getVendorSalons(); 
-      const loadedSalons = r.data.data;
+      const loadedSalons = r.data.data.salons || r.data.data;
       setSalons(loadedSalons); 
       if (loadedSalons.length > 0) {
         const savedSalonId = localStorage.getItem('vendor_selected_salon');
@@ -46,15 +53,20 @@ const StaffManagePage = () => {
     setLoading(false); 
   };
 
-  const loadStaff = async () => { 
+  const loadStaff = async (page = pagination.page) => { 
     setIsFetching(true);
     try { 
-      const queryParams = {};
+      const queryParams = { page, limit: pagination.limit };
       if (filters.search) queryParams.search = filters.search;
       if (filters.isActive !== 'all') queryParams.isActive = filters.isActive;
       
       const r = await getSalonStaff(selectedSalon, queryParams); 
-      setStaff(r.data.data); 
+      if (r.data.data.staff) {
+        setStaff(r.data.data.staff);
+        setPagination(prev => ({ ...prev, page: r.data.data.page, total: r.data.data.total, totalPages: r.data.data.totalPages }));
+      } else {
+        setStaff(r.data.data);
+      }
     } catch (e) {} 
     setIsFetching(false);
   };
@@ -144,36 +156,38 @@ const StaffManagePage = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-6">
-        <div className="h-10 w-64 bg-slate-200 rounded-lg animate-pulse" />
-        <div className="h-16 bg-slate-100 rounded-2xl animate-pulse border border-border" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1,2,3].map(i => (
-             <div key={i} className="h-44 bg-slate-100 rounded-2xl animate-pulse border border-border"></div>
-          ))}
+      <VendorPageLayout>
+        <div className="flex flex-col gap-6">
+          <div className="h-10 w-64 bg-slate-200 rounded-lg animate-pulse" />
+          <div className="h-16 bg-slate-100 rounded-2xl animate-pulse border border-border" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1,2,3].map(i => (
+               <div key={i} className="h-44 bg-slate-100 rounded-2xl animate-pulse border border-border"></div>
+            ))}
+          </div>
         </div>
-      </div>
+      </VendorPageLayout>
     );
   }
 
   return (
-    <div className="space-y-6 animate-fade-in relative max-w-5xl mx-auto w-full pb-10">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-        <div>
-          <h1 className="font-headline-md text-[24px] sm:text-[28px] text-on-surface font-bold">Staff Management</h1>
-          <p className="font-body-md text-muted-text mt-1">Manage your team members and schedule availability.</p>
-        </div>
-        <button onClick={() => {
-          setEditingStaff(null);
-          setForm({ name: '', phone: '', specializations: '' });
-          setShowForm(!showForm);
-        }} className={`w-full sm:w-auto shrink-0 justify-center whitespace-nowrap px-4 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm flex items-center gap-1.5 border ${showForm ? 'bg-surface border-border text-on-surface hover:bg-surface-variant' : 'bg-primary text-white hover:bg-primary-dark border-transparent'}`}>
-          <span className="material-symbols-outlined text-[18px]">{showForm ? 'close' : 'add'}</span>
-          {showForm ? 'Cancel' : 'Add Staff'}
-        </button>
-      </div>
+    <VendorPageLayout>
+      <VendorPageHeader 
+        title="Staff Management"
+        description="Manage your team members and schedule availability."
+        actions={
+          <button onClick={() => {
+            setEditingStaff(null);
+            setForm({ name: '', phone: '', specializations: '' });
+            setShowForm(!showForm);
+          }} className={`w-full sm:w-auto shrink-0 justify-center whitespace-nowrap px-4 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm flex items-center gap-1.5 border ${showForm ? 'bg-surface border-border text-on-surface hover:bg-surface-variant' : 'bg-primary text-white hover:bg-primary-dark border-transparent'}`}>
+            <span className="material-symbols-outlined text-[18px]">{showForm ? 'close' : 'add'}</span>
+            {showForm ? 'Cancel' : 'Add Staff'}
+          </button>
+        }
+      />
 
-      <div className="flex flex-col sm:flex-row gap-4 bg-surface p-4 rounded-2xl border border-border shadow-sm">
+      <VendorListToolbar>
         <select value={selectedSalon} onChange={e => { setSelectedSalon(e.target.value); localStorage.setItem('vendor_selected_salon', e.target.value); }}
           className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm bg-surface text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm">
           {salons.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
@@ -193,7 +207,7 @@ const StaffManagePage = () => {
           <option value="true">Active</option>
           <option value="false">Inactive</option>
         </select>
-      </div>
+      </VendorListToolbar>
 
       <Modal 
         isOpen={showForm}
@@ -225,61 +239,71 @@ const StaffManagePage = () => {
         </form>
       </Modal>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-        {isFetching ? (
-          Array.from({ length: 3 }).map((_, i) => (
-             <div key={i} className="h-44 bg-surface rounded-2xl animate-pulse border border-border shadow-sm"></div>
-          ))
-        ) : staff.length === 0 && !loading ? (
-          <div className="col-span-full py-16 text-center text-muted-text bg-surface rounded-2xl border border-border flex flex-col items-center">
-            <span className="material-symbols-outlined text-4xl text-muted-text/30 mb-2">group</span>
-            <p className="font-medium text-on-surface text-lg">No staff members found.</p>
-            <p className="text-sm mt-1">Try adjusting filters or register a new staff member.</p>
-          </div>
-        ) : (
-          staff.map(s => (
-          <div key={s._id} className="bg-surface rounded-2xl p-5 border border-border shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
-            <div>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-soft-primary rounded-full flex items-center justify-center text-primary text-[15px] font-bold">
-                    {s.name.charAt(0).toUpperCase()}
+      <VendorTableContainer isCardGrid={true}>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {isFetching ? (
+            Array.from({ length: 3 }).map((_, i) => (
+               <div key={i} className="h-44 bg-surface rounded-2xl animate-pulse border border-border shadow-sm"></div>
+            ))
+          ) : staff.length === 0 && !loading ? (
+            <div className="col-span-full py-16 text-center text-muted-text bg-surface rounded-2xl border border-border flex flex-col items-center">
+              <span className="material-symbols-outlined text-4xl text-muted-text/30 mb-2">group</span>
+              <p className="font-medium text-on-surface text-lg">No staff members found.</p>
+              <p className="text-sm mt-1">Try adjusting filters or register a new staff member.</p>
+            </div>
+          ) : (
+            staff.map(s => (
+            <div key={s._id} className="bg-surface rounded-2xl p-5 border border-border shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+              <div>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-soft-primary rounded-full flex items-center justify-center text-primary text-[15px] font-bold">
+                      {s.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-on-surface text-sm">{s.name}</h4>
+                      <p className="text-xs text-muted-text mt-0.5">{s.phone}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-on-surface text-sm">{s.name}</h4>
-                    <p className="text-xs text-muted-text mt-0.5">{s.phone}</p>
-                  </div>
-                </div>
-                <span className={`text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-full border ${s.isActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
-                  {s.isActive ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-1.5 mt-4">
-                {s.specializations?.map(sp => (
-                  <span key={sp} className="text-[10px] px-2.5 py-1 bg-background-alt text-muted-text border border-border rounded-md font-medium">
-                    {sp}
+                  <span className={`text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-full border ${s.isActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
+                    {s.isActive ? 'Active' : 'Inactive'}
                   </span>
-                ))}
-                {!s.specializations?.length && <span className="text-xs text-muted-text/60 italic">No specializations</span>}
+                </div>
+                <div className="flex flex-wrap gap-1.5 mt-4">
+                  {s.specializations?.map(sp => (
+                    <span key={sp} className="text-[10px] px-2.5 py-1 bg-background-alt text-muted-text border border-border rounded-md font-medium">
+                      {sp}
+                    </span>
+                  ))}
+                  {!s.specializations?.length && <span className="text-xs text-muted-text/60 italic">No specializations</span>}
+                </div>
+              </div>
+              
+              <div className="mt-5 pt-4 border-t border-border grid grid-cols-4 gap-2">
+                <button onClick={() => openEditForm(s)} title="Edit" className="col-span-1 py-1.5 font-medium text-muted-text hover:bg-surface-variant rounded-lg transition-colors flex items-center justify-center border border-border">
+                  <span className="material-symbols-outlined text-[18px]">edit</span>
+                </button>
+                <button onClick={() => openAvailability(s)} className="col-span-2 text-xs py-1.5 font-semibold text-primary bg-soft-primary hover:bg-primary/20 rounded-lg transition-colors flex items-center justify-center gap-1 border border-primary/10">
+                  <span className="material-symbols-outlined text-[16px]">schedule</span>
+                  Availability
+                </button>
+                <button onClick={() => handleToggleStatus(s._id)} title={s.isActive ? 'Disable' : 'Enable'} className={`col-span-1 py-1.5 font-medium rounded-lg transition-colors border ${s.isActive ? 'border-error/20 text-error hover:bg-error/10' : 'border-success/20 text-success hover:bg-success/10'} flex items-center justify-center`}>
+                  <span className="material-symbols-outlined text-[18px]">{s.isActive ? 'toggle_on' : 'toggle_off'}</span>
+                </button>
               </div>
             </div>
-            
-            <div className="mt-5 pt-4 border-t border-border grid grid-cols-4 gap-2">
-              <button onClick={() => openEditForm(s)} title="Edit" className="col-span-1 py-1.5 font-medium text-muted-text hover:bg-surface-variant rounded-lg transition-colors flex items-center justify-center border border-border">
-                <span className="material-symbols-outlined text-[18px]">edit</span>
-              </button>
-              <button onClick={() => openAvailability(s)} className="col-span-2 text-xs py-1.5 font-semibold text-primary bg-soft-primary hover:bg-primary/20 rounded-lg transition-colors flex items-center justify-center gap-1 border border-primary/10">
-                <span className="material-symbols-outlined text-[16px]">schedule</span>
-                Availability
-              </button>
-              <button onClick={() => handleToggleStatus(s._id)} title={s.isActive ? 'Disable' : 'Enable'} className={`col-span-1 py-1.5 font-medium rounded-lg transition-colors border ${s.isActive ? 'border-error/20 text-error hover:bg-error/10' : 'border-success/20 text-success hover:bg-success/10'} flex items-center justify-center`}>
-                <span className="material-symbols-outlined text-[18px]">{s.isActive ? 'toggle_on' : 'toggle_off'}</span>
-              </button>
-            </div>
-          </div>
-          ))
-        )}
-      </div>
+            ))
+          )}
+        </div>
+      </VendorTableContainer>
+      
+      <VendorPagination
+        currentPage={pagination.page}
+        totalPages={pagination.totalPages}
+        total={pagination.total}
+        limit={pagination.limit}
+        onPageChange={loadStaff}
+      />
 
       {/* Availability Modal */}
       {showAvailability && (
@@ -344,7 +368,7 @@ const StaffManagePage = () => {
           </div>
         </div>
       )}
-    </div>
+    </VendorPageLayout>
   );
 };
 export default StaffManagePage;

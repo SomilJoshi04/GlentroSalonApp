@@ -8,7 +8,7 @@ export const updateProfile = (data) => api.put('/vendors/profile', data);
 export const updateFcmToken = (data) => api.put('/vendors/fcm-token', data);
 
 // Salons
-export const getVendorSalons = () => api.get('/salons/vendor/my-salons');
+export const getVendorSalons = (params) => api.get('/salons/vendor/my-salons', { params });
 export const createSalon = (data) => api.post('/salons', data);
 export const updateSalon = (id, data) => api.put(`/salons/${id}`, data);
 export const getSalonById = (id) => api.get(`/salons/detail/${id}`);
@@ -71,4 +71,5 @@ export const markChatAsRead = (chatId) => api.patch(`/chat/${chatId}/read`);
 export const getNotifications = (params) => api.get('/notifications', { params });
 export const markNotificationRead = (id) => api.patch(`/notifications/${id}/read`);
 export const markAllNotificationsRead = () => api.patch('/notifications/read-all');
+export const clearAllNotifications = () => api.delete('/notifications/clear-all');
 export const getUnreadCount = () => api.get('/notifications/unread-count');

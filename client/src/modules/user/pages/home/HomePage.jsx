@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getNearbySalons, getSalons, getCategories, getServices, getBanners } from '../../services/userApi';
+import { getNearbySalons, getSalons, getCategories, getServices, getBanners, getPackages } from '../../services/userApi';
 import { useAuth } from '../../../../context/AuthContext';
 import { useNotifications } from '../../../../context/NotificationContext';
 import { useLocationContext } from '../../../../context/LocationContext';
@@ -15,8 +15,11 @@ const HomePage = () => {
   const [categories, setCategories] = useState([]);
   const [services, setServices] = useState([]);
   const [banners, setBanners] = useState([]);
+  const [featuredOffers, setFeaturedOffers] = useState([]);
+  const [currentOfferIndex, setCurrentOfferIndex] = useState(0);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const videoRefs = useRef([]);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
   const [salonListTitle, setSalonListTitle] = useState('Nearby Salons');
@@ -32,10 +35,55 @@ const HomePage = () => {
     if (banners.length > 1) {
       interval = setInterval(() => {
         setCurrentBannerIndex((prevIndex) => (prevIndex + 1) % banners.length);
-      }, 4000);
+      }, 6000);
     }
     return () => clearInterval(interval);
   }, [banners.length]);
+
+  // Featured Offers Auto-Rotation
+  useEffect(() => {
+    let interval;
+    if (featuredOffers.length > 1) {
+      interval = setInterval(() => {
+        setCurrentOfferIndex((prevIndex) => (prevIndex + 1) % featuredOffers.length);
+      }, 5000);
+    }
+    return () => clearInterval(interval);
+  }, [featuredOffers.length]);
+
+  // Auto-play active video and pause inactive ones
+  useEffect(() => {
+    videoRefs.current.forEach((video, idx) => {
+      if (video) {
+        if (idx === currentBannerIndex) {
+          video.play().catch((err) => {
+            console.log('Autoplay play blocked or error:', err);
+          });
+        } else {
+          video.pause();
+        }
+      }
+    });
+  }, [currentBannerIndex, banners]);
+
+  // Tab Visibility change listener
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        const activeVideo = videoRefs.current[currentBannerIndex];
+        if (activeVideo) activeVideo.pause();
+      } else {
+        const activeVideo = videoRefs.current[currentBannerIndex];
+        if (activeVideo) {
+          activeVideo.play().catch(() => {});
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [currentBannerIndex]);
 
   // Trigger permission modal on first load if no location exists
   useEffect(() => {
@@ -60,16 +108,26 @@ const HomePage = () => {
         setSalonListTitle('Popular Salons in ' + (selectedLocation?.city || 'Your Area'));
       }
 
-      const [catRes, salonRes, serviceRes, bannerRes] = await Promise.all([
+      const offersParams = { limit: 10, checkValidity: 'true', status: 'ACTIVE', isActive: 'true' };
+      if (selectedLocation?.lat && selectedLocation?.lng) {
+        offersParams.lat = selectedLocation.lat;
+        offersParams.lng = selectedLocation.lng;
+      } else if (selectedLocation?.city) {
+        offersParams.city = selectedLocation.city;
+      }
+
+      const [catRes, salonRes, serviceRes, bannerRes, offersRes] = await Promise.all([
         getCategories(),
         salonPromise,
         getServices({ limit: 4 }),
-        getBanners().catch(() => ({ data: { data: [] } }))
+        getBanners().catch(() => ({ data: { data: [] } })),
+        getPackages(offersParams).catch(() => ({ data: { data: { packages: [] } } }))
       ]);
 
       setCategories(catRes.data.data?.slice(0, 4) || []);
       setServices(serviceRes.data.data.services || []);
       setBanners(bannerRes.data?.data || []);
+      setFeaturedOffers(offersRes.data?.data?.packages || []);
 
       let fetchedSalons = salonRes.data.data.salons || [];
 
@@ -85,6 +143,7 @@ const HomePage = () => {
       console.error(err);
     } finally {
       setLoading(false);
+      setFeaturedOfferLoading(false);
     }
   };
 
@@ -97,7 +156,7 @@ const HomePage = () => {
     return 'Good Evening';
   };
 
-  const activeOffer = banners.length > 0 ? banners[currentBannerIndex] : null;
+  const activeBanner = banners.length > 0 ? banners[currentBannerIndex] : null;
 
   return (
     <div className="bg-[#F8F7F5] text-on-surface font-body-md antialiased pb-4 -mx-4 md:mx-0 md:bg-transparent">
@@ -105,18 +164,36 @@ const HomePage = () => {
       <div className="relative w-full h-[320px] bg-inverse-surface flex flex-col pt-10 pb-6 px-6 overflow-hidden rounded-b-[24px]">
         {banners.length > 0 ? (
           banners.map((banner, index) => (
-            <img
-              key={banner._id || index}
-              alt={banner.title || "Hero Background"}
-              className={`absolute inset-0 w-full h-full object-cover object-top transition-opacity duration-1000 ease-in-out ${index === currentBannerIndex ? 'opacity-50 z-0' : 'opacity-0 -z-10'}`}
-              src={getImageUrl(banner.image)}
-            />
+            banner.type === 'video' ? (
+              <video
+                key={banner._id || index}
+                ref={el => videoRefs.current[index] = el}
+                src={getImageUrl(banner.video)}
+                poster={banner.image ? getImageUrl(banner.image) : undefined}
+                className={`absolute inset-0 w-full h-full object-cover object-top transition-opacity duration-1000 ease-in-out ${index === currentBannerIndex ? 'opacity-35 z-0' : 'opacity-0 -z-10'}`}
+                muted
+                loop
+                playsInline
+                preload="metadata"
+              />
+            ) : (
+              <img
+                key={banner._id || index}
+                alt={banner.title || "Hero Background"}
+                className={`absolute inset-0 w-full h-full object-cover object-top transition-opacity duration-1000 ease-in-out ${index === currentBannerIndex ? 'opacity-40 z-0' : 'opacity-0 -z-10'}`}
+                src={getImageUrl(banner.image)}
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80";
+                }}
+              />
+            )
           ))
         ) : (
           <img
             alt="Hero Background Fallback"
-            className="absolute inset-0 w-full h-full object-cover object-top opacity-50 z-0"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAybZNIjciVynWHUV2jUNo04-Ix6IeHMDVLfbwzBzgmBPN6pXRHRH5Omf2ah_iFmfjvgWxksChx4L6WZpvBDQbKW4b_2PTINUCkMIrGiQgcC9X1N5Qe_us9LrtH_8h6PRDNWYrAVuJ6Y1xoQsR-w5ntVXZOOcTg3PsLHT7teFEQ96wEVmWSzUcyNiz8Cb5Oz9I06pflGf143ZOkVShvvOXMcarRtOiRLyeifYHOXTsXEYSID6XIZAbV"
+            className="absolute inset-0 w-full h-full object-cover object-top opacity-40 z-0"
+            src="https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80"
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-[#1A1A1A] z-0"></div>
@@ -153,13 +230,16 @@ const HomePage = () => {
           </div>
         </header>
 
-        {/* Greeting & Title */}
-        <div className="relative z-10 mt-auto mb-2">
-          <p className="font-body-sm text-white/80 mb-0.5">{getGreeting()},</p>
-          <h2 className="font-headline-sm text-white mb-2 truncate">{user?.name?.split(' ')[0] || 'Guest'}</h2>
-          <h1 className="font-headline-md text-white font-serif tracking-tight leading-[1.15] max-w-[280px]">
-            Find & Book The<br />Best Salons Near You
+        {/* Title & Description */}
+        <div className="relative z-10 mt-auto mb-12">
+          <h1 className="font-headline-md text-white font-serif tracking-tight leading-[1.15] max-w-[290px] text-[28px] sm:text-[32px] drop-shadow-md">
+            {activeBanner?.title || <>Find & Book The<br />Best Salons Near You</>}
           </h1>
+          {activeBanner?.description && (
+            <p className="font-body-sm text-white/95 mt-1.5 line-clamp-2 max-w-[280px] text-xs leading-relaxed drop-shadow">
+              {activeBanner.description}
+            </p>
+          )}
         </div>
       </div>
 
@@ -184,7 +264,130 @@ const HomePage = () => {
         </div>
       </div>
 
-      <main className="px-6 space-y-10 mt-8">
+      <main className="px-6 space-y-8 mt-4">
+        {/* Promotional Offers Banner */}
+        {/* Dynamic Promotional Offers Banner Carousel */}
+        <section className="relative h-52 sm:h-60 rounded-3xl overflow-hidden shadow-md border border-border/10 cursor-pointer active:scale-[0.99] transition-transform duration-150 group">
+          {featuredOffers.length > 0 ? (
+            <>
+              {/* Slide Content */}
+              <div 
+                key={currentOfferIndex}
+                onClick={() => {
+                  const offer = featuredOffers[currentOfferIndex];
+                  if (offer) {
+                    navigate(`/offers?salon=${offer.salon?._id || ''}&search=${encodeURIComponent(offer.name || '')}`);
+                  }
+                }}
+                className="absolute inset-0 w-full h-full animate-fade-in flex flex-col justify-end"
+              >
+                {/* Slide Background Image */}
+                <img
+                  src={featuredOffers[currentOfferIndex].image 
+                    ? getImageUrl(featuredOffers[currentOfferIndex].image) 
+                    : (featuredOffers[currentOfferIndex].salon?.images?.[0] 
+                      ? getImageUrl(featuredOffers[currentOfferIndex].salon.images[0]) 
+                      : "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80")}
+                  alt={featuredOffers[currentOfferIndex].name}
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80";
+                  }}
+                />
+                
+                {/* Dark Overlay Gradient */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-transparent" />
+                
+                {/* Slide Content Text overlay */}
+                <div className="relative z-10 p-5 flex justify-between items-end gap-4 w-full">
+                  <div className="space-y-1 text-white max-w-[72%]">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="inline-block bg-primary text-white font-extrabold text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider shadow">
+                        {featuredOffers[currentOfferIndex].discountPercent || Math.round(((featuredOffers[currentOfferIndex].totalPrice - featuredOffers[currentOfferIndex].discountedPrice) / featuredOffers[currentOfferIndex].totalPrice) * 100)}% OFF
+                      </span>
+                      <span className="inline-block bg-white/20 text-white font-semibold text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider backdrop-blur-md">
+                        {featuredOffers[currentOfferIndex].salon?.name || 'Partner Salon'}
+                      </span>
+                    </div>
+                    
+                    <h3 className="font-headline-sm text-base sm:text-lg font-bold tracking-tight line-clamp-1">
+                      {featuredOffers[currentOfferIndex].name}
+                    </h3>
+                    
+                    <p className="text-[10px] sm:text-xs text-white/80 line-clamp-2 leading-relaxed font-body-sm">
+                      {featuredOffers[currentOfferIndex].description || 'Exclusive bundle deal on top salon services. Book your slot today!'}
+                    </p>
+                  </div>
+                  
+                  <div className="flex flex-col items-end gap-1.5 shrink-0">
+                    <div className="text-right">
+                      <span className="text-[9px] text-white/60 block uppercase tracking-wider leading-none">Deal Price</span>
+                      <span className="text-base sm:text-lg font-black text-white">₹{featuredOffers[currentOfferIndex].discountedPrice}</span>
+                    </div>
+                    
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const offer = featuredOffers[currentOfferIndex];
+                        if (offer) {
+                          navigate(`/offers?salon=${offer.salon?._id || ''}&search=${encodeURIComponent(offer.name || '')}`);
+                        }
+                      }}
+                      className="bg-white text-primary px-3.5 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold shadow hover:bg-soft-primary transition-colors whitespace-nowrap active:scale-95 duration-100"
+                    >
+                      Book Now
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Navigation Dots Indicator */}
+              {featuredOffers.length > 1 && (
+                <div className="absolute right-5 top-5 z-20 flex gap-1 bg-black/25 px-2 py-1 rounded-full backdrop-blur-sm">
+                  {featuredOffers.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCurrentOfferIndex(idx);
+                      }}
+                      className={`h-1.5 rounded-full transition-all duration-300 ${
+                        currentOfferIndex === idx ? 'w-4 bg-white' : 'w-1.5 bg-white/40'
+                      }`}
+                      aria-label={`Go to slide ${idx + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            // Fallback default banner if no active featured offers are in DB
+            <div 
+              onClick={() => navigate('/offers')}
+              className="absolute inset-0 w-full h-full bg-gradient-to-r from-primary to-[#8F66FF] p-5 flex flex-col justify-between"
+            >
+              <div className="absolute right-[-20px] bottom-[-20px] opacity-15 text-[150px] font-bold select-none leading-none group-hover:scale-105 transition-transform duration-500">%</div>
+              <div className="relative z-10 flex justify-between items-center h-full w-full">
+                <div className="space-y-1.5 max-w-[75%] text-white">
+                  <span className="inline-block bg-white/20 text-white font-bold text-[9px] px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                    Limited Time Deals
+                  </span>
+                  <h3 className="font-headline-sm text-base sm:text-lg font-bold tracking-tight">
+                    Exclusive Salon Offers & Bundles!
+                  </h3>
+                  <p className="text-[10px] sm:text-xs text-white/90 leading-relaxed font-body-sm line-clamp-2">
+                    Pamper yourself with up to 50% discount on top rated hair, spa and beauty packages.
+                  </p>
+                </div>
+                <div className="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-xl border border-white/20 flex items-center justify-center transition-colors shrink-0">
+                  <span className="material-symbols-outlined text-white text-[20px]">local_offer</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+
         {/* Top Categories */}
         <section>
           <div className="flex justify-between items-center mb-5">
@@ -318,26 +521,7 @@ const HomePage = () => {
           </div>
         </section>
 
-        {/* Exclusive Offers */}
-        <section className="pb-4">
-          <div 
-            onClick={() => activeOffer?.link ? window.open(activeOffer.link, '_blank') : null}
-            className={`bg-soft-pink rounded-2xl p-4 flex items-center justify-between border border-hot-pink/10 ${activeOffer?.link ? 'cursor-pointer' : ''}`}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-full bg-hot-pink flex items-center justify-center text-white shrink-0 transform -rotate-45 shadow-sm">
-                <span className="material-symbols-outlined text-[24px]">sell</span>
-              </div>
-              <div>
-                <h4 className="font-semibold text-sm text-heading-text">Exclusive Offers for You!</h4>
-                <p className="text-[11px] text-muted-text">Grab amazing deals on top services</p>
-              </div>
-            </div>
-            <button className="bg-hot-pink text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm hover:opacity-90 transition-opacity whitespace-nowrap ml-2">
-              View Offers
-            </button>
-          </div>
-        </section>
+
       </main>
 
       {/* Location Modals */}

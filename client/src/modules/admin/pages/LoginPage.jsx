@@ -9,6 +9,7 @@ const LoginPage = () => {
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { setAuth } = useAuth();
   const { settings } = useSettings();
   const navigate = useNavigate();
@@ -44,8 +45,15 @@ const LoginPage = () => {
               <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} required
                 className="w-full px-4 py-3 rounded-xl bg-surface-elevated border border-border text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500" placeholder="admin@salon.com" /></div>
             <div><label className="block text-sm font-medium text-text-secondary mb-1.5">Password</label>
-              <input type="password" value={form.password} onChange={e => setForm({...form, password: e.target.value})} required
-                className="w-full px-4 py-3 rounded-xl bg-surface-elevated border border-border text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500" placeholder="Enter password" /></div>
+              <div className="relative">
+                <input type={showPassword ? "text" : "password"} value={form.password} onChange={e => setForm({...form, password: e.target.value})} required
+                  className="w-full px-4 py-3 pr-12 rounded-xl bg-surface-elevated border border-border text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500" placeholder="Enter password" />
+                <button type="button" onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary hover:text-primary-600 transition-colors flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[20px]">{showPassword ? 'visibility_off' : 'visibility'}</span>
+                </button>
+              </div>
+            </div>
             <button type="submit" disabled={loading}
               className="w-full py-3 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 transition-all disabled:opacity-50">
               {loading ? 'Signing in...' : 'Sign In'}

@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { getCoupons, createCoupon, deleteCoupon } from '../services/adminApi';
 import Modal from '../../../components/common/Modal';
+import Pagination from '../../../components/common/Pagination';
+import AdminPageLayout from '../components/layout/AdminPageLayout';
+import AdminPageHeader from '../components/layout/AdminPageHeader';
 
 const CouponsPage = () => {
   const [coupons, setCoupons] = useState([]);
@@ -10,15 +13,39 @@ const CouponsPage = () => {
   const [form, setForm] = useState({ code: '', discountType: 'percentage', discountValue: '', minPurchaseAmount: '0', maxDiscountAmount: '', validFrom: '', validTo: '', usageLimit: '', applicableToOffers: true });
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { load(); }, []);
-  const load = async () => { 
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    total: 0,
+    limit: 6
+  });
+
+  useEffect(() => { load(1); }, []);
+
+  const load = async (page = 1) => { 
     setLoading(true);
     setError(null);
     try { 
-      const r = await getCoupons(); 
+      const r = await getCoupons({ page, limit: pagination.limit }); 
       const data = r.data?.data;
       const list = data?.coupons || data || [];
       setCoupons(Array.isArray(list) ? list : []); 
+
+      if (data && data.coupons) {
+        setPagination({
+          currentPage: data.page,
+          totalPages: data.totalPages,
+          total: data.total,
+          limit: pagination.limit
+        });
+      } else {
+        setPagination({
+          currentPage: 1,
+          totalPages: 1,
+          total: Array.isArray(list) ? list.length : 0,
+          limit: pagination.limit
+        });
+      }
     } catch (e) {
       setError('Unable to load coupons. Please try again.');
     } 
@@ -26,18 +53,46 @@ const CouponsPage = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault(); setSaving(true);
-    try { await createCoupon({ ...form, code: form.code.toUpperCase(), discountValue: Number(form.discountValue), minPurchaseAmount: Number(form.minPurchaseAmount) }); setShowForm(false); load(); }
-    catch (e) { alert(e.response?.data?.message || 'Failed'); } setSaving(false);
+    e.preventDefault(); 
+    setSaving(true);
+    try { 
+      await createCoupon({ 
+        ...form, 
+        code: form.code.toUpperCase(), 
+        discountValue: Number(form.discountValue), 
+        minPurchaseAmount: Number(form.minPurchaseAmount) 
+      }); 
+      setShowForm(false); 
+      load(1); 
+    } catch (e) { 
+      alert(e.response?.data?.message || 'Failed'); 
+    } 
+    setSaving(false);
   };
 
-  const handleDelete = async (id) => { if (confirm('Delete?')) { try { await deleteCoupon(id); load(); } catch (e) {} } };
-
-  if (loading) return <div className="flex justify-center py-12"><div className="w-10 h-10 border-4 border-dark-700 border-t-primary-500 rounded-full animate-spin" /></div>;
+  const handleDelete = async (id) => { 
+    if (confirm('Delete?')) { 
+      try { 
+        await deleteCoupon(id); 
+        const nextPage = (coupons.length === 1 && pagination.currentPage > 1)
+          ? pagination.currentPage - 1
+          : pagination.currentPage;
+        load(nextPage); 
+      } catch (e) {} 
+    } 
+  };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between"><h1 className="text-2xl font-bold text-text-primary">Coupons</h1><button onClick={() => setShowForm(!showForm)} className="px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-medium">{showForm ? 'Cancel' : '+ Create Coupon'}</button></div>
+    <AdminPageLayout>
+      <AdminPageHeader 
+        title="Coupons"
+        description="Manage discount codes and platform promotions."
+        actions={
+          <button onClick={() => setShowForm(!showForm)} className="px-4 py-2 bg-primary text-white rounded-xl text-[14px] font-medium shadow-sm hover:bg-primary-600 transition-colors">
+            {showForm ? 'Cancel' : '+ Create Coupon'}
+          </button>
+        }
+      />
       
       <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Create Coupon" size="md">
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -62,26 +117,37 @@ const CouponsPage = () => {
           {error}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {coupons.length === 0 ? <p className="text-text-muted col-span-full py-8 text-center">No coupons found.</p> :
-          coupons.map(c => (
-          <div key={c._id} className="bg-surface-card border border-border rounded-2xl p-5">
-            <div className="flex justify-between items-start">
-              <div className="px-3 py-1 bg-primary-600/20 text-primary-400 font-bold tracking-wider rounded-lg border border-primary-500/30">{c.code}</div>
-              <button onClick={() => handleDelete(c._id)} className="text-danger text-xs hover:text-danger/80">Delete</button>
-            </div>
-            <p className="mt-4 text-xl font-bold text-text-primary">{c.discountType === 'percentage' ? `${c.discountValue}% OFF` : `₹${c.discountValue} OFF`}</p>
-            <p className="text-sm text-text-secondary mt-1">Min purchase: ₹{c.minPurchaseAmount}</p>
-            <div className="mt-3 pt-3 border-t border-border flex justify-between text-xs text-text-muted">
-              <span>Used: {c.usedCount || 0} times</span>
-              <span className={c.isActive ? 'text-success' : 'text-danger'}>{c.isActive ? 'Active' : 'Expired'}</span>
-            </div>
-            {!c.applicableToOffers && <div className="mt-2 text-[10px] text-warning bg-warning/10 px-2 py-1 rounded inline-block">Not valid on offers</div>}
+        <div className="flex-1 overflow-y-auto min-h-0 pr-2 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {coupons.length === 0 ? <p className="text-text-muted col-span-full py-8 text-center">No coupons found.</p> :
+            coupons.map(c => (
+              <div key={c._id} className="bg-surface border border-border rounded-2xl p-5 shadow-sm hover:border-primary/50 transition-colors">
+                <div className="flex justify-between items-start">
+                  <div className="px-3 py-1 bg-primary/10 text-primary font-extrabold tracking-wider rounded-lg border border-primary/20">{c.code}</div>
+                  <button onClick={() => handleDelete(c._id)} className="text-error text-xs hover:text-error/80 flex items-center gap-1 font-medium"><span className="material-symbols-outlined text-[16px]">delete</span>Delete</button>
+                </div>
+                <p className="mt-4 text-2xl font-bold text-on-surface">{c.discountType === 'percentage' ? `${c.discountValue}% OFF` : `₹${c.discountValue} OFF`}</p>
+                <p className="text-sm text-text-secondary mt-1">Min purchase: ₹{c.minPurchaseAmount}</p>
+                <div className="mt-4 pt-3 border-t border-border flex justify-between text-xs text-muted-text font-medium">
+                  <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">confirmation_number</span> Used: {c.usedCount || 0} times</span>
+                  <span className={`px-2 py-0.5 rounded ${c.isActive ? 'bg-success/10 text-success' : 'bg-error/10 text-error'}`}>{c.isActive ? 'Active' : 'Expired'}</span>
+                </div>
+                {!c.applicableToOffers && <div className="mt-3 text-[11px] text-warning bg-warning/10 px-2.5 py-1.5 rounded-lg inline-block font-medium">Not valid on offers</div>}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+          
+          <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            limit={pagination.limit}
+            onPageChange={load}
+          />
+        </div>
       )}
-    </div>
+    </AdminPageLayout>
   );
 };
+
 export default CouponsPage;

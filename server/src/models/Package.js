@@ -67,6 +67,14 @@ const packageSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    isFeatured: {
+      type: Boolean,
+      default: false,
+    },
+    priority: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
@@ -74,5 +82,6 @@ const packageSchema = new mongoose.Schema(
 );
 
 packageSchema.index({ salon: 1, status: 1 });
+packageSchema.index({ isFeatured: 1, priority: -1, status: 1, isActive: 1 });
 
 module.exports = mongoose.model('Package', packageSchema);

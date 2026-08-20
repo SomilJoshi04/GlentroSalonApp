@@ -29,10 +29,10 @@ const VendorLayout = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background flex font-inter">
+    <div className="h-screen w-full bg-background flex font-inter overflow-hidden">
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-[260px] bg-surface border-r border-border transform transition-transform duration-300 lg:translate-x-0 lg:static flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex items-center gap-3 px-6 py-6 border-b border-border">
+      <aside className={`absolute md:relative inset-y-0 left-0 z-50 w-[260px] bg-surface border-r border-border transform transition-transform duration-300 flex flex-col h-full ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <div className="flex items-center gap-3 px-6 py-6 border-b border-border shrink-0">
           {settings?.appLogo ? (
             <img src={getImageUrl(settings.appLogo)} alt="App Logo" className="w-10 h-10 rounded-lg object-contain" />
           ) : (
@@ -54,15 +54,15 @@ const VendorLayout = () => {
                 {item.label}
               </div>
               {item.count > 0 && (
-                <span className="bg-error text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                <span className="bg-error text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center shrink-0">
                   {item.count}
                 </span>
               )}
             </NavLink>
           ))}
         </nav>
-        <div className="p-4 border-t border-border mt-auto">
-          <button onClick={() => { logout('vendor'); navigate('/vendor/login'); }} 
+        <div className="p-4 border-t border-border mt-auto shrink-0">
+          <button onClick={() => { logout('vendor'); navigate('/vendor/login'); }}
             className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-[13px] font-medium text-error hover:bg-error/10 transition-colors">
             <span className="material-symbols-outlined text-[18px]">logout</span>
             Logout
@@ -74,9 +74,9 @@ const VendorLayout = () => {
       {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
 
       {/* Main */}
-      <div className="flex-1 flex flex-col min-h-screen min-w-0">
+      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
         {!hideHeader && (
-          <header className="sticky top-0 z-30 bg-surface/80 backdrop-blur-md border-b border-border h-[72px] px-6 flex items-center justify-between">
+          <header className="shrink-0 z-30 bg-surface/95 backdrop-blur-md border-b border-border h-[72px] px-4 md:px-6 flex items-center justify-between">
             <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 -ml-2 rounded-xl text-muted-text hover:bg-surface-variant flex items-center">
               <span className="material-symbols-outlined">menu</span>
             </button>
@@ -95,7 +95,7 @@ const VendorLayout = () => {
             </div>
           </header>
         )}
-        <main className={`flex-1 ${hideHeader ? '' : 'p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto w-full'}`}>
+        <main className={`flex-1 overflow-y-auto min-h-0 ${hideHeader ? '' : 'p-4 md:p-6 flex flex-col'}`}>
           <Outlet />
         </main>
       </div>

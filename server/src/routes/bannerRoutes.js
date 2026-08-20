@@ -20,8 +20,8 @@ router.use(protect);
 router.use(authorize('admin'));
 
 router.get('/', getBanners);
-router.post('/', upload.single('image'), createBanner);
-router.put('/:id', upload.single('image'), updateBanner);
+router.post('/', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'video', maxCount: 1 }]), createBanner);
+router.put('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'video', maxCount: 1 }]), updateBanner);
 router.delete('/:id', deleteBanner);
 router.patch('/:id/toggle-status', toggleBannerStatus);
 

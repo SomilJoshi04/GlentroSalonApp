@@ -261,9 +261,22 @@ const updateSalon = async (req, res, next) => {
 // @desc    Get vendor's salons
 const getVendorSalons = async (req, res, next) => {
   try {
-    const salons = await Salon.find({ vendor: req.user.id }).sort({ createdAt: -1 });
-    const salonsWithPrices = await attachMinServicePrices(salons);
-    res.json({ success: true, data: salonsWithPrices });
+    const { page, limit } = req.query;
+    let query = Salon.find({ vendor: req.user.id }).sort({ createdAt: -1 });
+    
+    if (page && limit) {
+      const pageNum = parseInt(page);
+      const limitNum = parseInt(limit);
+      query = query.skip((pageNum - 1) * limitNum).limit(limitNum);
+      const salons = await query;
+      const salonsWithPrices = await attachMinServicePrices(salons);
+      const total = await Salon.countDocuments({ vendor: req.user.id });
+      res.json({ success: true, data: { salons: salonsWithPrices, total, page: pageNum, totalPages: Math.ceil(total / limitNum) } });
+    } else {
+      const salons = await query;
+      const salonsWithPrices = await attachMinServicePrices(salons);
+      res.json({ success: true, data: salonsWithPrices });
+    }
   } catch (error) { next(error); }
 };
 

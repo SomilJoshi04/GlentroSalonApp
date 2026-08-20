@@ -5,6 +5,30 @@ const getSubcategories = async (req, res, next) => {
     const query = {};
     if (req.query.category) query.category = req.query.category;
     if (req.query.isActive !== undefined) query.isActive = req.query.isActive === 'true';
+    if (req.query.search) {
+      query.name = { $regex: req.query.search, $options: 'i' };
+    }
+
+    const { page, limit } = req.query;
+    if (page && limit) {
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+      const total = await Subcategory.countDocuments(query);
+      const subcategories = await Subcategory.find(query)
+        .populate('category', 'name')
+        .sort({ name: 1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+      return res.json({
+        success: true,
+        data: {
+          subcategories,
+          total,
+          page: parseInt(page),
+          totalPages: Math.ceil(total / limit)
+        }
+      });
+    }
+
     const subcategories = await Subcategory.find(query).populate('category', 'name').sort({ name: 1 });
     res.json({ success: true, data: subcategories });
   } catch (error) { next(error); }

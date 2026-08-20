@@ -7,9 +7,38 @@ const bannerSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    type: {
+      type: String,
+      enum: ['image', 'video'],
+      default: 'image',
+    },
     image: {
       type: String,
-      required: [true, 'Banner image is required'],
+      default: '',
+    },
+    video: {
+      type: String,
+      default: '',
+    },
+    description: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    ctaText: {
+      type: String,
+      trim: true,
+      default: 'Book Now',
+    },
+    displayOrder: {
+      type: Number,
+      default: 0,
+    },
+    startDate: {
+      type: Date,
+    },
+    endDate: {
+      type: Date,
     },
     link: {
       type: String,

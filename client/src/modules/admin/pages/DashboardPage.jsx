@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getDashboardStats } from '../services/adminApi';
 
 const DashboardPage = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -37,14 +39,14 @@ const DashboardPage = () => {
   }
 
   const statCards = data ? [
-    { label: 'Total Revenue', value: `₹${(data.totalRevenue || 0).toLocaleString()}`, icon: 'payments', color: 'text-success', bg: 'bg-success/10' },
-    { label: 'Platform Fee', value: `₹${(data.totalPlatformFee || 0).toLocaleString()}`, icon: 'account_balance', color: 'text-primary', bg: 'bg-primary/10' },
-    { label: 'Total Users', value: data.totalUsers || 0, icon: 'group', color: 'text-blue-500', bg: 'bg-blue-500/10' },
-    { label: 'Active Vendors', value: data.activeVendors || 0, icon: 'storefront', color: 'text-purple-500', bg: 'bg-purple-500/10' },
-    { label: 'Total Bookings', value: data.totalBookings || 0, icon: 'calendar_month', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { label: 'Completed Bookings', value: data.completedBookings || 0, icon: 'check_circle', color: 'text-success', bg: 'bg-success/10' },
-    { label: 'Pending Bookings', value: data.pendingBookings || 0, icon: 'pending_actions', color: 'text-warning', bg: 'bg-warning/10' },
-    { label: 'Total Services', value: data.totalServices || 0, icon: 'category', color: 'text-orange-500', bg: 'bg-orange-500/10' },
+    { label: 'Total Revenue', value: `₹${(data.totalRevenue || 0).toLocaleString()}`, icon: 'payments', color: 'text-success', bg: 'bg-success/10', path: '/admin/bookings' },
+    { label: 'Platform Fee', value: `₹${(data.totalPlatformFee || 0).toLocaleString()}`, icon: 'account_balance', color: 'text-primary', bg: 'bg-primary/10', path: '/admin/commissions' },
+    { label: 'Total Users', value: data.totalUsers || 0, icon: 'group', color: 'text-blue-500', bg: 'bg-blue-500/10', path: '/admin/users' },
+    { label: 'Active Vendors', value: data.activeVendors || 0, icon: 'storefront', color: 'text-purple-500', bg: 'bg-purple-500/10', path: '/admin/vendors' },
+    { label: 'Total Bookings', value: data.totalBookings || 0, icon: 'calendar_month', color: 'text-emerald-500', bg: 'bg-emerald-500/10', path: '/admin/bookings' },
+    { label: 'Completed Bookings', value: data.completedBookings || 0, icon: 'check_circle', color: 'text-success', bg: 'bg-success/10', path: '/admin/bookings' },
+    { label: 'Pending Bookings', value: data.pendingBookings || 0, icon: 'pending_actions', color: 'text-warning', bg: 'bg-warning/10', path: '/admin/bookings' },
+    { label: 'Total Services', value: data.totalServices || 0, icon: 'category', color: 'text-orange-500', bg: 'bg-orange-500/10', path: '/admin/services' },
   ] : [];
 
   return (
@@ -74,7 +76,11 @@ const DashboardPage = () => {
       {/* Stat Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map((stat, idx) => (
-          <div key={idx} className="bg-surface rounded-2xl p-6 shadow-sm border border-border hover:shadow-md transition-shadow">
+          <div 
+            key={idx} 
+            onClick={() => stat.path && navigate(stat.path)}
+            className={`bg-surface rounded-2xl p-6 shadow-sm border border-border hover:shadow-md transition-shadow ${stat.path ? 'cursor-pointer' : ''}`}
+          >
             <div className="flex items-center justify-between">
               <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.bg} ${stat.color}`}>
                 <span className="material-symbols-outlined text-[24px]">{stat.icon}</span>

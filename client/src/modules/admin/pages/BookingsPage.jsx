@@ -4,6 +4,9 @@ import DataTable from '../components/DataTable';
 import StatusBadge from '../components/StatusBadge';
 import BookingDetailsModal from '../components/BookingDetailsModal';
 import { format } from 'date-fns';
+import AdminPageLayout from '../components/layout/AdminPageLayout';
+import AdminPageHeader from '../components/layout/AdminPageHeader';
+import AdminListToolbar from '../components/layout/AdminListToolbar';
 
 const BookingsPage = () => {
   const [bookings, setBookings] = useState([]);
@@ -183,22 +186,20 @@ const BookingsPage = () => {
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in pb-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="font-headline-md text-[28px] text-on-surface">Booking Management</h1>
-          <p className="font-body-md text-muted-text mt-1">Monitor and manage all platform reservations in real-time.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-surface border border-border rounded-xl font-label-md text-[14px] text-on-surface hover:bg-surface-variant transition-colors shadow-sm">
+    <AdminPageLayout>
+      <AdminPageHeader 
+        title="Booking Management"
+        description="Monitor and manage all platform reservations in real-time."
+        actions={
+          <button className="flex items-center gap-2 px-4 py-2 bg-surface border border-border rounded-xl font-label-md text-[14px] text-on-surface hover:bg-surface-variant transition-colors shadow-sm">
             <span className="material-symbols-outlined text-[18px]">download</span>
             Export CSV
           </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-2 border-b border-border">
+      <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-2 border-b border-border shrink-0 mb-4">
         {tabs.map(tab => (
           <button 
             key={tab}
@@ -210,10 +211,9 @@ const BookingsPage = () => {
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-surface p-4 rounded-2xl border border-border shadow-sm">
+      <AdminListToolbar>
         {/* Search */}
-        <div className="relative">
+        <div className="relative flex-1">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted-text text-[20px]">search</span>
           <input 
             type="text" 
@@ -225,7 +225,7 @@ const BookingsPage = () => {
         </div>
 
         {/* Vendor Filter */}
-        <div>
+        <div className="flex-1">
           <select 
             value={vendorFilter}
             onChange={(e) => setVendorFilter(e.target.value)}
@@ -239,7 +239,7 @@ const BookingsPage = () => {
         </div>
 
         {/* Date Filters */}
-        <div>
+        <div className="flex-1">
           <input 
             type="date" 
             value={startDate}
@@ -247,7 +247,7 @@ const BookingsPage = () => {
             className="w-full bg-background-alt border border-border rounded-xl px-3 py-2 text-[14px] outline-none focus:border-primary text-muted-text"
           />
         </div>
-        <div>
+        <div className="flex-1">
           <input 
             type="date" 
             value={endDate}
@@ -255,7 +255,7 @@ const BookingsPage = () => {
             className="w-full bg-background-alt border border-border rounded-xl px-3 py-2 text-[14px] outline-none focus:border-primary text-muted-text"
           />
         </div>
-      </div>
+      </AdminListToolbar>
 
       <DataTable 
         columns={columns} 
@@ -269,11 +269,12 @@ const BookingsPage = () => {
       {/* Booking Details Modal */}
       {selectedBooking && (
         <BookingDetailsModal 
+          isOpen={!!selectedBooking}
           booking={selectedBooking} 
           onClose={() => setSelectedBooking(null)} 
         />
       )}
-    </div>
+    </AdminPageLayout>
   );
 };
 

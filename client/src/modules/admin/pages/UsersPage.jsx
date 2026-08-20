@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { getUsers, updateUserStatus } from '../services/adminApi';
 import DataTable from '../components/DataTable';
 import StatusBadge from '../components/StatusBadge';
+import AdminPageLayout from '../components/layout/AdminPageLayout';
+import AdminPageHeader from '../components/layout/AdminPageHeader';
+import AdminListToolbar from '../components/layout/AdminListToolbar';
 
 const UsersPage = () => {
   const [users, setUsers] = useState([]);
@@ -118,22 +121,19 @@ const UsersPage = () => {
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in pb-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="font-headline-md text-[28px] text-on-surface">User Management</h1>
-          <p className="font-body-md text-muted-text mt-1">Manage and monitor customer accounts.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-surface border border-border rounded-xl font-label-md text-[14px] text-on-surface hover:bg-surface-variant transition-colors shadow-sm">
+    <AdminPageLayout>
+      <AdminPageHeader 
+        title="User Management"
+        description="Manage and monitor customer accounts."
+        actions={
+          <button className="flex items-center gap-2 px-4 py-2 bg-surface border border-border rounded-xl font-label-md text-[14px] text-on-surface hover:bg-surface-variant transition-colors shadow-sm">
             <span className="material-symbols-outlined text-[18px]">download</span>
             Export CSV
           </button>
-        </div>
-      </div>
+        }
+      />
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface p-4 rounded-2xl border border-border shadow-sm">
+      <AdminListToolbar>
         <div className="relative flex-1 max-w-md">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted-text text-[20px]">search</span>
           <input 
@@ -156,7 +156,7 @@ const UsersPage = () => {
             <option value="inactive">Inactive</option>
           </select>
         </div>
-      </div>
+      </AdminListToolbar>
 
       <DataTable 
         columns={columns} 
@@ -166,7 +166,7 @@ const UsersPage = () => {
         pagination={pagination}
         onPageChange={fetchUsers}
       />
-    </div>
+    </AdminPageLayout>
   );
 };
 

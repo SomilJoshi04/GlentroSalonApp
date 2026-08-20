@@ -46,15 +46,16 @@ export const deleteSubcategory = (id) => api.delete(`/subcategories/${id}`);
 export const getServices = (params) => api.get('/admin/services', { params });
 
 // Commissions
-export const getCommissions = (params) => api.get('/admin/commissions', { params });
-export const setCommission = (data) => api.post('/admin/commissions', data);
-export const getPlatformFee = () => api.get('/admin/platform-fee');
-export const updatePlatformFee = (data) => api.put('/admin/platform-fee', data);
+export const getCommissions = (params) => api.get('/commissions', { params });
+export const setCommission = (data) => api.post('/commissions', data);
+export const deleteCommission = (id) => api.delete(`/commissions/${id}`);
+export const getPlatformFee = () => api.get('/commissions/platform-fee');
+export const updatePlatformFee = (data) => api.put('/commissions/platform-fee', data);
 
 // Coupons
-export const getCoupons = (params) => api.get('/admin/coupons', { params });
-export const createCoupon = (data) => api.post('/admin/coupons', data);
-export const deleteCoupon = (id) => api.delete(`/admin/coupons/${id}`);
+export const getCoupons = (params) => api.get('/coupons', { params });
+export const createCoupon = (data) => api.post('/coupons', data);
+export const deleteCoupon = (id) => api.delete(`/coupons/${id}`);
 
 // Offers & Packages
 export const getOffers = (params) => api.get('/offers', { params });
@@ -64,6 +65,8 @@ export const rejectOffer = (id, data) => api.patch(`/offers/${id}/reject`, data)
 export const getPackages = (params) => api.get('/packages', { params });
 export const approvePackage = (id) => api.patch(`/packages/${id}/approve`);
 export const rejectPackage = (id, data) => api.patch(`/packages/${id}/reject`, data);
+export const updatePackageAdmin = (id, data) => api.patch(`/packages/${id}/admin`, data);
+export const deletePackageAdmin = (id) => api.delete(`/packages/${id}/admin`);
 
 // Subscriptions
 export const getSubscriptionPlans = (params) => api.get('/admin/subscriptions/plans', { params });
@@ -83,6 +86,7 @@ export const getNotifications = (params) => api.get('/notifications', { params }
 export const getUnreadCount = () => api.get('/notifications/unread-count');
 export const markAsRead = (id) => api.patch(`/notifications/${id}/read`);
 export const markAllAsRead = () => api.patch('/notifications/read-all');
+export const clearAllNotifications = () => api.delete('/notifications/clear-all');
 export const deleteNotification = (id) => api.delete(`/notifications/${id}`);
 
 // Chat

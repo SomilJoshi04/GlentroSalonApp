@@ -49,7 +49,7 @@ const calculateCancellationFee = async (booking) => {
  * @param {Object|null} pkg - Package document or null
  * @returns {Object} { totalAmount, discountAmount, finalAmount, packageDiscount }
  */
-const calculateBookingTotal = (services, coupon = null, pkg = null) => {
+const calculateBookingTotal = (services, coupon = null, pkg = null, platformFeePercentage = 0) => {
   const originalTotal = services.reduce((sum, s) => sum + s.price, 0);
   let baseAmount = originalTotal;
   let packageDiscount = 0;
@@ -79,15 +79,21 @@ const calculateBookingTotal = (services, coupon = null, pkg = null) => {
   }
 
   couponDiscount = Math.min(couponDiscount, baseAmount);
-  const finalAmount = Math.round((baseAmount - couponDiscount) * 100) / 100;
+  const subtotalAfterDiscounts = Math.round((baseAmount - couponDiscount) * 100) / 100;
   const totalDiscount = Math.round((packageDiscount + couponDiscount) * 100) / 100;
+  
+  const platformFeeAmount = Math.round((subtotalAfterDiscounts * platformFeePercentage) / 100 * 100) / 100;
+  const finalAmount = Math.round((subtotalAfterDiscounts + platformFeeAmount) * 100) / 100;
 
   return {
-    totalAmount: Math.round(originalTotal * 100) / 100,
+    totalAmount: Math.round(originalTotal * 100) / 100, // Original service sum
+    subtotalAfterDiscounts,                             // Service sum minus discounts
     discountAmount: totalDiscount,
     couponDiscount: Math.round(couponDiscount * 100) / 100,
     packageDiscount: Math.round(packageDiscount * 100) / 100,
-    finalAmount,
+    platformFeePercentage,
+    platformFeeAmount,
+    finalAmount,                                        // User pays this
   };
 };
 
@@ -99,31 +105,40 @@ const calculateBookingTotal = (services, coupon = null, pkg = null) => {
  * @param {number} bookingAmount - Final booking amount
  * @returns {Object} { commission, platformFee, vendorPayout }
  */
-const calculateFinancialBreakdown = async (vendor, bookingAmount) => {
+const calculateFinancialBreakdown = async (vendor, subtotalAfterDiscounts, precalculatedPlatformFeeAmount = 0) => {
   const platformFeeDoc = await PlatformFee.findOne({ isActive: true });
+  // The platform fee is now an external charge added on top of the subtotal.
+  // It is collected by the admin. We use the precalculated amount if provided, or calculate it.
   const platformFeePercentage = platformFeeDoc ? platformFeeDoc.feePercentage : 5;
+  const platformFee = precalculatedPlatformFeeAmount || Math.round((subtotalAfterDiscounts * platformFeePercentage) / 100 * 100) / 100;
+  
+  const globalAdminCommission = platformFeeDoc && platformFeeDoc.adminCommissionPercentage !== undefined ? platformFeeDoc.adminCommissionPercentage : 10;
 
-  const platformFee = Math.round((bookingAmount * platformFeePercentage) / 100 * 100) / 100;
   let commission = 0;
+  let vendorPlanType = 'COMMISSION';
+  let appliedCommissionRate = 0;
 
   // If vendor has active subscription, no commission
   if (vendor.hasActiveSubscription && vendor.hasActiveSubscription()) {
     commission = 0;
+    vendorPlanType = 'SUBSCRIPTION';
   } else {
-    // Commission plan - use vendor's commission rate
-    const commissionRate = vendor.commissionRate || 0;
-    commission = Math.round((bookingAmount * commissionRate) / 100 * 100) / 100;
+    // Commission plan - use vendor's custom commission rate OR fallback to global admin commission
+    appliedCommissionRate = (vendor.commissionRate !== undefined && vendor.commissionRate > 0) ? vendor.commissionRate : globalAdminCommission;
+    commission = Math.round((subtotalAfterDiscounts * appliedCommissionRate) / 100 * 100) / 100;
   }
 
-  const vendorPayout = Math.round((bookingAmount - commission - platformFee) * 100) / 100;
+  // Vendor Payout is simply Subtotal minus Commission. Platform fee doesn't eat into their payout.
+  const vendorPayout = Math.round((subtotalAfterDiscounts - commission) * 100) / 100;
 
   return {
     commission,
     platformFee,
     vendorPayout,
     platformFeePercentage,
-    commissionRate: vendor.commissionRate || 0,
-    hasSubscription: vendor.hasActiveSubscription ? vendor.hasActiveSubscription() : false,
+    adminCommissionPercentage: appliedCommissionRate,
+    vendorPlanType,
+    hasSubscription: vendorPlanType === 'SUBSCRIPTION',
   };
 };
 

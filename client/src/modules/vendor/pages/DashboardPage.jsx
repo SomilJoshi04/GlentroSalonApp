@@ -152,7 +152,7 @@ const DashboardPage = () => {
             <p className="text-sm">No bookings yet</p>
           </div>
         ) : (
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-border max-h-[400px] overflow-y-auto">
             {recentBookings.map(b => (
               <div key={b._id} className="px-6 py-4 flex items-center justify-between hover:bg-surface-variant/20 transition-colors">
                 <div>

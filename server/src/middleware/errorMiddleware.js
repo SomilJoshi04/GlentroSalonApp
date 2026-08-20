@@ -14,7 +14,7 @@ const notFound = (req, res, next) => {
  * Consistent response format: { success, message, data?, errors?, stack? }
  */
 const errorHandler = (err, req, res, next) => {
-  let statusCode = err.statusCode || res.statusCode === 200 ? 500 : res.statusCode;
+  let statusCode = err.statusCode ? err.statusCode : (res.statusCode === 200 ? 500 : res.statusCode);
   let message = err.message || 'Internal Server Error';
 
   // Mongoose bad ObjectId

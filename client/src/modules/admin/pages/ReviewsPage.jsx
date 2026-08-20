@@ -1,24 +1,53 @@
 import { useState, useEffect } from 'react';
 import { getAllReviews, deleteReview } from '../services/adminApi';
-import PageHeader from '../../../components/common/PageHeader';
-import Loader from '../../../components/common/Loader';
-import Button from '../../../components/common/Button';
+import AdminPageLayout from '../components/layout/AdminPageLayout';
+import AdminPageHeader from '../components/layout/AdminPageHeader';
+import DataTable from '../components/DataTable';
 
 const ReviewsPage = () => {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
+  const [error, setError] = useState(null);
+
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    total: 0,
+    limit: 10
+  });
 
   useEffect(() => {
-    loadReviews();
+    loadReviews(1);
   }, []);
 
-  const loadReviews = async () => {
+  const loadReviews = async (page = 1) => {
+    setLoading(true);
+    setError(null);
     try {
-      const res = await getAllReviews();
-      setReviews(res.data.data);
+      const res = await getAllReviews({ page, limit: pagination.limit });
+      const data = res.data?.data;
+      const list = data?.reviews || data || [];
+      setReviews(Array.isArray(list) ? list : []);
+
+      if (data && data.reviews) {
+        setPagination({
+          currentPage: data.page || page,
+          totalPages: data.pages || 1,
+          total: data.total || list.length,
+          limit: pagination.limit
+        });
+      } else {
+        setPagination({
+          currentPage: 1,
+          totalPages: 1,
+          total: Array.isArray(list) ? list.length : 0,
+          limit: pagination.limit
+        });
+      }
     } catch (error) {
       console.error('Failed to load reviews', error);
+      setError('Failed to load reviews');
     } finally {
       setLoading(false);
     }
@@ -30,7 +59,10 @@ const ReviewsPage = () => {
     setDeletingId(id);
     try {
       await deleteReview(id);
-      setReviews(reviews.filter(r => r._id !== id));
+      const nextPage = (reviews.length === 1 && pagination.currentPage > 1)
+        ? pagination.currentPage - 1
+        : pagination.currentPage;
+      loadReviews(nextPage);
     } catch (error) {
       alert('Failed to delete review');
     } finally {
@@ -38,68 +70,78 @@ const ReviewsPage = () => {
     }
   };
 
-  if (loading) return <Loader fullScreen text="Loading reviews..." />;
+  const columns = [
+    {
+      header: 'User',
+      render: (row) => (
+        <div className="flex flex-col">
+          <span className="font-medium text-on-surface">{row.user?.name || 'Unknown'}</span>
+          <span className="text-[12px] text-muted-text">{row.user?.email}</span>
+        </div>
+      )
+    },
+    {
+      header: 'Salon',
+      render: (row) => <span className="font-medium">{row.salon?.name || 'Unknown'}</span>
+    },
+    {
+      header: 'Rating',
+      render: (row) => (
+        <div className="flex items-center gap-1 text-rating">
+          <span className="material-symbols-outlined text-[16px]" style={{fontVariationSettings: "'FILL' 1"}}>star</span>
+          <span className="text-on-surface font-medium">{row.rating}</span>
+        </div>
+      )
+    },
+    {
+      header: 'Comment',
+      render: (row) => (
+        <span className="line-clamp-2 max-w-xs text-muted-text" title={row.comment}>
+          {row.comment || '-'}
+        </span>
+      )
+    },
+    {
+      header: 'Date',
+      render: (row) => (
+        <span className="text-muted-text">{new Date(row.createdAt).toLocaleDateString()}</span>
+      )
+    },
+    {
+      header: 'Actions',
+      render: (row) => (
+        <button 
+          onClick={() => handleDelete(row._id)}
+          disabled={deletingId === row._id}
+          className="p-2 text-error hover:bg-error/10 transition-colors rounded-lg flex items-center gap-1 disabled:opacity-50"
+        >
+          {deletingId === row._id ? '...' : (
+            <>
+              <span className="material-symbols-outlined text-[18px]">delete</span>
+              <span className="text-sm font-medium">Delete</span>
+            </>
+          )}
+        </button>
+      )
+    }
+  ];
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="All Platform Reviews" />
-
-      {reviews.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-          <p className="text-gray-500">No reviews found in the system.</p>
-        </div>
-      ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200 text-gray-600">
-                <tr>
-                  <th className="px-6 py-4 font-medium">User</th>
-                  <th className="px-6 py-4 font-medium">Salon</th>
-                  <th className="px-6 py-4 font-medium">Rating</th>
-                  <th className="px-6 py-4 font-medium">Comment</th>
-                  <th className="px-6 py-4 font-medium">Date</th>
-                  <th className="px-6 py-4 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {reviews.map((review) => (
-                  <tr key={review._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900">{review.user?.name || 'Unknown'}</div>
-                      <div className="text-xs text-gray-500">{review.user?.email}</div>
-                    </td>
-                    <td className="px-6 py-4 font-medium">{review.salon?.name || 'Unknown'}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1 text-yellow-400">
-                        <span className="material-symbols-outlined text-sm" style={{fontVariationSettings: "'FILL' 1"}}>star</span>
-                        <span className="text-gray-700 font-medium">{review.rating}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 max-w-xs truncate text-gray-600" title={review.comment}>
-                      {review.comment || '-'}
-                    </td>
-                    <td className="px-6 py-4 text-gray-500">
-                      {new Date(review.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4">
-                      <Button 
-                        variant="danger" 
-                        size="sm" 
-                        onClick={() => handleDelete(review._id)}
-                        loading={deletingId === review._id}
-                      >
-                        Delete
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </div>
+    <AdminPageLayout>
+      <AdminPageHeader 
+        title="All Platform Reviews"
+        description="Monitor and manage all user reviews."
+      />
+      
+      <DataTable 
+        columns={columns}
+        data={reviews}
+        loading={loading}
+        error={error}
+        pagination={pagination}
+        onPageChange={loadReviews}
+      />
+    </AdminPageLayout>
   );
 };
 

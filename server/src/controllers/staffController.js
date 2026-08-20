@@ -16,10 +16,25 @@ const addStaff = async (req, res, next) => {
 // @desc    Get salon staff
 const getSalonStaff = async (req, res, next) => {
   try {
-    const { search, isActive } = req.query;
+    const { search, isActive, page, limit } = req.query;
     const query = { salon: req.params.salonId };
     if (search) query.name = { $regex: search, $options: 'i' };
     if (isActive !== undefined) query.isActive = isActive === 'true';
+
+    if (page && limit) {
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+      const total = await Staff.countDocuments(query);
+      const staff = await Staff.find(query).skip(skip).limit(parseInt(limit));
+      return res.json({
+        success: true,
+        data: {
+          staff,
+          total,
+          page: parseInt(page),
+          totalPages: Math.ceil(total / limit)
+        }
+      });
+    }
 
     const staff = await Staff.find(query);
     res.json({ success: true, data: staff });

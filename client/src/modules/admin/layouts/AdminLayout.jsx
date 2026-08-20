@@ -58,19 +58,20 @@ const AdminLayout = () => {
     { to: '/admin/subscriptions', label: 'Subscriptions', icon: 'workspace_premium' },
     { to: '/admin/reviews', label: 'Reviews', icon: 'star_rate' },
     { to: '/admin/coupons', label: 'Coupons', icon: 'local_activity' },
-    { to: '/admin/banners', label: 'Banners', icon: 'view_carousel' },
+    { to: '/admin/promotional-videos', label: 'Promotional Videos', icon: 'videocam' },
+    { to: '/admin/commissions', label: 'Financials', icon: 'account_balance_wallet' },
     { to: '/admin/notifications', label: 'Notifications', icon: 'notifications' },
     { to: '/admin/settings', label: 'Settings', icon: 'settings' },
     { to: '/admin/support', label: 'Support', icon: 'headset_mic' },
   ];
 
   return (
-    <div className="min-h-screen bg-background flex font-inter">
+    <div className="h-screen bg-background flex font-inter overflow-hidden">
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-[260px] bg-surface border-r border-border transform transition-transform duration-300 lg:translate-x-0 lg:static flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         
         {/* Brand/Logo */}
-        <div className="flex items-center gap-3 px-6 py-6 border-b border-border">
+        <div className="flex items-center gap-3 px-6 py-6 border-b border-border shrink-0">
           {settings?.appLogo ? (
             <img src={getImageUrl(settings.appLogo)} alt="App Logo" className="w-10 h-10 rounded-lg object-contain" />
           ) : (
@@ -108,7 +109,7 @@ const AdminLayout = () => {
         </nav>
 
         {/* Logout */}
-        <div className="p-4 border-t border-border mt-auto">
+        <div className="p-4 border-t border-border mt-auto shrink-0">
           <button 
             onClick={() => { logout('admin'); navigate('/admin/login'); }} 
             className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-[13px] font-medium text-error hover:bg-error/10 transition-colors"
@@ -123,10 +124,10 @@ const AdminLayout = () => {
       {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-h-screen min-w-0">
+      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
         
         {/* Top Navbar */}
-        <header className="sticky top-0 z-30 bg-surface/80 backdrop-blur-md border-b border-border h-[72px] px-6 flex items-center justify-between">
+        <header className="shrink-0 bg-surface/80 backdrop-blur-md border-b border-border h-[72px] px-6 flex items-center justify-between z-30">
           <div className="flex items-center gap-4">
             <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 -ml-2 rounded-xl text-muted-text hover:bg-surface-variant flex items-center">
               <span className="material-symbols-outlined">menu</span>
@@ -146,7 +147,7 @@ const AdminLayout = () => {
 
           <div className="flex items-center gap-4 shrink-0">
             <NotificationDropdown />
-            <button className="p-2 text-muted-text hover:bg-surface-variant rounded-full transition-colors flex items-center">
+            <button onClick={() => navigate('/admin/settings')} className="p-2 text-muted-text hover:bg-surface-variant rounded-full transition-colors flex items-center">
               <span className="material-symbols-outlined text-[24px]">settings</span>
             </button>
             <NavLink to="/admin/profile" className="hidden sm:flex items-center gap-2 pl-2 border-l border-border hover:bg-surface-variant p-1 pr-3 rounded-full transition-colors">
@@ -168,8 +169,8 @@ const AdminLayout = () => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-x-hidden bg-background">
-          <div className="p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto">
+        <main className="flex-1 overflow-hidden relative bg-background">
+          <div className="absolute inset-0 p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto w-full flex flex-col h-full">
              <Outlet />
           </div>
         </main>

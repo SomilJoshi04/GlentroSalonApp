@@ -3,13 +3,13 @@ import Loader from '../../../components/common/Loader';
 
 const DataTable = ({ columns, data, loading, error, pagination, onPageChange }) => {
   return (
-    <div className="bg-surface rounded-2xl border border-border overflow-hidden shadow-sm flex flex-col">
-      <div className="overflow-x-auto">
+    <div className="bg-surface rounded-2xl border border-border overflow-hidden shadow-sm flex flex-col flex-1 min-h-0">
+      <div className="overflow-auto flex-1 relative">
         <table className="w-full text-left border-collapse min-w-[800px]">
-          <thead className="bg-surface-variant/50 border-b border-border">
+          <thead className="bg-surface-variant/90 backdrop-blur-sm border-b border-border sticky top-0 z-10">
             <tr>
               {columns.map((col, idx) => (
-                <th key={idx} className="px-6 py-4 font-label-md text-[12px] text-muted-text uppercase tracking-wider">
+                <th key={idx} className="px-6 py-4 font-label-md text-[12px] text-muted-text uppercase tracking-wider bg-surface-variant/90 backdrop-blur-sm">
                   {col.header}
                 </th>
               ))}

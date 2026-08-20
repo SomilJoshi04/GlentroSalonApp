@@ -5,6 +5,29 @@ const getPlans = async (req, res, next) => {
   try {
     const query = {};
     if (req.query.isActive !== undefined) query.isActive = req.query.isActive === 'true';
+    if (req.query.search) {
+      query.name = { $regex: req.query.search, $options: 'i' };
+    }
+
+    const { page, limit } = req.query;
+    if (page && limit) {
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+      const total = await Subscription.countDocuments(query);
+      const plans = await Subscription.find(query)
+        .sort({ price: 1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+      return res.json({
+        success: true,
+        data: {
+          plans,
+          total,
+          page: parseInt(page),
+          totalPages: Math.ceil(total / limit)
+        }
+      });
+    }
+
     const plans = await Subscription.find(query).sort({ price: 1 });
     res.json({ success: true, data: plans });
   } catch (error) { next(error); }

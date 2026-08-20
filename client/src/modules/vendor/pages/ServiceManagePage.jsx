@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 import { getVendorSalons, getServices, createService, updateService, deleteService, toggleServiceStatus, getCategories, getSubcategories } from '../services/vendorApi';
 import Modal from '../../../components/common/Modal';
+import Pagination from '../../../components/common/Pagination';
+import VendorPageLayout from '../../../components/vendor/layout/VendorPageLayout';
+import VendorPageHeader from '../../../components/vendor/layout/VendorPageHeader';
+import VendorListToolbar from '../../../components/vendor/layout/VendorListToolbar';
+import VendorTableContainer from '../../../components/vendor/layout/VendorTableContainer';
+import VendorPagination from '../../../components/vendor/layout/VendorPagination';
 
 const ServiceManagePage = () => {
   const [salons, setSalons] = useState([]);
@@ -11,6 +17,7 @@ const ServiceManagePage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
+  const [pagination, setPagination] = useState({ page: 1, limit: 12, total: 0, totalPages: 1 });
 
   // Filters
   const [filters, setFilters] = useState({ search: '', category: '', isActive: 'all' });
@@ -21,13 +28,13 @@ const ServiceManagePage = () => {
   const [form, setForm] = useState({ name: '', category: '', subcategory: '', gender: 'unisex', price: '', duration: '', description: '' });
 
   useEffect(() => { loadInit(); }, []);
-  useEffect(() => { if (selectedSalon) loadServices(); }, [selectedSalon, filters]);
+  useEffect(() => { if (selectedSalon) loadServices(1); }, [selectedSalon, filters]);
   useEffect(() => { if (form.category) loadSubs(); }, [form.category]);
 
   const loadInit = async () => {
     try {
       const [s, c] = await Promise.all([getVendorSalons(), getCategories()]);
-      const loadedSalons = s.data.data;
+      const loadedSalons = s.data.data.salons || s.data.data;
       setSalons(loadedSalons); 
       setCategories(c.data.data);
       if (loadedSalons.length > 0) {
@@ -43,16 +50,17 @@ const ServiceManagePage = () => {
     setLoading(false);
   };
 
-  const loadServices = async () => { 
+  const loadServices = async (page = pagination.page) => { 
     setIsFetching(true);
     try { 
-      const queryParams = { salon: selectedSalon };
+      const queryParams = { salon: selectedSalon, page, limit: pagination.limit };
       if (filters.search) queryParams.search = filters.search;
       if (filters.category) queryParams.category = filters.category;
       if (filters.isActive !== 'all') queryParams.isActive = filters.isActive;
 
       const r = await getServices(queryParams); 
-      setServices(r.data.data.services); 
+      setServices(r.data.data.services);
+      setPagination(prev => ({ ...prev, page: r.data.data.page, total: r.data.data.total, totalPages: r.data.data.totalPages }));
     } catch (e) {} 
     setIsFetching(false);
   };
@@ -123,32 +131,34 @@ const ServiceManagePage = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-6">
-        <div className="h-10 w-64 bg-slate-200 rounded-lg animate-pulse" />
-        <div className="h-16 bg-slate-100 rounded-2xl animate-pulse border border-border" />
-        <div className="h-96 bg-slate-100 rounded-2xl animate-pulse border border-border" />
-      </div>
+      <VendorPageLayout>
+        <div className="flex flex-col gap-6">
+          <div className="h-10 w-64 bg-slate-200 rounded-lg animate-pulse" />
+          <div className="h-16 bg-slate-100 rounded-2xl animate-pulse border border-border" />
+          <div className="h-96 bg-slate-100 rounded-2xl animate-pulse border border-border" />
+        </div>
+      </VendorPageLayout>
     );
   }
 
   return (
-    <div className="space-y-6 animate-fade-in relative max-w-5xl mx-auto w-full pb-10">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-        <div>
-          <h1 className="font-headline-md text-[24px] sm:text-[28px] text-on-surface font-bold">Services</h1>
-          <p className="font-body-md text-muted-text mt-1">Configure and manage your salon service catalog.</p>
-        </div>
-        <button onClick={() => {
-          setEditingService(null);
-          setForm({ name: '', category: '', subcategory: '', gender: 'unisex', price: '', duration: '', description: '' });
-          setShowForm(!showForm);
-        }} className={`w-full sm:w-auto shrink-0 justify-center whitespace-nowrap px-4 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm flex items-center gap-1.5 border ${showForm ? 'bg-surface border-border text-on-surface hover:bg-surface-variant' : 'bg-primary text-white hover:bg-primary-dark border-transparent'}`}>
-          <span className="material-symbols-outlined text-[18px]">{showForm ? 'close' : 'add'}</span>
-          {showForm ? 'Cancel' : 'Add Service'}
-        </button>
-      </div>
+    <VendorPageLayout>
+      <VendorPageHeader 
+        title="Services"
+        description="Configure and manage your salon service catalog."
+        actions={
+          <button onClick={() => {
+            setEditingService(null);
+            setForm({ name: '', category: '', subcategory: '', gender: 'unisex', price: '', duration: '', description: '' });
+            setShowForm(!showForm);
+          }} className={`w-full sm:w-auto shrink-0 justify-center whitespace-nowrap px-4 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm flex items-center gap-1.5 border ${showForm ? 'bg-surface border-border text-on-surface hover:bg-surface-variant' : 'bg-primary text-white hover:bg-primary-dark border-transparent'}`}>
+            <span className="material-symbols-outlined text-[18px]">{showForm ? 'close' : 'add'}</span>
+            {showForm ? 'Cancel' : 'Add Service'}
+          </button>
+        }
+      />
       
-      <div className="flex flex-col md:flex-row gap-4 bg-surface p-4 rounded-2xl border border-border shadow-sm">
+      <VendorListToolbar>
         <select value={selectedSalon} onChange={e => { setSelectedSalon(e.target.value); localStorage.setItem('vendor_selected_salon', e.target.value); }} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm bg-surface text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm">
           {salons.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
         </select>
@@ -177,7 +187,7 @@ const ServiceManagePage = () => {
           <option value="true">Active</option>
           <option value="false">Inactive</option>
         </select>
-      </div>
+      </VendorListToolbar>
 
       <Modal 
         isOpen={showForm} 
@@ -234,7 +244,7 @@ const ServiceManagePage = () => {
         </form>
       </Modal>
 
-      <div className="bg-surface rounded-2xl border border-border overflow-hidden shadow-sm">
+      <VendorTableContainer>
         {isFetching ? (
           <div className="flex flex-col divide-y divide-border">
             <div className="h-[52px] bg-background-alt/50 border-b border-border"></div>
@@ -249,58 +259,64 @@ const ServiceManagePage = () => {
             <p className="text-sm mt-1">Try adjusting filters or register a new service.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-background-alt border-b border-border">
-                <tr>
-                  <th className="text-left px-5 py-4 text-muted-text font-semibold text-[13px]">Service</th>
-                  <th className="text-left px-5 py-4 text-muted-text font-semibold text-[13px]">Category</th>
-                  <th className="text-left px-5 py-4 text-muted-text font-semibold text-[13px]">Price</th>
-                  <th className="text-left px-5 py-4 text-muted-text font-semibold text-[13px]">Duration</th>
-                  <th className="text-left px-5 py-4 text-muted-text font-semibold text-[13px]">Status</th>
-                  <th className="text-right px-5 py-4 text-muted-text font-semibold text-[13px]">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {services.map(s => (
-                  <tr key={s._id} className="hover:bg-surface-variant/20 transition-colors">
-                    <td className="px-5 py-4 font-semibold text-on-surface">
-                      {s.name}
-                      {s.gender !== 'unisex' && (
-                        <span className="ml-2 text-[10px] px-2 py-0.5 bg-soft-primary text-primary border border-primary/10 rounded-full uppercase tracking-wide">
-                          {s.gender}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-5 py-4 text-on-surface">{s.category?.name || '-'}</td>
-                    <td className="px-5 py-4 font-semibold text-on-surface">₹{s.price}</td>
-                    <td className="px-5 py-4 text-muted-text">{s.duration} min</td>
-                    <td className="px-5 py-4">
-                      <span className={`text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-full border ${s.isActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
-                        {s.isActive ? 'Active' : 'Inactive'}
+          <table className="w-full text-sm">
+            <thead className="bg-background-alt border-b border-border sticky top-0 z-10">
+              <tr>
+                <th className="text-left px-5 py-4 text-muted-text font-semibold text-[13px]">Service</th>
+                <th className="text-left px-5 py-4 text-muted-text font-semibold text-[13px]">Category</th>
+                <th className="text-left px-5 py-4 text-muted-text font-semibold text-[13px]">Price</th>
+                <th className="text-left px-5 py-4 text-muted-text font-semibold text-[13px]">Duration</th>
+                <th className="text-left px-5 py-4 text-muted-text font-semibold text-[13px]">Status</th>
+                <th className="text-right px-5 py-4 text-muted-text font-semibold text-[13px]">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {services.map(s => (
+                <tr key={s._id} className="hover:bg-surface-variant/20 transition-colors">
+                  <td className="px-5 py-4 font-semibold text-on-surface">
+                    {s.name}
+                    {s.gender !== 'unisex' && (
+                      <span className="ml-2 text-[10px] px-2 py-0.5 bg-soft-primary text-primary border border-primary/10 rounded-full uppercase tracking-wide">
+                        {s.gender}
                       </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex justify-end gap-1.5">
-                        <button onClick={() => openEditForm(s)} title="Edit" className="p-1.5 text-muted-text hover:bg-surface-variant hover:text-primary rounded-lg transition-colors flex items-center justify-center shrink-0">
-                          <span className="material-symbols-outlined text-[20px]">edit</span>
-                        </button>
-                        <button onClick={() => handleToggleStatus(s._id)} title={s.isActive ? 'Disable' : 'Enable'} className={`p-1.5 rounded-lg transition-colors flex items-center justify-center shrink-0 ${s.isActive ? 'text-green-600 hover:bg-green-50' : 'text-slate-400 hover:bg-slate-100'}`}>
-                          <span className="material-symbols-outlined text-[20px]">{s.isActive ? 'toggle_on' : 'toggle_off'}</span>
-                        </button>
-                        <button onClick={() => handleDelete(s._id)} title="Delete" className="p-1.5 text-error hover:bg-error/10 rounded-lg transition-colors flex items-center justify-center shrink-0">
-                          <span className="material-symbols-outlined text-[20px]">delete</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    )}
+                  </td>
+                  <td className="px-5 py-4 text-on-surface">{s.category?.name || '-'}</td>
+                  <td className="px-5 py-4 font-semibold text-on-surface">₹{s.price}</td>
+                  <td className="px-5 py-4 text-muted-text">{s.duration} min</td>
+                  <td className="px-5 py-4">
+                    <span className={`text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-full border ${s.isActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
+                      {s.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <div className="flex justify-end gap-1.5">
+                      <button onClick={() => openEditForm(s)} title="Edit" className="p-1.5 text-muted-text hover:bg-surface-variant hover:text-primary rounded-lg transition-colors flex items-center justify-center shrink-0">
+                        <span className="material-symbols-outlined text-[20px]">edit</span>
+                      </button>
+                      <button onClick={() => handleToggleStatus(s._id)} title={s.isActive ? 'Disable' : 'Enable'} className={`p-1.5 rounded-lg transition-colors flex items-center justify-center shrink-0 ${s.isActive ? 'text-green-600 hover:bg-green-50' : 'text-slate-400 hover:bg-slate-100'}`}>
+                        <span className="material-symbols-outlined text-[20px]">{s.isActive ? 'toggle_on' : 'toggle_off'}</span>
+                      </button>
+                      <button onClick={() => handleDelete(s._id)} title="Delete" className="p-1.5 text-error hover:bg-error/10 rounded-lg transition-colors flex items-center justify-center shrink-0">
+                        <span className="material-symbols-outlined text-[20px]">delete</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
-      </div>
-    </div>
+      </VendorTableContainer>
+
+      <VendorPagination
+        currentPage={pagination.page}
+        totalPages={pagination.totalPages}
+        total={pagination.total}
+        limit={pagination.limit}
+        onPageChange={loadServices}
+      />
+    </VendorPageLayout>
   );
 };
 export default ServiceManagePage;

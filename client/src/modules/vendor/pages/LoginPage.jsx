@@ -11,6 +11,7 @@ const LoginPage = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { setAuth } = useAuth();
   const { settings } = useSettings();
   const navigate = useNavigate();
@@ -52,8 +53,14 @@ const LoginPage = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-muted-text mb-1.5">Password</label>
-              <input type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required
-                className="w-full px-4 py-3 bg-surface text-on-surface rounded-xl border border-border text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary shadow-sm" placeholder="Enter password" />
+              <div className="relative">
+                <input type={showPassword ? "text" : "password"} value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required
+                  className="w-full px-4 py-3 pr-12 bg-surface text-on-surface rounded-xl border border-border text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary shadow-sm" placeholder="Enter password" />
+                <button type="button" onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-text hover:text-primary transition-colors flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[20px]">{showPassword ? 'visibility_off' : 'visibility'}</span>
+                </button>
+              </div>
             </div>
             <button type="submit" disabled={loading}
               className="w-full py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50 shadow-sm flex items-center justify-center gap-1.5">

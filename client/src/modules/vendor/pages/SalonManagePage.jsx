@@ -5,18 +5,37 @@ import ImageUpload from '../../../components/common/ImageUpload';
 import Modal from '../../../components/common/Modal';
 import toast from 'react-hot-toast';
 import { getImageUrl } from '../../../utils/imageUtils';
+import Pagination from '../../../components/common/Pagination';
+import VendorPageLayout from '../../../components/vendor/layout/VendorPageLayout';
+import VendorPageHeader from '../../../components/vendor/layout/VendorPageHeader';
+import VendorTableContainer from '../../../components/vendor/layout/VendorTableContainer';
+import VendorPagination from '../../../components/vendor/layout/VendorPagination';
 
 const SalonManagePage = () => {
   const [salons, setSalons] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({ page: 1, limit: 12, total: 0, totalPages: 1 });
   const [showForm, setShowForm] = useState(false);
   const [editingSalon, setEditingSalon] = useState(null);
   const [form, setForm] = useState({ name: '', description: '', address: '', city: '', zone: '', phone: '', email: '', openingTime: '09:00', closingTime: '21:00', gender: 'unisex', latitude: '', longitude: '' });
   const [imageFile, setImageFile] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { load(); }, []);
-  const load = async () => { try { const r = await getVendorSalons(); setSalons(r.data.data); } catch (e) {} setLoading(false); };
+  useEffect(() => { load(pagination.page); }, []);
+  
+  const load = async (page = 1) => { 
+    try { 
+      setLoading(true);
+      const r = await getVendorSalons({ page, limit: pagination.limit }); 
+      if (r.data.data.salons) {
+        setSalons(r.data.data.salons);
+        setPagination(prev => ({ ...prev, page: r.data.data.page, total: r.data.data.total, totalPages: r.data.data.totalPages }));
+      } else {
+        setSalons(r.data.data);
+      }
+    } catch (e) {} 
+    setLoading(false); 
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setSaving(true);
@@ -54,30 +73,32 @@ const SalonManagePage = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-6">
-        <div className="h-10 w-64 bg-slate-200 rounded-lg animate-pulse" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {[1,2].map(i => (
-             <div key={i} className="h-44 bg-slate-100 rounded-2xl animate-pulse border border-border"></div>
-          ))}
+      <VendorPageLayout>
+        <div className="flex flex-col gap-6">
+          <div className="h-10 w-64 bg-slate-200 rounded-lg animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[1,2].map(i => (
+               <div key={i} className="h-44 bg-slate-100 rounded-2xl animate-pulse border border-border"></div>
+            ))}
+          </div>
         </div>
-      </div>
+      </VendorPageLayout>
     );
   }
 
   return (
-    <div className="space-y-6 animate-fade-in max-w-5xl mx-auto w-full pb-10">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="font-headline-md text-[28px] text-on-surface font-bold">My Salons</h1>
-          <p className="font-body-md text-muted-text mt-1">Manage and edit your salon profiles and map location.</p>
-        </div>
-        <button onClick={() => { setShowForm(!showForm); setEditingSalon(null); setImageFile(null); }}
-          className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm flex items-center gap-1.5 border shrink-0 ${showForm ? 'bg-surface border-border text-on-surface hover:bg-surface-variant' : 'bg-primary text-white hover:bg-primary-dark border-transparent'}`}>
-          <span className="material-symbols-outlined text-[18px]">{showForm ? 'close' : 'add'}</span>
-          {showForm ? 'Cancel' : 'Add Salon'}
-        </button>
-      </div>
+    <VendorPageLayout>
+      <VendorPageHeader 
+        title="My Salons"
+        description="Manage and edit your salon profiles and map location."
+        actions={
+          <button onClick={() => { setShowForm(!showForm); setEditingSalon(null); setImageFile(null); }}
+            className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm flex items-center gap-1.5 border shrink-0 ${showForm ? 'bg-surface border-border text-on-surface hover:bg-surface-variant' : 'bg-primary text-white hover:bg-primary-dark border-transparent'}`}>
+            <span className="material-symbols-outlined text-[18px]">{showForm ? 'close' : 'add'}</span>
+            {showForm ? 'Cancel' : 'Add Salon'}
+          </button>
+        }
+      />
 
       <Modal 
         isOpen={showForm} 
@@ -178,47 +199,57 @@ const SalonManagePage = () => {
         </form>
       </Modal>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {salons.map(s => (
-          <div key={s._id} className="bg-surface rounded-2xl p-5 border border-border hover:shadow-md transition-all flex flex-col sm:flex-row gap-4 shadow-sm">
-            <div className="w-full sm:w-24 h-24 rounded-xl bg-background-alt border border-border overflow-hidden shrink-0">
-              {s.images?.[0] ? (
-                <img src={getImageUrl(s.images[0])} alt={s.name} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-text/40"><span className="material-symbols-outlined text-3xl">storefront</span></div>
-              )}
-            </div>
-            <div className="flex-1 flex flex-col justify-between">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h3 className="font-semibold text-on-surface text-[16px]">{s.name}</h3>
-                  <p className="text-xs text-muted-text mt-1 line-clamp-1">📍 {s.address}</p>
-                  <div className="flex gap-2 mt-2.5">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold border border-primary/10 bg-soft-primary text-primary capitalize">{s.gender}</span>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${s.isApproved ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'}`}>
-                      {s.isApproved ? 'Approved' : 'Pending Approval'}
-                    </span>
+      <VendorTableContainer isCardGrid={true}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {salons.map(s => (
+            <div key={s._id} className="bg-surface rounded-2xl p-5 border border-border hover:shadow-md transition-all flex flex-col sm:flex-row gap-4 shadow-sm">
+              <div className="w-full sm:w-24 h-24 rounded-xl bg-background-alt border border-border overflow-hidden shrink-0">
+                {s.images?.[0] ? (
+                  <img src={getImageUrl(s.images[0])} alt={s.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted-text/40"><span className="material-symbols-outlined text-3xl">storefront</span></div>
+                )}
+              </div>
+              <div className="flex-1 flex flex-col justify-between">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="font-semibold text-on-surface text-[16px]">{s.name}</h3>
+                    <p className="text-xs text-muted-text mt-1 line-clamp-1">📍 {s.address}</p>
+                    <div className="flex gap-2 mt-2.5">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold border border-primary/10 bg-soft-primary text-primary capitalize">{s.gender}</span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${s.isApproved ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'}`}>
+                        {s.isApproved ? 'Approved' : 'Pending Approval'}
+                      </span>
+                    </div>
                   </div>
+                  <button onClick={() => handleEdit(s)} className="p-2 text-primary hover:bg-soft-primary rounded-lg transition-colors flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[20px]">edit</span>
+                  </button>
                 </div>
-                <button onClick={() => handleEdit(s)} className="p-2 text-primary hover:bg-soft-primary rounded-lg transition-colors flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[20px]">edit</span>
-                </button>
-              </div>
-              <div className="mt-3 pt-3 border-t border-border text-[11px] text-muted-text flex items-center gap-4">
-                <span className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[14px]">schedule</span>
-                  {s.openingTime} - {s.closingTime}
-                </span>
-                <span className="flex items-center gap-1 text-amber-500 font-semibold">
-                  <span className="material-symbols-outlined text-[14px] fill-current">star</span>
-                  {s.ratings?.average?.toFixed(1) || '0.0'} ({s.ratings?.count || 0})
-                </span>
+                <div className="mt-3 pt-3 border-t border-border text-[11px] text-muted-text flex items-center gap-4">
+                  <span className="flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">schedule</span>
+                    {s.openingTime} - {s.closingTime}
+                  </span>
+                  <span className="flex items-center gap-1 text-amber-500 font-semibold">
+                    <span className="material-symbols-outlined text-[14px] fill-current">star</span>
+                    {s.ratings?.average?.toFixed(1) || '0.0'} ({s.ratings?.count || 0})
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
-    </div>
+          ))}
+        </div>
+      </VendorTableContainer>
+      
+      <VendorPagination
+        currentPage={pagination.page}
+        totalPages={pagination.totalPages}
+        total={pagination.total}
+        limit={pagination.limit}
+        onPageChange={load}
+      />
+    </VendorPageLayout>
   );
 };
 export default SalonManagePage;

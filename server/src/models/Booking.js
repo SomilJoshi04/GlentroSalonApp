@@ -104,6 +104,19 @@ const bookingSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    platformFeePercentage: {
+      type: Number,
+      default: 0,
+    },
+    adminCommissionPercentage: {
+      type: Number,
+      default: 0,
+    },
+    vendorPlanType: {
+      type: String,
+      enum: ['COMMISSION', 'SUBSCRIPTION'],
+      default: 'COMMISSION',
+    },
   },
   {
     timestamps: true,

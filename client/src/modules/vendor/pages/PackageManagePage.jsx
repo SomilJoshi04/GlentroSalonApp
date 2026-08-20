@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 import { getVendorPackages, createPackage, updatePackage, deletePackage, togglePackageStatus, getVendorSalons, getServices } from '../services/vendorApi';
 import Modal from '../../../components/common/Modal';
+import { getImageUrl } from '../../../utils/imageUtils';
+import VendorPageLayout from '../../../components/vendor/layout/VendorPageLayout';
+import VendorPageHeader from '../../../components/vendor/layout/VendorPageHeader';
+import VendorListToolbar from '../../../components/vendor/layout/VendorListToolbar';
+import VendorTableContainer from '../../../components/vendor/layout/VendorTableContainer';
+import VendorPagination from '../../../components/vendor/layout/VendorPagination';
 
 const PackageManagePage = () => {
   const [packages, setPackages] = useState([]);
@@ -9,6 +15,7 @@ const PackageManagePage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
+  const [pagination, setPagination] = useState({ page: 1, limit: 12, total: 0, totalPages: 1 });
 
   // Filters
   const [filters, setFilters] = useState({ search: '', status: '' });
@@ -16,32 +23,44 @@ const PackageManagePage = () => {
   // Form
   const [showForm, setShowForm] = useState(false);
   const [editingPackage, setEditingPackage] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
   const [form, setForm] = useState({ 
     name: '', salon: '', services: [], totalPrice: '', discountedPrice: '', description: '',
     validFrom: '', validTo: '', usageLimit: 0, perUserLimit: 0, terms: '' 
   });
 
   useEffect(() => { loadInit(); }, []);
-  useEffect(() => { loadPackages(); }, [filters]);
+  useEffect(() => { loadPackages(1); }, [filters]);
   useEffect(() => { if (form.salon) loadServices(form.salon); }, [form.salon]);
 
   const loadInit = async () => { 
     try { 
-      const [p, s] = await Promise.all([getVendorPackages(), getVendorSalons()]); 
-      setPackages(p.data.data); 
-      setSalons(s.data.data); 
+      const [p, s] = await Promise.all([getVendorPackages({ page: 1, limit: pagination.limit }), getVendorSalons()]); 
+      if (p.data.data.packages) {
+        setPackages(p.data.data.packages);
+        setPagination(prev => ({ ...prev, page: p.data.data.page, total: p.data.data.total, totalPages: p.data.data.totalPages }));
+      } else {
+        setPackages(p.data.data);
+      }
+      setSalons(s.data.data.salons || s.data.data); 
     } catch (e) {} 
     setLoading(false); 
   };
 
-  const loadPackages = async () => {
+  const loadPackages = async (page = pagination.page) => {
     setIsFetching(true);
     try {
-      const query = {};
+      const query = { page, limit: pagination.limit };
       if (filters.search) query.search = filters.search;
       if (filters.status) query.status = filters.status;
       const r = await getVendorPackages(query);
-      setPackages(r.data.data);
+      if (r.data.data.packages) {
+        setPackages(r.data.data.packages);
+        setPagination(prev => ({ ...prev, page: r.data.data.page, total: r.data.data.total, totalPages: r.data.data.totalPages }));
+      } else {
+        setPackages(r.data.data);
+      }
     } catch (e) {}
     setIsFetching(false);
   };
@@ -53,42 +72,66 @@ const PackageManagePage = () => {
     } catch (e) {} 
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file (PNG, JPG, JPEG, WEBP).');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Image file size must be less than 2MB.');
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault(); 
     setSaving(true);
     try { 
-      const payload = { 
-        ...form, 
-        totalPrice: Number(form.totalPrice), 
-        discountedPrice: Number(form.discountedPrice) 
-      };
+      const formData = new FormData();
+      formData.append('name', form.name);
+      formData.append('salon', form.salon);
+      formData.append('totalPrice', Number(form.totalPrice));
+      formData.append('discountedPrice', Number(form.discountedPrice));
+      formData.append('description', form.description);
+      formData.append('validFrom', form.validFrom);
+      formData.append('validTo', form.validTo);
+      formData.append('usageLimit', Number(form.usageLimit || 0));
+      formData.append('perUserLimit', Number(form.perUserLimit || 0));
+      formData.append('terms', form.terms);
+      formData.append('services', JSON.stringify(form.services));
+      if (imageFile) formData.append('image', imageFile);
 
       if (editingPackage) {
-        await updatePackage(editingPackage._id, payload);
+        await updatePackage(editingPackage._id, formData);
       } else {
-        await createPackage(payload);
+        await createPackage(formData);
       }
 
       setShowForm(false); 
       setEditingPackage(null);
+      setImageFile(null);
+      setImagePreview('');
       setForm({ 
-        name: '', salon: '', services: [], totalPrice: '', discountedPrice: '', description: '',
+        name: '', salon: salons.length > 0 ? salons[0]._id : '', services: [], totalPrice: '', discountedPrice: '', description: '',
         validFrom: '', validTo: '', usageLimit: 0, perUserLimit: 0, terms: ''
       });
       loadPackages(); 
     } catch (e) { 
-      alert(e.response?.data?.message || 'Failed to save package'); 
+      alert(e.response?.data?.message || 'Failed to save offer/package'); 
     }
     setSaving(false);
   };
 
   const handleDelete = async (id) => { 
-    if (confirm('Are you sure you want to delete this package?')) { 
-      try { 
-        await deletePackage(id); 
-        loadPackages(); 
-      } catch (e) { alert('Failed to delete'); } 
-    } 
+    if (!confirm('Are you sure you want to delete this offer/package?')) return; 
+    try { 
+      await deletePackage(id); 
+      loadPackages(); 
+    } catch (e) { alert('Failed to delete'); } 
   };
 
   const handleToggleStatus = async (id) => {
@@ -115,6 +158,8 @@ const PackageManagePage = () => {
       perUserLimit: p.perUserLimit || 0,
       terms: p.terms || ''
     });
+    setImageFile(null);
+    setImagePreview(p.image ? getImageUrl(p.image) : '');
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -125,29 +170,37 @@ const PackageManagePage = () => {
     REJECTED: 'bg-red-100 text-red-700 border-red-200' 
   };
 
-  if (loading) return <div className="flex justify-center py-12"><div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" /></div>;
+  if (loading) {
+    return (
+      <VendorPageLayout>
+        <div className="flex justify-center py-12"><div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" /></div>
+      </VendorPageLayout>
+    );
+  }
 
   return (
-    <div className="space-y-6 animate-fade-in relative">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="font-headline-md text-[24px] sm:text-[28px] text-on-surface font-bold">Offers & Packages</h1>
-          <p className="font-body-md text-muted-text mt-1">Create promotional offers or bundle multiple services together.</p>
-        </div>
-        <button onClick={() => {
-          setEditingPackage(null);
-          setForm({ 
-            name: '', salon: salons.length > 0 ? salons[0]._id : '', services: [], totalPrice: '', discountedPrice: '', description: '',
-            validFrom: '', validTo: '', usageLimit: 0, perUserLimit: 0, terms: ''
-          });
-          setShowForm(!showForm);
-        }} className={`w-full sm:w-auto shrink-0 justify-center whitespace-nowrap px-4 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm flex items-center gap-1.5 border ${showForm ? 'bg-surface border-border text-on-surface hover:bg-surface-variant' : 'bg-primary text-white hover:bg-primary-dark border-transparent'}`}>
-          <span className="material-symbols-outlined text-[18px]">{showForm ? 'close' : 'add'}</span>
-          {showForm ? 'Cancel' : 'Create Offer/Package'}
-        </button>
-      </div>
+    <VendorPageLayout>
+      <VendorPageHeader 
+        title="Offers & Packages"
+        description="Create promotional offers or bundle multiple services together."
+        actions={
+          <button onClick={() => {
+            setEditingPackage(null);
+            setImageFile(null);
+            setImagePreview('');
+            setForm({ 
+              name: '', salon: salons.length > 0 ? salons[0]._id : '', services: [], totalPrice: '', discountedPrice: '', description: '',
+              validFrom: '', validTo: '', usageLimit: 0, perUserLimit: 0, terms: ''
+            });
+            setShowForm(!showForm);
+          }} className={`w-full sm:w-auto shrink-0 justify-center whitespace-nowrap px-4 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm flex items-center gap-1.5 border ${showForm ? 'bg-surface border-border text-on-surface hover:bg-surface-variant' : 'bg-primary text-white hover:bg-primary-dark border-transparent'}`}>
+            <span className="material-symbols-outlined text-[18px]">{showForm ? 'close' : 'add'}</span>
+            {showForm ? 'Cancel' : 'Create Offer/Package'}
+          </button>
+        }
+      />
 
-      <div className="flex flex-col sm:flex-row gap-4 bg-surface p-4 rounded-2xl border border-border shadow-sm">
+      <VendorListToolbar>
         <div className="flex-1 relative">
           <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-text text-[20px]">search</span>
           <input 
@@ -167,7 +220,7 @@ const PackageManagePage = () => {
           <option value="ACTIVE">Active</option>
           <option value="REJECTED">Rejected</option>
         </select>
-      </div>
+      </VendorListToolbar>
 
       <Modal 
         isOpen={showForm} 
@@ -263,6 +316,36 @@ const PackageManagePage = () => {
             <label className="text-sm font-medium text-muted-text mb-1 block">Description</label>
             <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} rows={3} placeholder="Describe what's included in this package..." className="w-full px-3.5 py-2.5 bg-surface text-on-surface rounded-xl border border-border text-sm resize-none focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" />
           </div>
+
+          <div>
+            <label className="text-sm font-medium text-muted-text mb-2 block">Offer Image</label>
+            <div className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-background-alt border border-border border-dashed rounded-2xl">
+              <div className="w-20 h-20 rounded-xl bg-surface-variant overflow-hidden shrink-0 border border-border flex items-center justify-center text-muted-text relative shadow-sm">
+                {imagePreview ? (
+                  <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="material-symbols-outlined text-[28px]">image</span>
+                )}
+              </div>
+              <div className="flex-1 w-full text-center sm:text-left">
+                <input
+                  type="file"
+                  id="offer-image"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="offer-image"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 border border-border rounded-xl text-xs font-semibold text-on-surface hover:bg-surface-variant cursor-pointer transition-all shadow-sm active:scale-95 duration-100"
+                >
+                  <span className="material-symbols-outlined text-[16px]">upload</span>
+                  {imagePreview ? 'Change Image' : 'Upload Image'}
+                </label>
+                <p className="text-[10px] text-muted-text mt-1.5">Supports PNG, JPG, JPEG or WEBP (Max 2MB)</p>
+              </div>
+            </div>
+          </div>
           
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setShowForm(false)} className="px-5 py-2.5 text-muted-text hover:text-on-surface text-sm font-medium transition-colors">Cancel</button>
@@ -273,97 +356,130 @@ const PackageManagePage = () => {
         </form>
       </Modal>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {isFetching ? (
-          Array.from({ length: 4 }).map((_, i) => (
-             <div key={i} className="h-[320px] bg-surface rounded-2xl animate-pulse border border-border shadow-sm"></div>
-          ))
-        ) : packages.length === 0 && !loading ? (
-          <div className="col-span-full py-16 text-center text-muted-text bg-surface rounded-2xl border border-border border-dashed flex flex-col items-center">
-            <span className="material-symbols-outlined text-4xl text-muted-text/30 mb-2">inventory_2</span>
-            <p className="font-semibold text-on-surface">No offers or packages found</p>
-            <p className="text-xs mt-1">Try adjusting your filters or create a new offer/package.</p>
-          </div>
-        ) : (
-          packages.map(p => (
-          <div key={p._id} className="bg-surface rounded-2xl p-6 border border-border shadow-sm hover:shadow-md transition-all flex flex-col justify-between relative overflow-hidden">
-            {p.status === 'ACTIVE' && <div className="absolute top-0 left-0 w-1.5 h-full bg-success"></div>}
-            {p.status === 'REJECTED' && <div className="absolute top-0 left-0 w-1.5 h-full bg-error"></div>}
-            {p.status === 'PENDING' && <div className="absolute top-0 left-0 w-1.5 h-full bg-warning"></div>}
-            
-            <div>
-              <div className="flex justify-between items-start mb-3 gap-4">
-                <div>
-                  <h4 className="font-bold text-on-surface text-[17px]">{p.name}</h4>
-                  <p className="text-xs text-muted-text mt-0.5 flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[14px]">store</span>
-                    {p.salon?.name}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className={`px-2 py-0.5 rounded-md text-[9px] uppercase font-bold tracking-wider border ${statusColors[p.status]}`}>
-                    {p.status === 'ACTIVE' ? 'APPROVED' : p.status}
-                  </span>
-                  <span className={`px-2 py-0.5 rounded-md text-[9px] uppercase font-bold tracking-wider border ${p.isActive ? 'bg-success/10 text-success border-success/20' : 'bg-surface-variant text-muted-text border-border'}`}>
-                    {p.isActive ? 'ENABLED' : 'DISABLED'}
-                  </span>
-                </div>
-              </div>
+      <VendorTableContainer isCardGrid={true}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {isFetching ? (
+            Array.from({ length: 4 }).map((_, i) => (
+               <div key={i} className="h-[320px] bg-surface rounded-2xl animate-pulse border border-border shadow-sm"></div>
+            ))
+          ) : packages.length === 0 && !loading ? (
+            <div className="col-span-full py-16 text-center text-muted-text bg-surface rounded-2xl border border-border border-dashed flex flex-col items-center">
+              <span className="material-symbols-outlined text-4xl text-muted-text/30 mb-2">inventory_2</span>
+              <p className="font-semibold text-on-surface">No offers or packages found</p>
+              <p className="text-xs mt-1">Try adjusting your filters or create a new offer/package.</p>
+            </div>
+          ) : (
+            packages.map(p => {
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const isExpired = new Date(p.validTo) < today;
+
+              return (
+            <div key={p._id} className={`bg-surface rounded-2xl border ${isExpired ? 'border-error/30 opacity-80' : 'border-border'} shadow-sm hover:shadow-md transition-all flex flex-col justify-between overflow-hidden relative w-full max-w-[400px]`}>
+              {p.status === 'ACTIVE' && !isExpired && <div className="absolute top-0 left-0 w-1.5 h-[128px] bg-success z-10"></div>}
+              {(p.status === 'REJECTED' || isExpired) && <div className="absolute top-0 left-0 w-1.5 h-[128px] bg-error z-10"></div>}
+              {p.status === 'PENDING' && !isExpired && <div className="absolute top-0 left-0 w-1.5 h-[128px] bg-warning z-10"></div>}
               
-              <div className="flex items-baseline gap-2 mb-4">
-                <span className="text-[26px] font-bold text-primary">₹{p.discountedPrice}</span>
-                <span className="text-sm text-muted-text line-through font-medium">₹{p.totalPrice}</span>
-                <span className="text-xs font-semibold text-success bg-success/10 px-2 py-0.5 rounded-lg ml-auto">
-                  Save {Math.round(((p.totalPrice - p.discountedPrice) / p.totalPrice) * 100)}%
-                </span>
+              {/* Offer Visual Banner */}
+              <div className="h-32 w-full relative overflow-hidden bg-surface-variant shrink-0 border-b border-border">
+                <img
+                  src={p.image ? getImageUrl(p.image) : (p.salon?.images?.[0] ? getImageUrl(p.salon.images[0]) : "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=400&q=80")}
+                  alt={p.name}
+                  className="object-cover w-full h-full"
+                />
               </div>
 
-              {p.status === 'REJECTED' && p.adminNote && (
-                <div className="mb-4 p-3 bg-error/5 border border-error/15 rounded-xl">
-                  <span className="text-[10px] font-bold text-error uppercase tracking-wider block mb-0.5">Rejection Reason</span>
-                  <p className="text-xs text-error">{p.adminNote}</p>
+              <div className="p-6 flex-1 flex flex-col justify-between">
+                <div className="flex justify-between items-start mb-3 gap-4">
+                  <div>
+                    <h4 className="font-bold text-on-surface text-[17px]">{p.name}</h4>
+                    <p className="text-xs text-muted-text mt-0.5 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">store</span>
+                      {p.salon?.name}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {isExpired ? (
+                      <span className="px-2 py-0.5 rounded-md text-[9px] uppercase font-bold tracking-wider border bg-error/10 text-error border-error/20">
+                        EXPIRED
+                      </span>
+                    ) : (
+                      <>
+                        <span className={`px-2 py-0.5 rounded-md text-[9px] uppercase font-bold tracking-wider border ${statusColors[p.status]}`}>
+                          {p.status === 'ACTIVE' ? 'APPROVED' : p.status}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-md text-[9px] uppercase font-bold tracking-wider border ${p.isActive ? 'bg-success/10 text-success border-success/20' : 'bg-surface-variant text-muted-text border-border'}`}>
+                          {p.isActive ? 'ENABLED' : 'DISABLED'}
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
-              )}
+                
+                <div className="flex items-baseline gap-2 mb-4">
+                  <span className="text-[26px] font-bold text-primary">₹{p.discountedPrice}</span>
+                  <span className="text-sm text-muted-text line-through font-medium">₹{p.totalPrice}</span>
+                  <span className="text-xs font-semibold text-success bg-success/10 px-2 py-0.5 rounded-lg ml-auto">
+                    Save {Math.round(((p.totalPrice - p.discountedPrice) / p.totalPrice) * 100)}%
+                  </span>
+                </div>
 
-              {p.validFrom && p.validTo && (
-                <div className="mb-4 flex items-center gap-2 text-xs text-muted-text bg-surface-variant p-2 rounded-lg border border-border">
-                  <span className="material-symbols-outlined text-[16px]">calendar_today</span>
-                  <span>{new Date(p.validFrom).toLocaleDateString()} - {new Date(p.validTo).toLocaleDateString()}</span>
-                </div>
-              )}
+                {p.status === 'REJECTED' && p.adminNote && (
+                  <div className="mb-4 p-3 bg-error/5 border border-error/15 rounded-xl">
+                    <span className="text-[10px] font-bold text-error uppercase tracking-wider block mb-0.5">Rejection Reason</span>
+                    <p className="text-xs text-error">{p.adminNote}</p>
+                  </div>
+                )}
 
-              {p.description && <p className="text-sm text-muted-text mb-4 line-clamp-2 leading-relaxed">{p.description}</p>}
-              
-              <div className="space-y-1.5 mb-6">
-                <p className="text-[11px] font-bold text-muted-text uppercase tracking-wider">Included Services ({p.services?.length || 0})</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {p.services?.map(s => (
-                     <span key={s._id} className="text-[11px] px-2.5 py-1 bg-surface-variant text-on-surface border border-border rounded-lg truncate max-w-full">
-                       {s.name}
-                     </span>
-                  ))}
+                {p.validFrom && p.validTo && (
+                  <div className="mb-4 flex items-center gap-2 text-xs text-muted-text bg-surface-variant p-2 rounded-lg border border-border">
+                    <span className="material-symbols-outlined text-[16px]">calendar_today</span>
+                    <span>{new Date(p.validFrom).toLocaleDateString()} - {new Date(p.validTo).toLocaleDateString()}</span>
+                  </div>
+                )}
+
+                {p.description && <p className="text-sm text-muted-text mb-4 line-clamp-2 leading-relaxed">{p.description}</p>}
+                
+                <div className="space-y-1.5 mb-6">
+                  <p className="text-[11px] font-bold text-muted-text uppercase tracking-wider">Included Services ({p.services?.length || 0})</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {p.services?.map(s => (
+                       <span key={s._id} className="text-[11px] px-2.5 py-1 bg-surface-variant text-on-surface border border-border rounded-lg truncate max-w-full">
+                         {s.name}
+                       </span>
+                    ))}
+                  </div>
                 </div>
+              </div>
+
+              <div className="mt-auto pt-4 border-t border-border flex gap-2">
+                <button onClick={() => openEditForm(p)} className="flex-1 text-xs py-2.5 font-medium text-on-surface bg-surface-variant hover:bg-surface-variant-hover border border-border rounded-xl transition-all flex items-center justify-center gap-1">
+                  <span className="material-symbols-outlined text-[16px]">edit</span>
+                  Edit
+                </button>
+                <button onClick={() => handleToggleStatus(p._id)} className={`flex-1 text-xs py-2.5 font-medium border rounded-xl transition-all flex items-center justify-center gap-1 ${p.isActive ? 'text-warning bg-warning/10 border-warning/20 hover:bg-warning/20' : 'text-success bg-success/10 border-success/20 hover:bg-success/20'}`}>
+                  <span className="material-symbols-outlined text-[16px]">{p.isActive ? 'visibility_off' : 'visibility'}</span>
+                  {p.isActive ? 'Disable' : 'Enable'}
+                </button>
+                <button onClick={() => handleDelete(p._id)} className="flex-1 text-xs py-2.5 font-medium text-error bg-error/10 hover:bg-error/20 border border-error/20 rounded-xl transition-all flex items-center justify-center gap-1">
+                  <span className="material-symbols-outlined text-[16px]">delete</span>
+                  Delete
+                </button>
               </div>
             </div>
-
-            <div className="mt-auto pt-4 border-t border-border flex gap-2">
-              <button onClick={() => openEditForm(p)} className="flex-1 text-xs py-2.5 font-medium text-on-surface bg-surface-variant hover:bg-surface-variant-hover border border-border rounded-xl transition-all flex items-center justify-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">edit</span>
-                Edit
-              </button>
-              <button onClick={() => handleToggleStatus(p._id)} className={`flex-1 text-xs py-2.5 font-medium border rounded-xl transition-all flex items-center justify-center gap-1 ${p.isActive ? 'text-warning bg-warning/10 border-warning/20 hover:bg-warning/20' : 'text-success bg-success/10 border-success/20 hover:bg-success/20'}`}>
-                <span className="material-symbols-outlined text-[16px]">{p.isActive ? 'visibility_off' : 'visibility'}</span>
-                {p.isActive ? 'Disable' : 'Enable'}
-              </button>
-              <button onClick={() => handleDelete(p._id)} className="flex-1 text-xs py-2.5 font-medium text-error bg-error/10 hover:bg-error/20 border border-error/20 rounded-xl transition-all flex items-center justify-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">delete</span>
-                Delete
-              </button>
-            </div>
-          </div>
-        )))}
-      </div>
-    </div>
+            )
+          }))}
+        </div>
+      </VendorTableContainer>
+      
+      <VendorPagination
+        currentPage={pagination.page}
+        totalPages={pagination.totalPages}
+        total={pagination.total}
+        limit={pagination.limit}
+        onPageChange={loadPackages}
+      />
+    </VendorPageLayout>
   );
 };
 export default PackageManagePage;

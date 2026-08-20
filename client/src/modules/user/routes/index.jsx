@@ -21,6 +21,7 @@ const ChatPage = lazy(() => import('../pages/chat/ChatPage'));
 const NotificationsPage = lazy(() => import('../pages/notifications/NotificationsPage'));
 const ProfilePage = lazy(() => import('../pages/profile/ProfilePage'));
 const FavoritesPage = lazy(() => import('../pages/profile/FavoritesPage'));
+import OffersPage from '../pages/home/OffersPage';
 
 const SuspenseWrapper = ({ children }) => (
   <Suspense fallback={<Loader text="Loading page..." />}>
@@ -40,6 +41,7 @@ export default function UserRoutes() {
       <Route element={<MainLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/offers" element={<OffersPage />} />
         <Route path="/salons" element={<SuspenseWrapper><SalonListPage /></SuspenseWrapper>} />
         <Route path="/salon/:id" element={<SuspenseWrapper><SalonDetailPage /></SuspenseWrapper>} />
         <Route path="/salon/:id/book" element={<SuspenseWrapper><BookingPage /></SuspenseWrapper>} />

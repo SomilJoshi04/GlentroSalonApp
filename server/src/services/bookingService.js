@@ -5,6 +5,7 @@ const Service = require('../models/Service');
 const Salon = require('../models/Salon');
 const Vendor = require('../models/Vendor');
 const Coupon = require('../models/Coupon');
+const PlatformFee = require('../models/PlatformFee');
 const { checkSlotAvailability, autoAssignStaff } = require('./availabilityService');
 const { calculateBookingTotal, calculateCancellationFee, calculateFinancialBreakdown } = require('../utils/calculateFees');
 const { calculateEndTime } = require('../utils/calculateAvailability');
@@ -144,15 +145,29 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
       coupon = await couponService.validateCoupon(couponCode, totalForCoupon);
     }
 
-    // Calculate totals
-    const { totalAmount, discountAmount, finalAmount, packageDiscount, couponDiscount } = calculateBookingTotal(
+    // Fetch Platform Fee configuration
+    const platformFeeDoc = await PlatformFee.findOne({ isActive: true });
+    const currentPlatformFeePercentage = platformFeeDoc ? platformFeeDoc.feePercentage : 5;
+
+    // Calculate totals including platform fee
+    const { 
+      totalAmount, 
+      subtotalAfterDiscounts,
+      discountAmount, 
+      finalAmount, 
+      packageDiscount, 
+      couponDiscount,
+      platformFeeAmount,
+      platformFeePercentage
+    } = calculateBookingTotal(
       bookingServices,
       coupon,
-      pkg
+      pkg,
+      currentPlatformFeePercentage
     );
 
-    // Calculate financial breakdown
-    const financials = await calculateFinancialBreakdown(vendor, finalAmount);
+    // Calculate financial breakdown based on subtotal
+    const financials = await calculateFinancialBreakdown(vendor, subtotalAfterDiscounts, platformFeeAmount);
 
     // Create booking
     const [booking] = await Booking.create(
@@ -180,6 +195,9 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
           commission: financials.commission,
           platformFee: financials.platformFee,
           vendorPayout: financials.vendorPayout,
+          platformFeePercentage: financials.platformFeePercentage,
+          adminCommissionPercentage: financials.adminCommissionPercentage,
+          vendorPlanType: financials.vendorPlanType,
         },
       ],
       { session, ordered: true }

@@ -20,7 +20,7 @@ const PackagesPage = lazy(() => import('../pages/PackagesPage'));
 const CouponsPage = lazy(() => import('../pages/CouponsPage'));
 const SubscriptionsPage = lazy(() => import('../pages/SubscriptionsPage'));
 const CommissionsPage = lazy(() => import('../pages/CommissionsPage'));
-const BannersPage = lazy(() => import('../pages/BannersPage'));
+const PromotionalVideosPage = lazy(() => import('../pages/PromotionalVideosPage'));
 const SettingsPage = lazy(() => import('../pages/SettingsPage'));
 const NotificationsPage = lazy(() => import('../pages/NotificationsPage'));
 const SupportPage = lazy(() => import('../pages/SupportPage'));
@@ -52,7 +52,7 @@ export default function AdminRoutes() {
         <Route path="coupons" element={<SuspenseWrapper><CouponsPage /></SuspenseWrapper>} />
         <Route path="subscriptions" element={<SuspenseWrapper><SubscriptionsPage /></SuspenseWrapper>} />
         <Route path="commissions" element={<SuspenseWrapper><CommissionsPage /></SuspenseWrapper>} />
-        <Route path="banners" element={<SuspenseWrapper><BannersPage /></SuspenseWrapper>} />
+        <Route path="promotional-videos" element={<SuspenseWrapper><PromotionalVideosPage /></SuspenseWrapper>} />
         <Route path="settings" element={<SuspenseWrapper><SettingsPage /></SuspenseWrapper>} />
         <Route path="notifications" element={<SuspenseWrapper><NotificationsPage /></SuspenseWrapper>} />
         <Route path="support" element={<SuspenseWrapper><SupportPage /></SuspenseWrapper>} />

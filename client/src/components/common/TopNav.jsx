@@ -37,6 +37,12 @@ const TopNav = () => {
             Search
           </NavLink>
           <NavLink 
+            to="/offers" 
+            className={({ isActive }) => `font-label-md transition-colors ${isActive ? 'text-primary border-b-2 border-primary pb-1' : 'text-on-surface-variant hover:text-primary'}`}
+          >
+            Offers
+          </NavLink>
+          <NavLink 
             to="/bookings" 
             className={({ isActive }) => `font-label-md transition-colors ${isActive ? 'text-primary border-b-2 border-primary pb-1' : 'text-on-surface-variant hover:text-primary'}`}
           >

@@ -12,6 +12,12 @@ export default function SettingsPage() {
   const [nameLoading, setNameLoading] = useState(false);
   const [radiusLoading, setRadiusLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [pageLoading, setPageLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setPageLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Initialize app name from settings
   useEffect(() => {
@@ -82,6 +88,44 @@ export default function SettingsPage() {
       setTimeout(() => setMessage({ type: '', text: '' }), 5000);
     }
   };
+
+  if (pageLoading) {
+    return (
+      <div className="space-y-6 max-w-4xl animate-pulse">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="h-8 bg-surface-variant rounded-lg w-64 mb-2"></div>
+            <div className="h-4 bg-surface-variant rounded-lg w-48"></div>
+          </div>
+        </div>
+        
+        <div className="bg-surface rounded-2xl border border-border p-6 shadow-sm">
+          <div className="h-6 bg-surface-variant rounded-lg w-32 mb-6"></div>
+          <div className="flex flex-col sm:flex-row gap-6 items-start">
+            <div className="flex-1 space-y-4 w-full">
+              <div className="h-5 bg-surface-variant rounded-lg w-40"></div>
+              <div className="h-16 bg-surface-variant rounded-lg w-full max-w-md"></div>
+              <div className="h-32 bg-surface-variant rounded-2xl w-full"></div>
+            </div>
+            <div className="flex-1 space-y-4 w-full sm:border-l sm:border-border sm:pl-6">
+              <div className="h-5 bg-surface-variant rounded-lg w-40"></div>
+              <div className="h-10 bg-surface-variant rounded-xl w-full max-w-md"></div>
+              <div className="h-10 bg-surface-variant rounded-xl w-32"></div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-surface rounded-2xl border border-border p-6 shadow-sm">
+           <div className="h-6 bg-surface-variant rounded-lg w-48 mb-6"></div>
+           <div className="space-y-4 max-w-md">
+             <div className="h-5 bg-surface-variant rounded-lg w-40"></div>
+             <div className="h-12 bg-surface-variant rounded-xl w-full"></div>
+             <div className="h-10 bg-surface-variant rounded-xl w-32"></div>
+           </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-4xl">

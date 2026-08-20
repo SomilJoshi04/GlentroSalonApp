@@ -49,6 +49,9 @@ export const validateCoupon = (data) => api.post('/coupons/validate', data);
 // Packages
 export const getPackages = (params) => api.get('/packages', { params });
 
+// Platform Fee
+export const getPublicPlatformFee = () => api.get('/commissions/platform-fee/public');
+
 // Offers
 export const getOffers = (params) => api.get('/offers', { params });
 

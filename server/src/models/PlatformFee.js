@@ -9,6 +9,13 @@ const platformFeeSchema = new mongoose.Schema(
       min: 0,
       max: 100,
     },
+    adminCommissionPercentage: {
+      type: Number,
+      required: true,
+      default: 10,
+      min: 0,
+      max: 100,
+    },
     cancellationFeePercentage: {
       type: Number,
       required: true,

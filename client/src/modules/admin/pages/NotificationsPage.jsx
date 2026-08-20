@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { getNotifications, markAsRead, markAllAsRead } from '../services/adminApi';
+import { getNotifications, markAsRead, markAllAsRead, clearAllNotifications } from '../services/adminApi';
 import { useNotifications } from '../../../context/NotificationContext';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '../../../context/AuthContext';
+import Pagination from '../../../components/common/Pagination';
 import toast from 'react-hot-toast';
+import AdminPageLayout from '../components/layout/AdminPageLayout';
+import AdminPageHeader from '../components/layout/AdminPageHeader';
 
 const NotificationsPage = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   
   const { unreadCount, decrementCount, resetCount } = useNotifications();
   const { user } = useAuth();
@@ -25,6 +29,7 @@ const NotificationsPage = () => {
       if (res.data?.success) {
         setNotifications(res.data.data.notifications);
         setTotalPages(res.data.data.totalPages);
+        setTotal(res.data.data.total || 0);
       }
     } catch (error) {
       toast.error('Failed to load notifications');
@@ -56,6 +61,21 @@ const NotificationsPage = () => {
     }
   };
 
+  const handleClearAll = async () => {
+    if (notifications.length === 0) return;
+    if (window.confirm('Are you sure you want to clear all notifications?')) {
+      try {
+        await clearAllNotifications();
+        setNotifications([]);
+        setTotal(0);
+        resetCount();
+        toast.success('All notifications cleared');
+      } catch (error) {
+        toast.error('Failed to clear notifications');
+      }
+    }
+  };
+
   const getIcon = (type) => {
     if (!type) return 'notifications';
     if (type.includes('BOOKING')) return 'calendar_today';
@@ -64,32 +84,49 @@ const NotificationsPage = () => {
     return 'notifications';
   };
 
+
   return (
-    <div className="space-y-6 animate-fade-in pb-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="font-headline-md text-[28px] text-on-surface flex items-center gap-3">
+    <AdminPageLayout>
+      <AdminPageHeader 
+        title={
+          <div className="flex items-center gap-3">
             Notifications
             {unreadCount > 0 && (
               <span className="bg-primary text-white text-[14px] font-bold px-2 py-0.5 rounded-full">
                 {unreadCount} new
               </span>
             )}
-          </h1>
-          <p className="font-body-md text-muted-text mt-1">Manage system alerts and updates.</p>
-        </div>
-        {unreadCount > 0 && (
-          <button 
-            onClick={handleMarkAllAsRead}
-            className="flex items-center gap-2 px-4 py-2 bg-surface-variant hover:bg-surface-variant-hover text-primary font-medium rounded-xl transition-colors shrink-0"
-          >
-            <span className="material-symbols-outlined text-[20px]">done_all</span>
-            Mark All as Read
-          </button>
-        )}
-      </div>
+          </div>
+        }
+        description="Manage system alerts and updates."
+        actions={
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={handleMarkAllAsRead}
+              disabled={unreadCount === 0}
+              className={`flex items-center gap-2 px-4 py-2 font-medium rounded-xl transition-colors shrink-0 ${
+                unreadCount > 0 
+                  ? 'bg-surface-variant hover:bg-surface-variant-hover text-primary' 
+                  : 'bg-surface-variant/50 text-muted-text cursor-not-allowed opacity-50'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[20px]">done_all</span>
+              Mark All as Read
+            </button>
+            {notifications.length > 0 && (
+              <button 
+                onClick={handleClearAll}
+                className="flex items-center gap-2 px-4 py-2 bg-surface hover:bg-error/10 text-error border border-error/20 hover:border-error/40 font-medium rounded-xl transition-colors shrink-0"
+              >
+                <span className="material-symbols-outlined text-[20px]">delete_sweep</span>
+                Clear All
+              </button>
+            )}
+          </div>
+        }
+      />
       
-      <div className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
+      <div className="flex-1 overflow-y-auto min-h-0 bg-surface rounded-2xl border border-border shadow-sm flex flex-col">
         {loading && notifications.length === 0 ? (
           <div className="p-12 flex justify-center">
             <div className="w-8 h-8 border-4 border-border border-t-primary rounded-full animate-spin"></div>
@@ -105,7 +142,7 @@ const NotificationsPage = () => {
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-border flex-1">
             {notifications.map((notif) => (
               <div 
                 key={notif._id} 
@@ -142,32 +179,15 @@ const NotificationsPage = () => {
           </div>
         )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="p-4 border-t border-border flex items-center justify-between bg-surface-card">
-            <span className="text-[13px] text-muted-text">
-              Page {page} of {totalPages}
-            </span>
-            <div className="flex gap-2">
-              <button 
-                disabled={page === 1}
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                className="p-1.5 rounded-lg border border-border text-on-surface hover:bg-surface-variant disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span className="material-symbols-outlined text-[20px]">chevron_left</span>
-              </button>
-              <button 
-                disabled={page === totalPages}
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                className="p-1.5 rounded-lg border border-border text-on-surface hover:bg-surface-variant disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span className="material-symbols-outlined text-[20px]">chevron_right</span>
-              </button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          total={total}
+          limit={20}
+          onPageChange={setPage}
+        />
       </div>
-    </div>
+    </AdminPageLayout>
   );
 };
 

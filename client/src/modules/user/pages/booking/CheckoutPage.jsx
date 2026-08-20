@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { createBooking, validateCoupon, createPaymentOrder, verifyPayment } from '../../services/userApi';
+import { createBooking, validateCoupon, createPaymentOrder, verifyPayment, getPublicPlatformFee } from '../../services/userApi';
 import { useAuth } from '../../../../context/AuthContext';
 import { goBack } from '../../../../utils/navigation';
 import { getImageUrl } from '../../../../utils/imageUtils';
@@ -32,6 +32,15 @@ const CheckoutPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('ONLINE');
+  const [platformFeePercentage, setPlatformFeePercentage] = useState(0);
+
+  useEffect(() => {
+    getPublicPlatformFee().then(res => {
+      if (res.data?.data?.feePercentage) {
+        setPlatformFeePercentage(res.data.data.feePercentage);
+      }
+    }).catch(() => {});
+  }, []);
 
   // Persist current state to sessionStorage so it survives refresh
   useEffect(() => {
@@ -45,7 +54,16 @@ const CheckoutPage = () => {
   const originalTotalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
   const baseAmount = packageDoc ? packageDoc.discountedPrice : originalTotalPrice;
   const packageDiscount = packageDoc ? (originalTotalPrice - packageDoc.discountedPrice) : 0;
-  const finalAmount = couponResult ? couponResult.finalAmount : baseAmount;
+  
+  // Calculate subtotal after discounts
+  const subtotalAfterDiscounts = couponResult ? couponResult.finalAmount : baseAmount;
+  const couponDiscountAmount = couponResult ? couponResult.discount : 0;
+  
+  // Platform fee calculated on subtotal
+  const platformFeeAmount = Math.round((subtotalAfterDiscounts * platformFeePercentage) / 100 * 100) / 100;
+  
+  // Final amount to pay
+  const finalAmount = Math.round((subtotalAfterDiscounts + platformFeeAmount) * 100) / 100;
 
   if (!salon || !date || !time || selectedServices.length === 0) {
     return (
@@ -275,7 +293,13 @@ const CheckoutPage = () => {
           {couponResult && (
             <div className="flex justify-between items-center text-success">
               <span className="font-body-md text-[16px]">Coupon Discount</span>
-              <span className="font-body-md text-[16px]">-₹{couponResult.discount}</span>
+              <span className="font-body-md text-[16px]">-₹{couponDiscountAmount}</span>
+            </div>
+          )}
+          {platformFeePercentage > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="font-body-md text-[16px] text-muted-text">Platform Fee ({platformFeePercentage}%)</span>
+              <span className="font-body-md text-[16px] text-on-surface">₹{platformFeeAmount}</span>
             </div>
           )}
           <div className="h-[1px] w-full bg-border my-2"></div>

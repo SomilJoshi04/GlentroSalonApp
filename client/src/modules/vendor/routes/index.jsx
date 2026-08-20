@@ -22,6 +22,7 @@ const ProfilePage = lazy(() => import('../pages/ProfilePage'));
 const ChatListPage = lazy(() => import('../pages/ChatListPage'));
 const ChatPage = lazy(() => import('../pages/ChatPage'));
 const ReviewsPage = lazy(() => import('../pages/ReviewsPage'));
+const NotificationsPage = lazy(() => import('../pages/NotificationsPage'));
 
 const SuspenseWrapper = ({ children }) => (
   <Suspense fallback={<Loader text="Loading..." />}>
@@ -48,6 +49,7 @@ export default function VendorRoutes() {
 
         <Route path="profile" element={<SuspenseWrapper><ProfilePage /></SuspenseWrapper>} />
         <Route path="reviews" element={<SuspenseWrapper><ReviewsPage /></SuspenseWrapper>} />
+        <Route path="notifications" element={<SuspenseWrapper><NotificationsPage /></SuspenseWrapper>} />
       </Route>
     </Routes>
   );

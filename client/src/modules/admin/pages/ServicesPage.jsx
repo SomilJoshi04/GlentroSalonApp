@@ -3,6 +3,9 @@ import { getServices } from '../services/adminApi';
 import DataTable from '../components/DataTable';
 import StatusBadge from '../components/StatusBadge';
 import ServiceDetailsModal from '../components/ServiceDetailsModal';
+import AdminPageLayout from '../components/layout/AdminPageLayout';
+import AdminPageHeader from '../components/layout/AdminPageHeader';
+import AdminListToolbar from '../components/layout/AdminListToolbar';
 
 const ServicesPage = () => {
   const [services, setServices] = useState([]);
@@ -110,27 +113,24 @@ const ServicesPage = () => {
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in pb-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="font-headline-md text-[28px] text-on-surface">Services Catalog</h1>
-          <p className="font-body-md text-muted-text mt-1">View all services offered by vendors across the platform.</p>
-        </div>
-      </div>
+    <AdminPageLayout>
+      <AdminPageHeader 
+        title="Service Database"
+        description="View and manage all services offered across salons."
+      />
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface p-4 rounded-2xl border border-border shadow-sm">
+      <AdminListToolbar>
         <div className="relative flex-1 max-w-md">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted-text text-[20px]">search</span>
           <input 
             type="text" 
-            placeholder="Search by service name..." 
+            placeholder="Search by service name, salon, or category..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-background-alt border border-border focus:border-primary focus:ring-1 focus:ring-primary rounded-xl py-2 pl-10 pr-4 text-[14px] outline-none transition-all"
           />
         </div>
-      </div>
+      </AdminListToolbar>
 
       <DataTable 
         columns={columns} 
@@ -141,14 +141,14 @@ const ServicesPage = () => {
         onPageChange={fetchServices}
       />
 
-      {/* Service Details Modal */}
       {selectedService && (
         <ServiceDetailsModal 
-          service={selectedService} 
+          isOpen={!!selectedService} 
           onClose={() => setSelectedService(null)} 
+          service={selectedService} 
         />
       )}
-    </div>
+    </AdminPageLayout>
   );
 };
 
