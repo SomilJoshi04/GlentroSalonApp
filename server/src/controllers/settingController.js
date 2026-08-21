@@ -4,7 +4,13 @@ const { processAndStoreImage, deleteImageSafe } = require('../services/imageServ
 // @desc    Get all settings (Public)
 const getSettings = async (req, res, next) => {
   try {
-    const settings = await AppSetting.find({});
+    const PUBLIC_KEYS = [
+      'appName', 'appLogo', 'salonSearchRadius', 
+      'supportEmail', 'supportPhone', 'supportWhatsApp', 'supportHours', 'supportDescription',
+      'loginPageImage', 'registerPageImage'
+    ];
+    
+    const settings = await AppSetting.find({ key: { $in: PUBLIC_KEYS } });
     const settingsObj = {};
     settings.forEach(setting => {
       settingsObj[setting.key] = setting.value;
@@ -42,9 +48,48 @@ const updateAppLogo = async (req, res, next) => {
     res.json({ success: true, data: updatedSetting });
   } catch (error) {
     if (req.file && error) {
-      // If we could access the generated filename, we'd delete it, but processAndStoreImage might have thrown.
-      // Better to return the error safely.
+      // Error handling for image upload failure
     }
+    next(error);
+  }
+};
+
+// @desc    Update Login Page Image (Admin)
+const updateLoginImage = async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'Please upload an image file' });
+    const newImage = await processAndStoreImage(req.file.buffer, 'loginPage');
+    const existingImage = await AppSetting.findOne({ key: 'loginPageImage' });
+    const oldImage = existingImage ? existingImage.value : null;
+
+    const updatedSetting = await AppSetting.findOneAndUpdate(
+      { key: 'loginPageImage' },
+      { value: newImage },
+      { new: true, upsert: true }
+    );
+    if (oldImage) deleteImageSafe(oldImage);
+    res.json({ success: true, data: updatedSetting });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update Register Page Image (Admin)
+const updateRegisterImage = async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'Please upload an image file' });
+    const newImage = await processAndStoreImage(req.file.buffer, 'registerPage');
+    const existingImage = await AppSetting.findOne({ key: 'registerPageImage' });
+    const oldImage = existingImage ? existingImage.value : null;
+
+    const updatedSetting = await AppSetting.findOneAndUpdate(
+      { key: 'registerPageImage' },
+      { value: newImage },
+      { new: true, upsert: true }
+    );
+    if (oldImage) deleteImageSafe(oldImage);
+    res.json({ success: true, data: updatedSetting });
+  } catch (error) {
     next(error);
   }
 };
@@ -90,9 +135,47 @@ const updateSalonSearchRadius = async (req, res, next) => {
   }
 };
 
+// @desc    Update multiple settings at once (Admin)
+// @route   PUT /api/settings/bulk
+// @access  Private (Admin)
+const updateBulkSettings = async (req, res, next) => {
+  try {
+    const { settings } = req.body;
+    if (!settings || typeof settings !== 'object') {
+      return res.status(400).json({ success: false, message: 'Invalid settings format' });
+    }
+
+    const bulkOps = Object.keys(settings).map((key) => ({
+      updateOne: {
+        filter: { key },
+        update: { value: settings[key] },
+        upsert: true,
+      },
+    }));
+
+    if (bulkOps.length > 0) {
+      await AppSetting.bulkWrite(bulkOps);
+    }
+
+    // Fetch and return the updated settings
+    const updatedSettings = await AppSetting.find({});
+    const settingsObj = {};
+    updatedSettings.forEach(setting => {
+      settingsObj[setting.key] = setting.value;
+    });
+
+    res.json({ success: true, data: settingsObj });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getSettings,
   updateAppLogo,
   updateAppName,
   updateSalonSearchRadius,
+  updateBulkSettings,
+  updateLoginImage,
+  updateRegisterImage
 };

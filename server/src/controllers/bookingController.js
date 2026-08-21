@@ -177,4 +177,342 @@ const getAllBookings = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-module.exports = { createBooking, getMyBookings, getSalonBookings, getBookingById, acceptBooking, rejectBooking, cancelBooking, completeBooking, getAvailability, getAllBookings };
+// @desc    Get all recent bookings across all vendor's salons (Vendor Dashboard)
+const getVendorRecentBookings = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
+
+    // Get all salons owned by this vendor
+    const salons = await Salon.find({ vendor: req.user.id }, '_id');
+    const salonIds = salons.map(s => s._id);
+
+    const query = { salon: { $in: salonIds } };
+    const skip = (page - 1) * limit;
+
+    const bookings = await Booking.find(query)
+      .populate('salon', 'name address')
+      .populate('user', 'name email phone')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const totalItems = await Booking.countDocuments(query);
+    const totalPages = Math.ceil(totalItems / limit);
+
+    res.json({
+      success: true,
+      data: bookings,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems,
+        itemsPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get dashboard statistics for vendor
+const getVendorStats = async (req, res, next) => {
+  try {
+    const salons = await Salon.find({ vendor: req.user.id }, '_id');
+    const salonIds = salons.map(s => s._id);
+
+    // Get counts per status
+    const statsPipeline = [
+      { $match: { salon: { $in: salonIds } } },
+      { 
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      }
+    ];
+    
+    // Revenue logic: We only consider COMPLETED bookings for revenue.
+    // Calculate today's boundaries.
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    const revenuePipeline = [
+      {
+        $match: {
+          salon: { $in: salonIds },
+          status: 'COMPLETED',
+          createdAt: { $gte: startOfToday, $lte: endOfToday }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          todayRevenue: { $sum: '$finalAmount' }
+        }
+      }
+    ];
+
+    const [statusStats, revenueStats] = await Promise.all([
+      Booking.aggregate(statsPipeline),
+      Booking.aggregate(revenuePipeline)
+    ]);
+
+    let pendingBookings = 0;
+    let confirmedBookings = 0;
+    let completedBookings = 0;
+    let totalBookings = 0;
+
+    statusStats.forEach(stat => {
+      totalBookings += stat.count;
+      if (stat._id === 'PENDING') pendingBookings = stat.count;
+      if (stat._id === 'CONFIRMED') confirmedBookings = stat.count;
+      if (stat._id === 'COMPLETED') completedBookings = stat.count;
+    });
+
+    const todayRevenue = revenueStats.length > 0 ? revenueStats[0].todayRevenue : 0;
+
+    res.json({
+      success: true,
+      data: {
+        totalBookings,
+        pendingBookings,
+        confirmedBookings,
+        completedBookings,
+        todayRevenue
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get analytics for vendor
+const getVendorAnalytics = async (req, res, next) => {
+  try {
+    const { range = '7d' } = req.query;
+    let days = 7;
+    if (range === '30d') days = 30;
+    else if (range === '3m') days = 90;
+    else if (range === '6m') days = 180;
+    else if (range === '12m') days = 365;
+
+    const startDate = new Date();
+    startDate.setHours(0, 0, 0, 0);
+    startDate.setDate(startDate.getDate() - days);
+
+    const salons = await Salon.find({ vendor: req.user.id }, '_id name');
+    const salonIds = salons.map(s => s._id);
+
+    // 1. Booking Trend (Group by day or month)
+    const groupByFormat = days > 90 ? "%Y-%m" : "%Y-%m-%d";
+    
+    const bookingTrendPipeline = [
+      { 
+        $match: { 
+          salon: { $in: salonIds }, 
+          createdAt: { $gte: startDate } 
+        } 
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: groupByFormat, date: "$createdAt" } },
+          bookings: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ];
+
+    // 2. Revenue Trend
+    const revenueTrendPipeline = [
+      { 
+        $match: { 
+          salon: { $in: salonIds }, 
+          status: 'COMPLETED',
+          createdAt: { $gte: startDate } 
+        } 
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: groupByFormat, date: "$createdAt" } },
+          revenue: { $sum: "$finalAmount" }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ];
+
+    // 3. Booking Status
+    const statusPipeline = [
+      { 
+        $match: { 
+          salon: { $in: salonIds }, 
+          createdAt: { $gte: startDate } 
+        } 
+      },
+      {
+        $group: {
+          _id: "$status",
+          value: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          name: "$_id",
+          value: 1,
+          _id: 0
+        }
+      }
+    ];
+
+    // 4. Salon Performance
+    const salonPerformancePipeline = [
+      { 
+        $match: { 
+          salon: { $in: salonIds }, 
+          createdAt: { $gte: startDate } 
+        } 
+      },
+      {
+        $group: {
+          _id: "$salon",
+          bookings: { $sum: 1 },
+          revenue: { 
+            $sum: { $cond: [ { $eq: ["$status", "COMPLETED"] }, "$finalAmount", 0 ] } 
+          }
+        }
+      }
+    ];
+
+    // 5. Top Services & Staff Performance (from BookingService)
+    const serviceStaffPipeline = [
+      {
+        $lookup: {
+          from: 'bookings',
+          localField: 'booking',
+          foreignField: '_id',
+          as: 'bookingDoc'
+        }
+      },
+      { $unwind: '$bookingDoc' },
+      {
+        $match: {
+          'bookingDoc.salon': { $in: salonIds },
+          'bookingDoc.createdAt': { $gte: startDate }
+        }
+      }
+    ];
+
+    const topServicesPipeline = [
+      ...serviceStaffPipeline,
+      {
+        $group: {
+          _id: "$service",
+          bookings: { $sum: 1 }
+        }
+      },
+      { $sort: { bookings: -1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: 'services',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'serviceDoc'
+        }
+      },
+      { $unwind: '$serviceDoc' },
+      {
+        $project: {
+          name: "$serviceDoc.name",
+          bookings: 1,
+          _id: 0
+        }
+      }
+    ];
+
+    const staffPerformancePipeline = [
+      ...serviceStaffPipeline,
+      {
+        $match: {
+          'staff': { $ne: null },
+          'bookingDoc.status': 'COMPLETED'
+        }
+      },
+      {
+        $group: {
+          _id: "$staff",
+          bookings: { $sum: 1 }
+        }
+      },
+      { $sort: { bookings: -1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: 'staffs',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'staffDoc'
+        }
+      },
+      { $unwind: { path: '$staffDoc', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          name: { $ifNull: ["$staffDoc.name", "Unknown"] },
+          bookings: 1,
+          _id: 0
+        }
+      }
+    ];
+
+    const [
+      rawBookingTrend,
+      rawRevenueTrend,
+      bookingStatus,
+      rawSalonPerformance,
+      topServices,
+      staffPerformance
+    ] = await Promise.all([
+      Booking.aggregate(bookingTrendPipeline),
+      Booking.aggregate(revenueTrendPipeline),
+      Booking.aggregate(statusPipeline),
+      Booking.aggregate(salonPerformancePipeline),
+      BookingService.aggregate(topServicesPipeline),
+      BookingService.aggregate(staffPerformancePipeline)
+    ]);
+
+    // Format trends to ensure dates are nicely mapped
+    const bookingTrend = rawBookingTrend.map(item => ({ date: item._id, bookings: item.bookings }));
+    const revenueTrend = rawRevenueTrend.map(item => ({ date: item._id, revenue: item.revenue }));
+    
+    // Format salon performance to inject real salon names
+    const salonPerformance = rawSalonPerformance.map(item => {
+      const salonMatch = salons.find(s => s._id.toString() === item._id.toString());
+      return {
+        name: salonMatch ? salonMatch.name : 'Unknown Salon',
+        bookings: item.bookings,
+        revenue: item.revenue
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        bookingTrend,
+        revenueTrend,
+        bookingStatus,
+        salonPerformance,
+        topServices,
+        staffPerformance
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { createBooking, getMyBookings, getSalonBookings, getBookingById, acceptBooking, rejectBooking, cancelBooking, completeBooking, getAvailability, getAllBookings, getVendorRecentBookings, getVendorStats, getVendorAnalytics };

@@ -1,6 +1,7 @@
 import api from '../../../services/api/axiosInstance';
 
 export const getDashboardStats = () => api.get('/admin/dashboard');
+export const getAnalytics = (range = '30d') => api.get(`/admin/analytics?range=${range}`);
 
 export const getRecentBookings = () => api.get('/admin/recent-bookings');
 
@@ -12,11 +13,21 @@ export const getPendingCounts = () => api.get('/admin/pending-counts');
 export const getUsers = (params) => api.get('/admin/users', { params });
 export const updateUserStatus = (id, isActive) => api.put(`/admin/users/${id}/status`, { isActive });
 
+// Account Recovery
+export const getAccountRecoveryRequests = (params) => api.get('/admin/account-recovery', { params });
+export const getAccountRecoveryRequestById = (id) => api.get(`/admin/account-recovery/${id}`);
+export const approveAccountRecovery = (id) => api.patch(`/admin/account-recovery/${id}/approve`);
+export const rejectAccountRecovery = (id, data) => api.patch(`/admin/account-recovery/${id}/reject`, data);
+
 // Note: Add Categories, Services, Packages, etc. here as needed
 
 // Vendor Management
 export const getVendors = (params) => api.get('/admin/vendors', { params });
 export const updateVendorStatus = (id, statusData) => api.put(`/admin/vendors/${id}/status`, statusData);
+
+// Content Management
+export const getAdminContent = (type) => api.get(`/admin/content/${type}`);
+export const updateAdminContent = (type, data) => api.put(`/admin/content/${type}`, data);
 
 // Auth & Profile
 export const loginAdmin = (data) => api.post('/auth/login/admin', data);
@@ -95,3 +106,16 @@ export const getChats = () => api.get('/chat');
 export const getMessages = (chatId, params) => api.get(`/chat/${chatId}/messages`, { params });
 export const sendMessage = (chatId, data) => api.post(`/chat/${chatId}/messages`, data);
 export const markChatAsRead = (chatId) => api.patch(`/chat/${chatId}/read`);
+
+// Settings
+export const updateBulkSettings = (data) => api.put('/settings/bulk', data);
+
+// FAQs
+export const getAdminFAQs = () => api.get('/faqs/admin');
+export const createFAQ = (data) => api.post('/faqs', data);
+export const updateFAQ = (id, data) => api.put(`/faqs/${id}`, data);
+export const deleteFAQ = (id) => api.delete(`/faqs/${id}`);
+
+// Booking Issues
+export const getAdminBookingIssues = () => api.get('/booking-issues/admin');
+export const updateBookingIssueStatus = (id, status) => api.patch(`/booking-issues/${id}/status`, { status });

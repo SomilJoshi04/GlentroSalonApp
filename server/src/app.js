@@ -29,7 +29,10 @@ const bannerRoutes = require('./routes/bannerRoutes');
 const settingRoutes = require('./routes/settingRoutes');
 const favoriteRoutes = require('./routes/favoriteRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
-
+const contentRoutes = require('./routes/contentRoutes');
+const accountRecoveryRoutes = require('./routes/accountRecoveryRoutes');
+const faqRoutes = require('./routes/faqRoutes');
+const bookingIssueRoutes = require('./routes/bookingIssueRoutes');
 const app = express();
 
 // Security middleware
@@ -103,7 +106,10 @@ app.use('/api/banners', bannerRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/reviews', reviewRoutes);
-
+app.use('/api/content', contentRoutes);
+app.use('/api/account-recovery', accountRecoveryRoutes);
+app.use('/api/faqs', faqRoutes);
+app.use('/api/booking-issues', bookingIssueRoutes);
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'Salon Booking API is running', timestamp: new Date().toISOString() });

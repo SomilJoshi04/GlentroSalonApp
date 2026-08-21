@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getNotifications, markNotificationRead, markAllNotificationsRead } from '../../services/userApi';
 import { useNotifications } from '../../../../context/NotificationContext';
 import Button from '../../../../components/common/Button';
@@ -17,6 +18,9 @@ const NotificationsPage = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const { decrementCount, resetCount } = useNotifications();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const fromProfile = location.state?.fromProfile;
 
   useEffect(() => { loadNotifications(); }, []);
 
@@ -47,10 +51,18 @@ const NotificationsPage = () => {
     <div className="space-y-6 animate-fade-in pt-6 md:pt-0 w-full">
       <div className="flex items-center justify-between">
         <div className="flex items-center">
-          <PageHeader title="Notifications" fallbackPath="/" />
-          <h1 className="hidden md:block font-headline-xl text-[32px] font-bold text-on-surface">Notifications</h1>
+          <div className="md:hidden"><PageHeader title="Notifications" fallbackPath="/profile" /></div>
+          <div className="hidden md:flex items-center gap-4">
+            {fromProfile && (
+              <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-on-surface-variant hover:bg-surface-variant rounded-full transition-colors flex items-center justify-center">
+                <span className="material-symbols-outlined">arrow_back</span>
+              </button>
+            )}
+            <h1 className="font-headline-xl text-[32px] font-bold text-on-surface">Notifications</h1>
+          </div>
         </div>
-        {notifications.some(n => !n.isRead) && (
+        
+        {notifications.length > 0 && notifications.some(n => !n.isRead) && (
           <Button variant="ghost" size="sm" onClick={handleReadAll}>Mark all read</Button>
         )}
       </div>

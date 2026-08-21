@@ -4,7 +4,7 @@ import { useAuth } from '../../../../context/AuthContext';
 import { useNotifications } from '../../../../context/NotificationContext';
 import { useLocationContext } from '../../../../context/LocationContext';
 import { updateProfile } from '../../../../services/api/authApi';
-import { initiateChat } from '../../services/userApi';
+import { initiateChat, deleteUserAccount } from '../../services/userApi';
 import Button from '../../../../components/common/Button';
 import Input from '../../../../components/common/Input';
 import PageHeader from '../../../../components/common/PageHeader';
@@ -21,6 +21,9 @@ const ProfilePage = () => {
   // Modals & Edit States
   const [editing, setEditing] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
 
   // Form State
@@ -83,6 +86,23 @@ const ProfilePage = () => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteUserAccount({ reason: deleteReason });
+      setShowDeleteConfirm(false);
+      logout('user');
+      navigate('/login', { state: { deleted: true } });
+    } catch (e) {
+      setMessage({
+        text: e.response?.data?.message || 'Failed to delete account. Please try again.',
+        type: 'error'
+      });
+      setShowDeleteConfirm(false);
+    }
+    setIsDeleting(false);
+  };
+
   const handleEditCancel = () => {
     setEditing(false);
     setFormData({
@@ -117,7 +137,7 @@ const ProfilePage = () => {
   );
 
   return (
-    <div className="w-full max-w-2xl mx-auto animate-fade-in relative flex flex-col pb-4">
+    <div className="w-full max-w-2xl md:max-w-4xl lg:max-w-5xl mx-auto animate-fade-in relative flex flex-col pb-4">
       <div className="md:hidden"><PageHeader title="Profile" fallbackPath="/" /></div>
 
       {message.text && !editing && (
@@ -163,26 +183,32 @@ const ProfilePage = () => {
                   icon="calendar_today"
                   label="My Bookings"
                   description="View your upcoming and previous appointments"
-                  onClick={() => navigate('/bookings')}
+                  onClick={() => navigate('/bookings', { state: { fromProfile: true } })}
                 />
                 <ListItem
                   icon="favorite"
                   label="My Favourites"
                   description="View salons you have liked and saved"
-                  onClick={() => navigate('/favorites')}
+                  onClick={() => navigate('/favorites', { state: { fromProfile: true } })}
+                />
+                <ListItem
+                  icon="local_offer"
+                  label="Offers"
+                  description="View exclusive offers and packages"
+                  onClick={() => navigate('/offers', { state: { fromProfile: true } })}
                 />
                 <ListItem
                   icon="chat"
                   label="Messages"
                   description="Chat with salons and Admin"
-                  onClick={() => navigate('/chat')}
+                  onClick={() => navigate('/chat', { state: { fromProfile: true } })}
                 />
                 <ListItem
                   icon="notifications"
                   label="Notifications"
                   description="Booking updates, offers and other alerts"
                   count={unreadCount}
-                  onClick={() => navigate('/notifications')}
+                  onClick={() => navigate('/notifications', { state: { fromProfile: true } })}
                 />
               </div>
             </section>
@@ -200,15 +226,52 @@ const ProfilePage = () => {
               </div>
             </section>
 
-            {/* Support Section */}
+            {/* Help & Information Section */}
             <section>
-              <h2 className="font-headline-sm text-lg text-on-surface font-semibold mb-4 px-1">Support</h2>
+              <h2 className="font-headline-sm text-lg text-on-surface font-semibold mb-4 px-1">Help & Information</h2>
               <div className="flex flex-col gap-3">
                 <ListItem
                   icon="headset_mic"
-                  label="Contact Admin"
-                  description="Get help with your bookings or account"
+                  label="Help & Support"
+                  description="Get assistance and contact our team"
+                  onClick={() => navigate('/support', { state: { fromProfile: true } })}
+                />
+                <ListItem
+                  icon="report_problem"
+                  label="Booking Issues"
+                  description="Report problems with specific bookings"
+                  onClick={() => navigate('/booking-issues', { state: { fromProfile: true } })}
+                />
+                <ListItem
+                  icon="policy"
+                  label="Privacy Policy"
+                  description="Read how we handle your data"
+                  onClick={() => navigate('/privacy-policy', { state: { fromProfile: true } })}
+                />
+                <ListItem
+                  icon="gavel"
+                  label="Terms & Conditions"
+                  description="View our service agreement"
+                  onClick={() => navigate('/terms-and-conditions', { state: { fromProfile: true } })}
+                />
+                <ListItem
+                  icon="support_agent"
+                  label="Contact Admin (Live Chat)"
+                  description="Message us directly for support"
                   onClick={handleContactAdmin}
+                />
+              </div>
+            </section>
+
+            {/* Account Section */}
+            <section>
+              <h2 className="font-headline-sm text-lg text-error font-semibold mb-4 px-1">Account</h2>
+              <div className="flex flex-col gap-3">
+                <ListItem
+                  icon="delete_forever"
+                  label="Delete Account"
+                  description="Permanently deactivate your account"
+                  onClick={() => setShowDeleteConfirm(true)}
                 />
               </div>
             </section>
@@ -217,7 +280,7 @@ const ProfilePage = () => {
             <section className="pt-4">
               <Button
                 variant="ghost"
-                className="w-full text-error hover:bg-error/10 hover:text-error rounded-2xl py-4 font-semibold"
+                className="w-full text-on-surface-variant hover:bg-surface-variant rounded-2xl py-4 font-semibold"
                 onClick={() => setShowLogoutConfirm(true)}
               >
                 Log Out
@@ -326,6 +389,67 @@ const ProfilePage = () => {
                 onClick={handleLogout}
               >
                 Log Out
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- DELETE ACCOUNT CONFIRMATION DIALOG --- */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-surface rounded-3xl w-full max-w-md p-6 shadow-xl animate-scale-in">
+            <div className="w-12 h-12 rounded-full bg-error/10 flex items-center justify-center text-error mx-auto mb-4">
+              <span className="material-symbols-outlined text-[28px]">warning</span>
+            </div>
+            <h3 className="text-center font-headline-sm text-xl font-bold text-on-surface mb-2">Delete Account?</h3>
+            <p className="text-center font-body-sm text-muted-text mb-6">
+              Your account will be deactivated and you will be logged out. Your account data and booking history will remain securely stored. If you deleted your account by mistake, you can request account recovery.
+            </p>
+
+            <div className="mb-6 text-left">
+              <label className="block text-sm font-medium text-on-surface mb-2">Reason for deletion (Optional)</label>
+              <select 
+                className="w-full p-3 rounded-xl border border-border bg-surface-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all appearance-none"
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+              >
+                <option value="">Select a reason</option>
+                <option value="I no longer use GlentroSalon">I no longer use GlentroSalon</option>
+                <option value="Privacy concerns">Privacy concerns</option>
+                <option value="I created another account">I created another account</option>
+                <option value="Other">Other</option>
+              </select>
+              
+              {deleteReason === 'Other' && (
+                <textarea
+                  className="w-full mt-3 p-3 rounded-xl border border-border bg-surface-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all resize-none h-24"
+                  placeholder="Please specify your reason (max 500 characters)"
+                  maxLength={500}
+                  onChange={(e) => setDeleteReason(`Other: ${e.target.value}`)}
+                />
+              )}
+            </div>
+
+            <div className="flex gap-4">
+              <Button
+                variant="outline"
+                className="flex-1 rounded-xl"
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDeleteReason('');
+                }}
+                disabled={isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                className="flex-1 rounded-xl"
+                onClick={handleDeleteAccount}
+                loading={isDeleting}
+              >
+                Delete Account
               </Button>
             </div>
           </div>

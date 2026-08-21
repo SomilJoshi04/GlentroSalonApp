@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../../context/AuthContext';
 import { registerUser } from '../../../../services/api/authApi';
+import { useSettings } from '../../../../context/SettingContext';
+import { getImageUrl } from '../../../../utils/imageUtils';
 import Button from '../../../../components/common/Button';
 import Input from '../../../../components/common/Input';
 
@@ -9,8 +11,13 @@ const RegisterPage = () => {
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
   const { state } = useLocation();
   const { setAuth } = useAuth();
+  const { settings } = useSettings();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -20,11 +27,16 @@ const RegisterPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!acceptedTerms) {
+      return setError('You must accept the Terms of Service & Privacy Policy');
+    }
     if (formData.password !== formData.confirmPassword) {
       return setError('Passwords do not match');
     }
+    
     setLoading(true);
     setError('');
+    
     try {
       const res = await registerUser(formData);
       setAuth('user', res.data.data.user, res.data.data.token);
@@ -52,45 +64,226 @@ const RegisterPage = () => {
     }
   };
 
-  const handleBack = () => {
-    if (window.history.length > 2 && !state?.from) {
-      navigate(-1);
-    } else {
-      navigate('/');
-    }
-  };
+  const registerImage = settings?.registerPageImage ? getImageUrl(settings.registerPageImage) : 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?q=80&w=2070&auto=format&fit=crop';
 
   return (
-    <div className="animate-fade-in relative pt-4">
-      {/* Back Button */}
-      <button 
-        onClick={handleBack}
-        className="absolute top-0 left-0 p-2 -ml-2 mt-0 text-on-surface-variant hover:bg-soft-primary transition-colors rounded-full active:scale-95 duration-150"
-      >
-        <span className="material-symbols-outlined">arrow_back</span>
-      </button>
+    <div className="min-h-screen flex w-full relative overflow-hidden font-inter">
+      
+      {/* Background with Split Effect */}
+      <div 
+        className="absolute inset-0 z-0"
+        style={{
+          backgroundImage: `url(${registerImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'right'
+        }}
+      ></div>
+      {/* Heavy gradient overlay: Solid purple left, translucent right */}
+      <div className="absolute inset-0 z-0 bg-gradient-to-r from-[#2D0B5A] from-40% via-[#2D0B5A]/80 to-[#2D0B5A]/20 backdrop-blur-sm"></div>
 
-      <div className="mt-8">
-        <h2 className="text-2xl font-bold text-text-primary mb-1">Create Account</h2>
-        <p className="text-text-secondary text-sm mb-6">Join us to discover amazing salons</p>
+      {/* LEFT SIDE: Visuals (Hidden on Mobile) */}
+      <div className="hidden lg:flex w-1/2 relative items-center justify-center p-12 z-10">
+        
+        {/* Main Image Container */}
+        <div className="relative w-full max-w-[400px] aspect-[1/1.2] rounded-[32px] shadow-2xl z-10 bg-surface overflow-hidden">
+          <img 
+            src={registerImage} 
+            alt="Premium Salon Interior" 
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+        </div>
 
-        {error && (
-          <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">{error}</div>
-        )}
+        {/* Floating Glass Elements (Placed outside the overflow-hidden container) */}
+        <div className="absolute top-[20%] left-[15%] w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/30 shadow-xl flex items-center justify-center animate-bounce z-20" style={{ animationDuration: '4s' }}>
+          <span className="material-symbols-outlined text-white text-3xl">cut</span>
+        </div>
+        <div className="absolute bottom-[25%] left-[25%] w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/30 shadow-xl flex items-center justify-center animate-bounce z-20" style={{ animationDuration: '5s', animationDelay: '1s' }}>
+          <span className="material-symbols-outlined text-white text-2xl">content_cut</span>
+        </div>
+        <div className="absolute top-[35%] right-[15%] w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/30 shadow-xl flex items-center justify-center animate-bounce z-20" style={{ animationDuration: '6s', animationDelay: '0.5s' }}>
+          <span className="material-symbols-outlined text-white text-3xl">sanitizer</span>
+        </div>
+        <div className="absolute bottom-[20%] right-[20%] w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/30 shadow-xl flex items-center justify-center animate-bounce z-20" style={{ animationDuration: '4.5s', animationDelay: '1.5s' }}>
+          <span className="material-symbols-outlined text-white text-2xl">sanitizer</span>
+        </div>
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Input label="Full Name" name="name" value={formData.name} onChange={handleChange} placeholder="John Doe" required />
-        <Input label="Email" type="email" name="email" value={formData.email} onChange={handleChange} placeholder="your@email.com" required />
-        <Input label="Phone" type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="+91 9876543210" required />
-        <Input label="Password" type="password" name="password" value={formData.password} onChange={handleChange} placeholder="Min 6 characters" required />
-        <Input label="Confirm Password" type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder="Re-enter password" required />
-        <Button type="submit" loading={loading} className="w-full" size="lg">Create Account</Button>
-      </form>
+      {/* RIGHT SIDE: Registration Card */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 z-20">
+        
+        <div className="w-full max-w-[480px] bg-white/80 backdrop-blur-xl rounded-[32px] p-8 sm:p-10 shadow-[0_8px_32px_0_rgba(31,38,135,0.37)] border border-white/60 relative">
+          
+          {/* Back to Login Link */}
+          <Link 
+            to="/login" 
+            className="absolute top-8 right-8 text-sm font-semibold text-[#4A1578] hover:text-[#2D0B5A] transition-colors"
+          >
+            Back to Login
+          </Link>
 
-        <p className="mt-6 text-center text-sm text-text-secondary">
-          Already have an account?{' '}
-          <Link to="/login" className="text-primary-600 font-semibold hover:text-primary-700">Sign In</Link>
-        </p>
+          {/* Heading */}
+          <div className="mb-8 mt-2 pr-24">
+            {/* Logo */}
+            <div className="flex items-center gap-2 mb-6">
+              {settings?.appLogo ? (
+                <img src={getImageUrl(settings.appLogo)} alt={`${settings?.appName || 'GlentroSalon'} Logo`} className="h-8 md:h-10 object-contain" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#31105D] to-[#8854C0] flex items-center justify-center text-white font-bold text-lg shadow-md">
+                  {(settings?.appName || 'GlentroSalon').charAt(0)}
+                </div>
+              )}
+              <span className="font-headline-md text-xl font-bold text-[#2D0B5A]">
+                {settings?.appName || 'GlentroSalon'}
+              </span>
+            </div>
+
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Start Your Journey</h1>
+            <p className="text-gray-600 text-sm leading-relaxed">
+              Create your {settings?.appName || 'Glentro'} profile to discover amazing beauty services.
+            </p>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm flex items-center gap-2 animate-fade-in">
+              <span className="material-symbols-outlined text-[18px]">error</span>
+              {error}
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            
+            {/* Input Groups - Using custom styling to match the reference closely */}
+            <div>
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">person</span>
+                <input 
+                  type="text" 
+                  name="name" 
+                  value={formData.name} 
+                  onChange={handleChange} 
+                  placeholder="Full Name" 
+                  required 
+                  className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A1578]/20 focus:border-[#4A1578] transition-all shadow-sm"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">mail</span>
+                <input 
+                  type="email" 
+                  name="email" 
+                  value={formData.email} 
+                  onChange={handleChange} 
+                  placeholder="Email Address" 
+                  required 
+                  className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A1578]/20 focus:border-[#4A1578] transition-all shadow-sm"
+                />
+              </div>
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">phone</span>
+                <input 
+                  type="tel" 
+                  name="phone" 
+                  value={formData.phone} 
+                  onChange={handleChange} 
+                  placeholder="Mobile Number" 
+                  required 
+                  className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A1578]/20 focus:border-[#4A1578] transition-all shadow-sm"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">lock</span>
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  name="password" 
+                  value={formData.password} 
+                  onChange={handleChange} 
+                  placeholder="Password" 
+                  required 
+                  className="w-full pl-12 pr-12 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A1578]/20 focus:border-[#4A1578] transition-all shadow-sm"
+                />
+                <button 
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  <span className="material-symbols-outlined text-[20px]">{showPassword ? 'visibility_off' : 'visibility'}</span>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">lock_reset</span>
+                <input 
+                  type={showConfirmPassword ? "text" : "password"} 
+                  name="confirmPassword" 
+                  value={formData.confirmPassword} 
+                  onChange={handleChange} 
+                  placeholder="Confirm Password" 
+                  required 
+                  className="w-full pl-12 pr-12 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A1578]/20 focus:border-[#4A1578] transition-all shadow-sm"
+                />
+                <button 
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  <span className="material-symbols-outlined text-[20px]">{showConfirmPassword ? 'visibility_off' : 'visibility'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Terms Checkbox */}
+            <div className="pt-2 pb-2">
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <div className="relative flex items-center justify-center mt-0.5">
+                  <input 
+                    type="checkbox" 
+                    checked={acceptedTerms}
+                    onChange={(e) => setAcceptedTerms(e.target.checked)}
+                    className="w-5 h-5 rounded border-gray-300 text-[#4A1578] focus:ring-[#4A1578] transition-colors cursor-pointer"
+                  />
+                </div>
+                <span className="text-sm text-gray-600 leading-snug">
+                  I agree to the {settings?.appName || 'GlentroSalon'} <Link to="/terms-and-conditions?guest=true" className="text-gray-900 font-medium underline decoration-gray-300 underline-offset-2 hover:decoration-gray-900 transition-colors">Terms of Service</Link> & <Link to="/privacy-policy?guest=true" className="text-gray-900 font-medium underline decoration-gray-300 underline-offset-2 hover:decoration-gray-900 transition-colors">Privacy Policy</Link>.
+                </span>
+              </label>
+            </div>
+
+            {/* Submit Button */}
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="w-full py-3.5 mt-2 rounded-xl bg-gradient-to-r from-[#31105D] to-[#8854C0] text-white font-semibold text-[15px] shadow-lg shadow-purple-900/20 hover:shadow-purple-900/40 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-70 disabled:pointer-events-none flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Creating Account...</>
+              ) : (
+                'Create Account'
+              )}
+            </button>
+          </form>
+
+          {/* Footer Link */}
+          <div className="mt-8 text-center">
+            <p className="text-sm text-gray-600">
+              Already have an account?{' '}
+              <Link to="/login" className="font-bold text-[#2D0B5A] hover:text-[#60209c] transition-colors">
+                Login
+              </Link>
+            </p>
+          </div>
+
+        </div>
       </div>
     </div>
   );

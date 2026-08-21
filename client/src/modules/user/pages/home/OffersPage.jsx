@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { getPackages, getSalons, getCategories } from '../../services/userApi';
 import { useLocationContext } from '../../../../context/LocationContext';
 import { goBack } from '../../../../utils/navigation';
@@ -10,6 +10,8 @@ import toast from 'react-hot-toast';
 
 const OffersPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromProfile = location.state?.fromProfile;
   const [searchParams] = useSearchParams();
   const { selectedLocation } = useLocationContext();
 
@@ -134,7 +136,7 @@ const OffersPage = () => {
   };
 
   return (
-    <div className="animate-fade-in space-y-6 w-full px-4 md:px-margin-desktop pb-[120px] pt-4 min-h-screen bg-background">
+    <div className="animate-fade-in space-y-6 md:space-y-4 w-full px-4 md:px-0 pb-[120px] md:pb-12 pt-4 min-h-screen bg-background">
       
       {/* Header */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -142,15 +144,20 @@ const OffersPage = () => {
           <div className="flex items-center gap-2">
             <button 
               onClick={() => goBack(navigate, '/')} 
-              className="p-2 text-on-surface-variant hover:bg-soft-primary transition-colors rounded-full active:scale-95 duration-150 -ml-2"
+              className="md:hidden p-2 text-on-surface-variant hover:bg-soft-primary transition-colors rounded-full active:scale-95 duration-150 -ml-2"
             >
               <span className="material-symbols-outlined">arrow_back</span>
             </button>
-            <h1 className="font-headline-xl text-[28px] md:text-[36px] font-bold text-on-surface leading-tight">
+            {fromProfile && (
+              <button onClick={() => navigate(-1)} className="hidden md:flex p-2 text-on-surface-variant hover:bg-soft-primary transition-colors rounded-full active:scale-95 duration-150 -ml-2">
+                <span className="material-symbols-outlined">arrow_back</span>
+              </button>
+            )}
+            <h1 className="font-headline-xl text-[28px] md:text-[36px] font-bold tracking-tight">
               Exclusive Offers & Deals
             </h1>
           </div>
-          <p className="text-sm text-muted-text mt-1 ml-8">
+          <p className="text-sm text-muted-text mt-1 ml-8 md:ml-0">
             Pamper yourself with premium salon bundles and save big
           </p>
         </div>

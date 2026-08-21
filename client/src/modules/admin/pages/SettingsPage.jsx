@@ -1,16 +1,28 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSettings } from '../../../context/SettingContext';
-import { updateAppLogo, updateAppName, updateSearchRadius } from '../../../services/api/settingApi';
+import { updateAppLogo, updateAppName, updateSearchRadius, updateBulkSettings, updateLoginImage, updateRegisterImage } from '../../../services/api/settingApi';
 import ImageUpload from '../../../components/common/ImageUpload';
 
 export default function SettingsPage() {
   const { settings, fetchSettings } = useSettings();
   const [logoFile, setLogoFile] = useState(null);
+  const [loginImageFile, setLoginImageFile] = useState(null);
+  const [registerImageFile, setRegisterImageFile] = useState(null);
+  const [loginImageLoading, setLoginImageLoading] = useState(false);
+  const [registerImageLoading, setRegisterImageLoading] = useState(false);
   const [appName, setAppName] = useState('');
   const [searchRadius, setSearchRadius] = useState('');
   const [loading, setLoading] = useState(false);
   const [nameLoading, setNameLoading] = useState(false);
   const [radiusLoading, setRadiusLoading] = useState(false);
+  const [supportLoading, setSupportLoading] = useState(false);
+  const [supportSettings, setSupportSettings] = useState({
+    supportEmail: '',
+    supportPhone: '',
+    supportWhatsApp: '',
+    supportHours: '',
+    supportDescription: '',
+  });
   const [message, setMessage] = useState({ type: '', text: '' });
   const [pageLoading, setPageLoading] = useState(true);
 
@@ -23,6 +35,15 @@ export default function SettingsPage() {
   useEffect(() => {
     if (settings?.appName) setAppName(settings.appName);
     if (settings?.salonSearchRadius) setSearchRadius(settings.salonSearchRadius);
+    if (settings) {
+      setSupportSettings({
+        supportEmail: settings.supportEmail || '',
+        supportPhone: settings.supportPhone || '',
+        supportWhatsApp: settings.supportWhatsApp || '',
+        supportHours: settings.supportHours || '',
+        supportDescription: settings.supportDescription || '',
+      });
+    }
   }, [settings]);
 
   const handleSaveLogo = async () => {
@@ -44,6 +65,52 @@ export default function SettingsPage() {
       setMessage({ type: 'error', text: 'Failed to update app logo' });
     } finally {
       setLoading(false);
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+    }
+  };
+
+  const handleSaveLoginImage = async () => {
+    if (!loginImageFile) return;
+    setLoginImageLoading(true);
+    setMessage({ type: '', text: '' });
+    try {
+      const formData = new FormData();
+      formData.append('image', loginImageFile);
+      
+      const res = await updateLoginImage(formData);
+      if (res.data?.success) {
+        setMessage({ type: 'success', text: 'Login page image updated successfully' });
+        await fetchSettings();
+        setLoginImageFile(null);
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage({ type: 'error', text: 'Failed to update login page image' });
+    } finally {
+      setLoginImageLoading(false);
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+    }
+  };
+
+  const handleSaveRegisterImage = async () => {
+    if (!registerImageFile) return;
+    setRegisterImageLoading(true);
+    setMessage({ type: '', text: '' });
+    try {
+      const formData = new FormData();
+      formData.append('image', registerImageFile);
+      
+      const res = await updateRegisterImage(formData);
+      if (res.data?.success) {
+        setMessage({ type: 'success', text: 'Register page image updated successfully' });
+        await fetchSettings();
+        setRegisterImageFile(null);
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage({ type: 'error', text: 'Failed to update register page image' });
+    } finally {
+      setRegisterImageLoading(false);
       setTimeout(() => setMessage({ type: '', text: '' }), 5000);
     }
   };
@@ -77,14 +144,32 @@ export default function SettingsPage() {
     try {
       const res = await updateSearchRadius(searchRadius);
       if (res.data?.success) {
-        setMessage({ type: 'success', text: 'Salon search radius updated successfully.' });
+        setMessage({ type: 'success', text: 'Salon search radius updated successfully' });
         await fetchSettings();
       }
     } catch (error) {
       console.error(error);
-      setMessage({ type: 'error', text: 'Failed to update salon search radius. Please try again.' });
+      setMessage({ type: 'error', text: 'Failed to update search radius' });
     } finally {
       setRadiusLoading(false);
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+    }
+  };
+
+  const handleSaveSupportSettings = async () => {
+    setSupportLoading(true);
+    setMessage({ type: '', text: '' });
+    try {
+      const res = await updateBulkSettings(supportSettings);
+      if (res.data?.success) {
+        setMessage({ type: 'success', text: 'Support configuration updated successfully' });
+        await fetchSettings();
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage({ type: 'error', text: 'Failed to update support configuration' });
+    } finally {
+      setSupportLoading(false);
       setTimeout(() => setMessage({ type: '', text: '' }), 5000);
     }
   };
@@ -128,7 +213,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-4xl h-full overflow-y-auto pb-20 pr-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-on-surface">Platform Settings</h1>
@@ -204,6 +289,70 @@ export default function SettingsPage() {
           
           <div className="w-32 hidden sm:block shrink-0"></div>
         </div>
+
+        <hr className="my-8 border-border" />
+
+        <div className="flex flex-col sm:flex-row gap-6 items-start">
+          <div className="flex-1 space-y-2">
+            <h3 className="text-sm font-medium text-on-surface">Login Page Image</h3>
+            <p className="text-xs text-muted-text max-w-md">
+              This image will be displayed on the public Login page.
+              Recommended size: High resolution portrait image (e.g. 1200x1600px).
+            </p>
+            
+            <div className="pt-4 flex gap-3 flex-col sm:flex-row">
+              <div className="flex-1">
+                <ImageUpload 
+                  currentImage={settings?.loginPageImage}
+                  onFileSelect={setLoginImageFile}
+                  label=""
+                  maxSizeMB={2}
+                />
+              </div>
+              {loginImageFile && (
+                <button 
+                  onClick={handleSaveLoginImage}
+                  disabled={loginImageLoading}
+                  className="px-4 py-2 mt-4 sm:mt-0 h-fit bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  {loginImageLoading ? 'Saving...' : 'Save Image'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <hr className="my-8 border-border" />
+
+        <div className="flex flex-col sm:flex-row gap-6 items-start">
+          <div className="flex-1 space-y-2">
+            <h3 className="text-sm font-medium text-on-surface">Register Page Image</h3>
+            <p className="text-xs text-muted-text max-w-md">
+              This image will be displayed on the public Register page.
+              Recommended size: High resolution portrait image (e.g. 1200x1600px).
+            </p>
+            
+            <div className="pt-4 flex gap-3 flex-col sm:flex-row">
+              <div className="flex-1">
+                <ImageUpload 
+                  currentImage={settings?.registerPageImage}
+                  onFileSelect={setRegisterImageFile}
+                  label=""
+                  maxSizeMB={2}
+                />
+              </div>
+              {registerImageFile && (
+                <button 
+                  onClick={handleSaveRegisterImage}
+                  disabled={registerImageLoading}
+                  className="px-4 py-2 mt-4 sm:mt-0 h-fit bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  {registerImageLoading ? 'Saving...' : 'Save Image'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="bg-surface rounded-2xl border border-border p-6 shadow-sm">
@@ -239,6 +388,80 @@ export default function SettingsPage() {
           </div>
           
           <div className="w-32 hidden sm:block shrink-0"></div>
+        </div>
+      </div>
+
+      <div className="bg-surface rounded-2xl border border-border p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-on-surface mb-4">Support Configuration</h2>
+        
+        <div className="flex flex-col gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-on-surface">Support Email</label>
+              <input 
+                type="email" 
+                value={supportSettings.supportEmail}
+                onChange={(e) => setSupportSettings({ ...supportSettings, supportEmail: e.target.value })}
+                placeholder="e.g. support@glentrosalon.com"
+                className="w-full px-4 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-background-alt"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-on-surface">Support Phone</label>
+              <input 
+                type="text" 
+                value={supportSettings.supportPhone}
+                onChange={(e) => setSupportSettings({ ...supportSettings, supportPhone: e.target.value })}
+                placeholder="e.g. +1 800 123 4567"
+                className="w-full px-4 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-background-alt"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-on-surface">WhatsApp Number</label>
+              <input 
+                type="text" 
+                value={supportSettings.supportWhatsApp}
+                onChange={(e) => setSupportSettings({ ...supportSettings, supportWhatsApp: e.target.value })}
+                placeholder="e.g. +1 800 123 4567"
+                className="w-full px-4 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-background-alt"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-on-surface">Support Hours</label>
+              <input 
+                type="text" 
+                value={supportSettings.supportHours}
+                onChange={(e) => setSupportSettings({ ...supportSettings, supportHours: e.target.value })}
+                placeholder="e.g. Mon-Fri, 9am - 6pm"
+                className="w-full px-4 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-background-alt"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-on-surface">Support Description Paragraph</label>
+            <p className="text-xs text-muted-text mb-2">This is the main introduction text displayed on the Help & Support page.</p>
+            <textarea 
+              value={supportSettings.supportDescription}
+              onChange={(e) => setSupportSettings({ ...supportSettings, supportDescription: e.target.value })}
+              placeholder="Our support team is here to help..."
+              rows={4}
+              className="w-full px-4 py-3 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-background-alt resize-none"
+            />
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button 
+              onClick={handleSaveSupportSettings}
+              disabled={supportLoading}
+              className="px-6 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              {supportLoading ? 'Saving...' : 'Save Support Config'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

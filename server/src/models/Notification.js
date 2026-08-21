@@ -4,7 +4,7 @@ const notificationSchema = new mongoose.Schema(
   {
     recipient: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
+      required: false,
       refPath: 'recipientModel',
     },
     recipientModel: {
@@ -36,6 +36,9 @@ const notificationSchema = new mongoose.Schema(
         'OFFER_APPROVAL_REQUEST',
         'CHAT_MESSAGE',
         'SYSTEM',
+        'RECOVERY_REQUEST',
+        'ACCOUNT_RECOVERED',
+        'RECOVERY_REJECTED',
       ],
     },
     title: {

@@ -3,7 +3,7 @@ import { Skeleton, SkeletonText, SkeletonAvatar } from '../../../../components/c
 
 export const ProfileSkeleton = () => {
   return (
-    <div className="space-y-6 w-full px-4 md:px-margin-desktop pb-[100px] pt-4">
+    <div className="w-full max-w-2xl md:max-w-4xl lg:max-w-5xl mx-auto flex flex-col pb-4 pt-4 space-y-6">
       <SkeletonText lines={1} className="w-32 hidden md:block mb-8" lineClassName="h-8" />
       
       {/* Profile Header Skeleton */}

@@ -52,6 +52,7 @@ const protect = async (req, res, next) => {
       role: decoded.role,
       name: user.name,
       email: user.email,
+      accountStatus: user.accountStatus || 'active'
     };
 
     next();
@@ -63,4 +64,28 @@ const protect = async (req, res, next) => {
   }
 };
 
-module.exports = { protect };
+/**
+ * Require active user - ensure account is not deleted/recovery_requested
+ * Must be used AFTER protect middleware
+ */
+const requireActiveUser = (req, res, next) => {
+  if (req.user && req.user.accountStatus !== 'active') {
+    if (req.user.accountStatus === 'deleted') {
+      return res.status(403).json({
+        success: false,
+        code: 'ACCOUNT_DELETED',
+        message: 'Your account has been deleted. You can request account recovery if you want to restore it.'
+      });
+    }
+    if (req.user.accountStatus === 'recovery_requested') {
+      return res.status(403).json({
+        success: false,
+        code: 'ACCOUNT_RECOVERY_PENDING',
+        message: 'Your account recovery request is currently under review.'
+      });
+    }
+  }
+  next();
+};
+
+module.exports = { protect, requireActiveUser };

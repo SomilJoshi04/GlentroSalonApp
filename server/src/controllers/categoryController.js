@@ -14,7 +14,7 @@ const getCategories = async (req, res, next) => {
       const skip = (parseInt(page) - 1) * parseInt(limit);
       const total = await Category.countDocuments(query);
       const categories = await Category.find(query)
-        .sort({ name: 1 })
+        .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit));
       return res.json({
@@ -28,7 +28,7 @@ const getCategories = async (req, res, next) => {
       });
     }
 
-    const categories = await Category.find(query).sort({ name: 1 });
+    const categories = await Category.find(query).sort({ createdAt: -1 });
     res.json({ success: true, data: categories });
   } catch (error) { next(error); }
 };

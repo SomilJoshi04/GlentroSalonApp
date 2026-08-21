@@ -135,14 +135,11 @@ const SearchPage = () => {
   };
 
   return (
-    <div className="animate-fade-in space-y-6 w-full px-4 md:px-margin-desktop pb-[100px]">
+    <div className="animate-fade-in space-y-6 md:space-y-4 w-full px-4 md:px-0 pb-[100px] md:pb-12">
       {/* Header */}
-      <header className="sticky top-[env(safe-area-inset-top)] z-40 bg-surface/90 backdrop-blur-md pb-4 pt-2 md:mx-0 md:px-0">
+      <header className="sticky top-[env(safe-area-inset-top)] z-40 bg-surface/90 backdrop-blur-md pb-4 pt-2 md:pt-4 md:mx-0 md:px-0">
         <div className="md:hidden"><PageHeader title="Search" fallbackPath="/" /></div>
-        <div className="hidden md:block mb-4">
-           <button onClick={() => goBack(navigate, '/')} className="p-2 text-on-surface-variant hover:bg-soft-primary transition-colors rounded-full active:scale-95 duration-150 -ml-2 mb-2">
-             <span className="material-symbols-outlined">arrow_back</span>
-           </button>
+        <div className="hidden md:block mb-4 md:mb-2">
            <h1 className="font-headline-xl text-[40px] font-bold text-on-surface leading-tight">Discover Top Salons</h1>
         </div>
         
@@ -237,7 +234,7 @@ const SearchPage = () => {
                 <h2 className="font-headline-sm text-[20px] font-semibold text-on-surface">Trending Salons</h2>
                 <button onClick={() => navigate('/salons')} className="font-label-sm text-[12px] font-medium text-primary hover:underline hidden md:block">View All</button>
               </div>
-              <div className="flex overflow-x-auto gap-4 pb-4 px-4 md:px-margin-desktop snap-x hide-scrollbar">
+              <div className="flex overflow-x-auto gap-4 pb-4 px-4 md:px-0 snap-x hide-scrollbar">
                 {trendingSalons.map(salon => (
                   <div 
                     key={salon._id}

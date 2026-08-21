@@ -43,6 +43,14 @@ export const verifyPayment = (data) => api.post('/payments/verify', data);
 export const getAvailability = (salonId, params) => api.get(`/bookings/availability/${salonId}`, { params });
 export const getComplexAvailability = (salonId, data) => api.post(`/bookings/availability/${salonId}`, data);
 
+// Content & Policies
+export const getContent = (type) => api.get(`/content/${type}`);
+export const getActiveFAQs = () => api.get('/faqs');
+
+// Booking Issues
+export const createBookingIssue = (data) => api.post('/booking-issues', data);
+export const getMyBookingIssues = () => api.get('/booking-issues');
+
 // Coupons
 export const validateCoupon = (data) => api.post('/coupons/validate', data);
 
@@ -67,3 +75,7 @@ export const getNotifications = (params) => api.get('/notifications', { params }
 export const markNotificationRead = (id) => api.patch(`/notifications/${id}/read`);
 export const markAllNotificationsRead = () => api.patch('/notifications/read-all');
 export const getUnreadCount = () => api.get('/notifications/unread-count');
+
+// Account Settings
+export const deleteUserAccount = (data) => api.delete('/users/account', { data });
+export const requestAccountRecovery = (data) => api.post('/account-recovery/request', data);

@@ -205,6 +205,59 @@ const PromotionalVideosPage = () => {
     }
   };
 
+  const columns = [
+    {
+      header: 'Video',
+      render: (row) => (
+        <div className="flex items-center gap-3">
+          {row.image ? (
+            <img src={getImageUrl(row.image)} alt={row.title} className="w-16 h-10 rounded object-cover bg-background" />
+          ) : (
+            <div className="w-16 h-10 rounded bg-surface-variant flex items-center justify-center text-muted-text">
+              <span className="material-symbols-outlined text-[20px]">videocam</span>
+            </div>
+          )}
+          <div>
+            <div className="text-on-surface font-medium">{row.title}</div>
+            <div className="text-[12px] text-muted-text line-clamp-1">{row.description || 'No description'}</div>
+          </div>
+        </div>
+      )
+    },
+    {
+      header: 'Type',
+      render: (row) => (
+        <span className="text-[12px] font-medium text-text-secondary bg-surface-variant px-2 py-0.5 rounded-full capitalize">
+          {row.type || 'Video'}
+        </span>
+      )
+    },
+    {
+      header: 'Status',
+      render: (row) => (
+        <button 
+          onClick={() => handleToggle(row._id)}
+          className={`px-2 py-0.5 rounded-full text-[12px] font-bold transition-colors ${row.isActive ? 'bg-success/10 text-success hover:bg-success/20' : 'bg-text-muted/10 text-text-muted hover:bg-text-muted/20'}`}
+        >
+          {row.isActive ? 'Active' : 'Hidden'}
+        </button>
+      )
+    },
+    {
+      header: 'Action',
+      render: (row) => (
+        <div className="flex items-center gap-2">
+          <button onClick={() => openEditForm(row)} className="text-primary hover:bg-primary/10 p-1.5 rounded-lg transition-colors">
+            <span className="material-symbols-outlined text-[18px]">edit</span>
+          </button>
+          <button onClick={() => handleDelete(row._id)} className="text-error hover:bg-error/10 p-1.5 rounded-lg transition-colors">
+            <span className="material-symbols-outlined text-[18px]">delete</span>
+          </button>
+        </div>
+      )
+    }
+  ];
+
   return (
     <AdminPageLayout>
       <AdminPageHeader 
@@ -224,88 +277,7 @@ const PromotionalVideosPage = () => {
       <Modal isOpen={showForm} onClose={() => setShowForm(false)} title={editingVideo ? "Edit Promotional Video" : "Add Promotional Video"} size="lg">
         <form onSubmit={handleSubmit} className="space-y-4">
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-text-secondary mb-1">Video Title</label>
-              <input 
-                type="text" 
-                value={form.title} 
-                onChange={e => setForm({...form, title: e.target.value})} 
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-xs font-medium focus:border-primary-500 focus:outline-none" 
-                placeholder="Exclusive Salon Offer Video" 
-              />
-            </div>
 
-            <div>
-              <label className="block text-xs font-bold text-text-secondary mb-1">Display Order Index</label>
-              <input 
-                type="number" 
-                value={form.displayOrder} 
-                onChange={e => setForm({...form, displayOrder: e.target.value})} 
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-xs font-medium focus:border-primary-500 focus:outline-none" 
-                placeholder="0" 
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-text-secondary mb-1">CTA Button Text</label>
-              <input 
-                type="text" 
-                value={form.ctaText} 
-                onChange={e => setForm({...form, ctaText: e.target.value})} 
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-xs font-medium focus:border-primary-500 focus:outline-none" 
-                placeholder="Book Now" 
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-text-secondary mb-1">Redirect Link URL (Optional)</label>
-              <input 
-                type="text" 
-                value={form.link} 
-                onChange={e => setForm({...form, link: e.target.value})} 
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-xs font-medium focus:border-primary-500 focus:outline-none" 
-                placeholder="https://..." 
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-text-secondary mb-1">Brief Description / Promo Subtext</label>
-              <textarea 
-                value={form.description} 
-                onChange={e => setForm({...form, description: e.target.value})} 
-                rows={2}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-xs font-medium focus:border-primary-500 focus:outline-none resize-none" 
-                placeholder="Describe this promotional video offer..." 
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-text-secondary mb-1">Publish Date (Start)</label>
-              <input 
-                type="date" 
-                value={form.startDate} 
-                onChange={e => setForm({...form, startDate: e.target.value})} 
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-xs font-medium focus:border-primary-500 focus:outline-none" 
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-text-secondary mb-1">Expiration Date (End)</label>
-              <input 
-                type="date" 
-                value={form.endDate} 
-                onChange={e => setForm({...form, endDate: e.target.value})} 
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-xs font-medium focus:border-primary-500 focus:outline-none" 
-              />
-            </div>
-          </div>
 
           {/* Video upload section */}
           <div className="space-y-2 border border-border border-dashed p-4 rounded-2xl bg-surface-elevated">
@@ -400,13 +372,12 @@ const PromotionalVideosPage = () => {
             </div>
             
             <div>
-              <label className="text-xs font-semibold text-text-secondary">Destination Link <span className="text-error">*</span></label>
+              <label className="text-xs font-semibold text-text-secondary">Destination Link (Optional)</label>
               <div className="relative mt-1.5">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[16px] text-text-muted">link</span>
                 <input 
                   value={form.link} 
                   onChange={e => setForm({...form, link: e.target.value})} 
-                  required 
                   placeholder="https://..."
                   className="w-full pl-9 pr-3 py-2 rounded-xl bg-surface border border-border text-text-primary text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all shadow-inner" 
                 />

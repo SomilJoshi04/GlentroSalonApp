@@ -2,12 +2,12 @@ const Button = ({ children, variant = 'primary', size = 'md', className = '', di
   const baseStyles = 'inline-flex items-center justify-center font-semibold transition-all duration-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
   
   const variants = {
-    primary: 'bg-primary text-white hover:bg-primary-dark focus:ring-primary shadow-md hover:shadow-lg active:scale-[0.98]',
-    secondary: 'bg-surface text-primary border-2 border-primary hover:bg-soft-primary focus:ring-primary',
-    accent: 'bg-secondary text-white hover:bg-secondary-container focus:ring-secondary shadow-md',
-    ghost: 'text-primary hover:bg-soft-primary focus:ring-primary',
-    danger: 'bg-error text-white hover:bg-error/90 focus:ring-error',
-    outline: 'border border-outline text-on-surface hover:bg-surface-variant focus:ring-outline',
+    primary: 'bg-primary text-white hover:bg-primary-dark focus:ring-primary shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]',
+    secondary: 'bg-surface text-primary border-2 border-primary hover:bg-soft-primary focus:ring-primary hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]',
+    accent: 'bg-secondary text-white hover:bg-secondary-container focus:ring-secondary shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]',
+    ghost: 'text-primary hover:bg-soft-primary focus:ring-primary hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]',
+    danger: 'bg-error text-white hover:bg-error/90 focus:ring-error shadow-sm hover:shadow hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]',
+    outline: 'border border-outline text-on-surface hover:bg-surface-variant focus:ring-outline hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]',
   };
 
   const sizes = {

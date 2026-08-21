@@ -31,24 +31,24 @@ const VendorLayout = () => {
   return (
     <div className="h-screen w-full bg-background flex font-inter overflow-hidden">
       {/* Sidebar */}
-      <aside className={`absolute md:relative inset-y-0 left-0 z-50 w-[260px] bg-surface border-r border-border transform transition-transform duration-300 flex flex-col h-full ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        <div className="flex items-center gap-3 px-6 py-6 border-b border-border shrink-0">
+      <aside className={`absolute md:relative inset-y-0 left-0 z-50 w-[260px] bg-[#1b0639] border-r border-white/10 transform transition-transform duration-300 flex flex-col h-full ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <div className="flex items-center gap-3 px-6 py-6 border-b border-white/10 shrink-0">
           {settings?.appLogo ? (
-            <img src={getImageUrl(settings.appLogo)} alt="App Logo" className="w-10 h-10 rounded-lg object-contain" />
+            <img src={getImageUrl(settings.appLogo)} alt="App Logo" className="w-10 h-10 rounded-lg object-contain bg-white/5 p-1" />
           ) : (
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white">
-              <span className="material-symbols-outlined text-[20px]">spa</span>
+            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-primary border border-white/20 shadow-inner">
+              <span className="material-symbols-outlined text-[24px]">spa</span>
             </div>
           )}
           <div>
-            <h1 className="font-headline-sm text-[18px] text-primary leading-tight">{settings?.appName || 'LuxeSalon'}</h1>
-            <p className="font-label-sm text-[11px] text-muted-text">Vendor Portal</p>
+            <h1 className="font-headline-sm text-[18px] text-white leading-tight font-bold tracking-wide">{settings?.appName || 'Glentro Salon'}</h1>
+            <p className="font-label-sm text-[11px] text-white/70 tracking-wider">Vendor Portal</p>
           </div>
         </div>
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto hide-scrollbar">
           {navItems.map(item => (
             <NavLink key={item.to} to={item.to} end={item.to === '/vendor'} onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) => `flex items-center justify-between px-3 py-2.5 rounded-xl text-[14px] font-medium transition-all ${isActive ? 'bg-soft-primary text-primary' : 'text-muted-text hover:bg-surface-variant hover:text-on-surface'}`}>
+              className={({ isActive }) => `flex items-center justify-between px-3 py-2.5 rounded-xl text-[14px] font-medium transition-all duration-200 ${isActive ? 'bg-primary text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}>
               <div className="flex items-center gap-3">
                 <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
                 {item.label}
@@ -61,9 +61,9 @@ const VendorLayout = () => {
             </NavLink>
           ))}
         </nav>
-        <div className="p-4 border-t border-border mt-auto shrink-0">
+        <div className="p-4 border-t border-white/10 mt-auto shrink-0">
           <button onClick={() => { logout('vendor'); navigate('/vendor/login'); }}
-            className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-[13px] font-medium text-error hover:bg-error/10 transition-colors">
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-[13px] font-medium text-white/80 hover:bg-error hover:text-white transition-colors duration-200">
             <span className="material-symbols-outlined text-[18px]">logout</span>
             Logout
           </button>

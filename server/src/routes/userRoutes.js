@@ -1,14 +1,15 @@
 const router = require('express').Router();
-const { getUsers, getUserById, updateProfile, updateLocation, toggleUserStatus, updateFcmToken } = require('../controllers/userController');
-const { protect } = require('../middleware/authMiddleware');
+const { getUsers, getUserById, updateProfile, updateLocation, toggleUserStatus, updateFcmToken, deleteAccount } = require('../controllers/userController');
+const { protect, requireActiveUser } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 const upload = require('../middleware/uploadMiddleware');
 
 router.get('/', protect, authorize('admin'), getUsers);
 router.get('/:id', protect, authorize('admin'), getUserById);
-router.put('/profile', protect, authorize('user', 'admin'), upload.single('avatar'), updateProfile);
-router.put('/location', protect, authorize('user'), updateLocation);
+router.put('/profile', protect, requireActiveUser, authorize('user', 'admin'), upload.single('avatar'), updateProfile);
+router.put('/location', protect, requireActiveUser, authorize('user'), updateLocation);
 router.patch('/:id/toggle-status', protect, authorize('admin'), toggleUserStatus);
-router.put('/fcm-token', protect, updateFcmToken);
+router.put('/fcm-token', protect, requireActiveUser, updateFcmToken);
+router.delete('/account', protect, requireActiveUser, authorize('user'), deleteAccount);
 
 module.exports = router;

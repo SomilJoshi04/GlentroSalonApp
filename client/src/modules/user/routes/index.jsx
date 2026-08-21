@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react';
 import Loader from '../../../components/common/Loader';
 import AuthLayout from '../layouts/AuthLayout';
 import MainLayout from '../layouts/MainLayout';
+import LegalPageLayout from '../layouts/LegalPageLayout';
 import ProtectedRoute from '../../../components/common/ProtectedRoute';
 
 import LoginPage from '../pages/auth/LoginPage';
@@ -12,6 +13,7 @@ import SearchPage from '../pages/home/SearchPage';
 
 const SalonListPage = lazy(() => import('../pages/salon/SalonListPage'));
 const SalonDetailPage = lazy(() => import('../pages/salon/SalonDetailPage'));
+const ContentPage = lazy(() => import('../pages/profile/ContentPage'));
 const BookingPage = lazy(() => import('../pages/booking/BookingPage'));
 const CheckoutPage = lazy(() => import('../pages/booking/CheckoutPage'));
 const BookingListPage = lazy(() => import('../pages/booking/BookingListPage'));
@@ -21,6 +23,8 @@ const ChatPage = lazy(() => import('../pages/chat/ChatPage'));
 const NotificationsPage = lazy(() => import('../pages/notifications/NotificationsPage'));
 const ProfilePage = lazy(() => import('../pages/profile/ProfilePage'));
 const FavoritesPage = lazy(() => import('../pages/profile/FavoritesPage'));
+const SupportPage = lazy(() => import('../pages/profile/SupportPage'));
+const BookingIssuesPage = lazy(() => import('../pages/profile/BookingIssuesPage'));
 import OffersPage from '../pages/home/OffersPage';
 
 const SuspenseWrapper = ({ children }) => (
@@ -32,10 +36,8 @@ const SuspenseWrapper = ({ children }) => (
 export default function UserRoutes() {
   return (
     <Routes>
-      <Route element={<AuthLayout />}>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-      </Route>
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/login" element={<LoginPage />} />
 
       {/* Public Routes under MainLayout */}
       <Route element={<MainLayout />}>
@@ -57,6 +59,15 @@ export default function UserRoutes() {
         <Route path="/notifications" element={<SuspenseWrapper><NotificationsPage /></SuspenseWrapper>} />
         <Route path="/profile" element={<SuspenseWrapper><ProfilePage /></SuspenseWrapper>} />
         <Route path="/favorites" element={<SuspenseWrapper><FavoritesPage /></SuspenseWrapper>} />
+        {/* Support Pages */}
+        <Route path="/support" element={<SuspenseWrapper><SupportPage /></SuspenseWrapper>} />
+        <Route path="/booking-issues" element={<SuspenseWrapper><BookingIssuesPage /></SuspenseWrapper>} />
+      </Route>
+
+      {/* Guest/Public Legal Pages */}
+      <Route element={<LegalPageLayout />}>
+        <Route path="/privacy-policy" element={<SuspenseWrapper><ContentPage type="privacy_policy" titleFallback="Privacy Policy" /></SuspenseWrapper>} />
+        <Route path="/terms-and-conditions" element={<SuspenseWrapper><ContentPage type="terms_conditions" titleFallback="Terms & Conditions" /></SuspenseWrapper>} />
       </Route>
     </Routes>
   );

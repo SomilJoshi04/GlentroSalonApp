@@ -46,6 +46,25 @@ const loginUser = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Account has been deactivated' });
     }
 
+    if (user.accountStatus === 'deleted') {
+      return res.status(403).json({
+        success: false,
+        code: 'ACCOUNT_DELETED',
+        message: 'Your account has been deleted. You can request account recovery if you want to restore it.'
+      });
+    }
+
+    if (user.accountStatus === 'recovery_requested') {
+      return res.status(403).json({
+        success: false,
+        code: 'ACCOUNT_RECOVERY_PENDING',
+        message: 'Your account recovery request is currently under review.'
+      });
+    }
+
+    user.lastLogin = new Date();
+    await user.save();
+
     const token = generateToken(user._id, user.role);
 
     res.json({

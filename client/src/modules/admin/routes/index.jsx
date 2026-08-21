@@ -25,6 +25,9 @@ const SettingsPage = lazy(() => import('../pages/SettingsPage'));
 const NotificationsPage = lazy(() => import('../pages/NotificationsPage'));
 const SupportPage = lazy(() => import('../pages/SupportPage'));
 const SupportChatPage = lazy(() => import('../pages/SupportChatPage'));
+const ContentPage = lazy(() => import('../pages/ContentPage'));
+const AdminFAQPage = lazy(() => import('../pages/AdminFAQPage'));
+const AdminBookingIssuesPage = lazy(() => import('../pages/AdminBookingIssuesPage'));
 const ProfilePage = lazy(() => import('../pages/ProfilePage'));
 const ReviewsPage = lazy(() => import('../pages/ReviewsPage'));
 
@@ -55,6 +58,9 @@ export default function AdminRoutes() {
         <Route path="promotional-videos" element={<SuspenseWrapper><PromotionalVideosPage /></SuspenseWrapper>} />
         <Route path="settings" element={<SuspenseWrapper><SettingsPage /></SuspenseWrapper>} />
         <Route path="notifications" element={<SuspenseWrapper><NotificationsPage /></SuspenseWrapper>} />
+        <Route path="content" element={<SuspenseWrapper><ContentPage /></SuspenseWrapper>} />
+        <Route path="faqs" element={<SuspenseWrapper><AdminFAQPage /></SuspenseWrapper>} />
+        <Route path="booking-issues" element={<SuspenseWrapper><AdminBookingIssuesPage /></SuspenseWrapper>} />
         <Route path="support" element={<SuspenseWrapper><SupportPage /></SuspenseWrapper>} />
         <Route path="support/:chatId" element={<SuspenseWrapper><SupportChatPage /></SuspenseWrapper>} />
         <Route path="profile" element={<SuspenseWrapper><ProfilePage /></SuspenseWrapper>} />

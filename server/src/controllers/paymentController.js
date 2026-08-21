@@ -54,7 +54,7 @@ exports.verifyPayment = async (req, res) => {
     const booking = await Booking.findByIdAndUpdate(bookingId, {
       paymentStatus: 'PAID',
       paymentMethod: 'ONLINE',
-      transactionId: razorpay_payment_id,
+      razorpayPaymentId: razorpay_payment_id,
       status: 'CONFIRMED' // Mark confirmed upon successful payment
     }, { new: true });
 

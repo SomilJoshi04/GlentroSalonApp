@@ -61,17 +61,20 @@ const AdminLayout = () => {
     { to: '/admin/promotional-videos', label: 'Promotional Videos', icon: 'videocam' },
     { to: '/admin/commissions', label: 'Financials', icon: 'account_balance_wallet' },
     { to: '/admin/notifications', label: 'Notifications', icon: 'notifications' },
+    { to: '/admin/content', label: 'Content (CMS)', icon: 'article' },
     { to: '/admin/settings', label: 'Settings', icon: 'settings' },
-    { to: '/admin/support', label: 'Support', icon: 'headset_mic' },
+    { to: '/admin/support', label: 'Live Support', icon: 'headset_mic' },
+    { to: '/admin/booking-issues', label: 'Booking Issues', icon: 'report_problem' },
+    { to: '/admin/faqs', label: 'FAQs', icon: 'help_center' },
   ];
 
   return (
     <div className="h-screen bg-background flex font-inter overflow-hidden">
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-[260px] bg-surface border-r border-border transform transition-transform duration-300 lg:translate-x-0 lg:static flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-[260px] bg-[#1b0639] border-r border-white/10 transform transition-transform duration-300 lg:translate-x-0 lg:static flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         
         {/* Brand/Logo */}
-        <div className="flex items-center gap-3 px-6 py-6 border-b border-border shrink-0">
+        <div className="flex items-center gap-3 px-6 py-6 border-b border-white/10 shrink-0">
           {settings?.appLogo ? (
             <img src={getImageUrl(settings.appLogo)} alt="App Logo" className="w-10 h-10 rounded-lg object-contain" />
           ) : (
@@ -80,8 +83,8 @@ const AdminLayout = () => {
             </div>
           )}
           <div>
-            <h1 className="font-headline-sm text-[18px] text-primary leading-tight">{settings?.appName || 'LuxeSalon'}</h1>
-            <p className="font-label-sm text-[11px] text-muted-text">Management Portal</p>
+            <h1 className="font-headline-sm text-[18px] text-white leading-tight">{settings?.appName || 'Glentro Salon'}</h1>
+            <p className="font-label-sm text-[11px] text-white/70">Management Portal</p>
           </div>
         </div>
 
@@ -93,7 +96,7 @@ const AdminLayout = () => {
               to={item.to} 
               end={item.to === '/admin'} 
               onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) => `flex items-center justify-between px-3 py-2.5 rounded-xl text-[14px] font-medium transition-all ${isActive ? 'bg-soft-primary text-primary' : 'text-muted-text hover:bg-surface-variant hover:text-on-surface'}`}
+              className={({ isActive }) => `flex items-center justify-between px-3 py-2.5 rounded-xl text-[14px] font-medium transition-all duration-200 ${isActive ? 'bg-primary text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
             >
               <div className="flex items-center gap-3">
                 <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
@@ -109,10 +112,10 @@ const AdminLayout = () => {
         </nav>
 
         {/* Logout */}
-        <div className="p-4 border-t border-border mt-auto shrink-0">
+        <div className="p-4 border-t border-white/10 mt-auto shrink-0">
           <button 
             onClick={() => { logout('admin'); navigate('/admin/login'); }} 
-            className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-[13px] font-medium text-error hover:bg-error/10 transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-[13px] font-medium text-white/80 hover:bg-error hover:text-white transition-colors duration-200"
           >
             <span className="material-symbols-outlined text-[18px]">logout</span>
             Logout
@@ -169,8 +172,8 @@ const AdminLayout = () => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-hidden relative bg-background">
-          <div className="absolute inset-0 p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto w-full flex flex-col h-full">
+        <main className="flex-1 overflow-y-auto bg-background relative">
+          <div className="p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto w-full min-h-full">
              <Outlet />
           </div>
         </main>

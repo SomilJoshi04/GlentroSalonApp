@@ -23,8 +23,10 @@ const CategoriesPage = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  const [catPagination, setCatPagination] = useState({ currentPage: 1, totalPages: 1, total: 0, limit: 10 });
-  const [subPagination, setSubPagination] = useState({ currentPage: 1, totalPages: 1, total: 0, limit: 10 });
+  const [catPagination, setCatPagination] = useState({ currentPage: 1, totalPages: 1, total: 0, limit: 6 });
+  const [subPagination, setSubPagination] = useState({ currentPage: 1, totalPages: 1, total: 0, limit: 6 });
+  const [catSearch, setCatSearch] = useState('');
+  const [subSearch, setSubSearch] = useState('');
 
   useEffect(() => { 
     fetchAllCatsForSelect();
@@ -43,10 +45,10 @@ const CategoriesPage = () => {
     }
   };
 
-  const fetchCategories = async (page = 1) => {
+  const fetchCategories = async (page = 1, search = catSearch) => {
     setLoadingCats(true);
     try {
-      const res = await getCategories({ page, limit: catPagination.limit });
+      const res = await getCategories({ page, limit: catPagination.limit, search });
       if (res.data?.success) {
         if (res.data.data.categories) {
           setCategories(res.data.data.categories);
@@ -66,10 +68,10 @@ const CategoriesPage = () => {
     setLoadingCats(false);
   };
 
-  const fetchSubcategories = async (page = 1) => {
+  const fetchSubcategories = async (page = 1, search = subSearch) => {
     setLoadingSubs(true);
     try {
-      const res = await getSubcategories({ page, limit: subPagination.limit });
+      const res = await getSubcategories({ page, limit: subPagination.limit, search });
       if (res.data?.success) {
         if (res.data.data.subcategories) {
           setSubcategories(res.data.data.subcategories);
@@ -128,7 +130,11 @@ const CategoriesPage = () => {
     if (confirm('Delete?')) { 
       try { 
         await deleteCategory(id); 
-        fetchCategories(catPagination.currentPage); 
+        let targetPage = catPagination.currentPage;
+        if (categories.length === 1 && targetPage > 1) {
+          targetPage -= 1;
+        }
+        fetchCategories(targetPage); 
         fetchAllCatsForSelect();
       } catch (e) {} 
     } 
@@ -138,7 +144,11 @@ const CategoriesPage = () => {
     if (confirm('Delete?')) { 
       try { 
         await deleteSubcategory(id); 
-        fetchSubcategories(subPagination.currentPage); 
+        let targetPage = subPagination.currentPage;
+        if (subcategories.length === 1 && targetPage > 1) {
+          targetPage -= 1;
+        }
+        fetchSubcategories(targetPage); 
       } catch (e) {} 
     } 
   };
@@ -219,6 +229,19 @@ const CategoriesPage = () => {
               Add Category
             </button>
           </div>
+          <div className="mb-4 shrink-0 relative">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted-text text-[20px]">search</span>
+            <input 
+              type="text" 
+              placeholder="Search categories..."
+              value={catSearch}
+              onChange={(e) => {
+                setCatSearch(e.target.value);
+                fetchCategories(1, e.target.value);
+              }}
+              className="w-full pl-10 pr-4 py-2 bg-surface-variant/50 border border-border rounded-xl text-sm focus:border-primary focus:bg-surface outline-none transition-all"
+            />
+          </div>
           <DataTable 
             columns={catColumns}
             data={categories}
@@ -235,6 +258,19 @@ const CategoriesPage = () => {
             <button onClick={() => setShowSubForm(true)} className="px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition-colors">
               Add Subcategory
             </button>
+          </div>
+          <div className="mb-4 shrink-0 relative">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted-text text-[20px]">search</span>
+            <input 
+              type="text" 
+              placeholder="Search subcategories..."
+              value={subSearch}
+              onChange={(e) => {
+                setSubSearch(e.target.value);
+                fetchSubcategories(1, e.target.value);
+              }}
+              className="w-full pl-10 pr-4 py-2 bg-surface-variant/50 border border-border rounded-xl text-sm focus:border-primary focus:bg-surface outline-none transition-all"
+            />
           </div>
           <DataTable 
             columns={subColumns}

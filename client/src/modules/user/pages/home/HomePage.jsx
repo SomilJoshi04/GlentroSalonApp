@@ -159,9 +159,9 @@ const HomePage = () => {
   const activeBanner = banners.length > 0 ? banners[currentBannerIndex] : null;
 
   return (
-    <div className="bg-[#F8F7F5] text-on-surface font-body-md antialiased pb-4 -mx-4 md:mx-0 md:bg-transparent">
+    <div className="bg-[#F8F7F5] text-on-surface font-body-md antialiased pb-4 -mx-4 md:mx-0 md:bg-transparent md:pt-4">
       {/* Hero Section */}
-      <div className="relative w-full h-[320px] bg-inverse-surface flex flex-col pt-10 pb-6 px-6 overflow-hidden rounded-b-[24px]">
+      <div className="relative w-full h-[320px] bg-inverse-surface flex flex-col pt-10 pb-6 px-6 overflow-hidden rounded-b-[24px] md:rounded-[24px]">
         {banners.length > 0 ? (
           banners.map((banner, index) => (
             banner.type === 'video' ? (
@@ -198,8 +198,8 @@ const HomePage = () => {
         )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-[#1A1A1A] z-0"></div>
 
-        {/* Header Nav */}
-        <header className="relative z-10 w-full flex justify-between items-center -mt-2.5">
+        {/* Header Nav (Mobile Only) */}
+        <header className="relative z-10 w-full flex md:hidden justify-between items-center -mt-2.5">
           <div
             onClick={() => setIsLocationModalOpen(true)}
             className="flex items-center gap-2 bg-black/20 backdrop-blur-md rounded-full px-3 py-2 border border-white/10 cursor-pointer"

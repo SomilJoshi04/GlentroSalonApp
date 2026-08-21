@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getMyBookings } from '../../services/userApi';
 import Loader from '../../../../components/common/Loader';
 import PageHeader from '../../../../components/common/PageHeader';
@@ -18,6 +18,8 @@ const BookingListPage = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromProfile = location.state?.fromProfile;
 
   useEffect(() => { loadBookings(); }, [filter]);
 
@@ -34,9 +36,16 @@ const BookingListPage = () => {
   const filters = ['', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'];
 
   return (
-    <div className="space-y-6 animate-fade-in w-full px-4 md:px-margin-desktop pb-[100px]">
+    <div className="space-y-6 md:space-y-4 animate-fade-in w-full px-4 md:px-0 pb-[100px] md:pb-12 pt-2 md:pt-4">
       <div className="md:hidden"><PageHeader title="My Bookings" fallbackPath="/" /></div>
-      <h1 className="hidden md:block font-headline-xl text-[32px] font-bold text-on-surface">My Bookings</h1>
+      <div className="hidden md:flex items-center gap-4">
+        {fromProfile && (
+          <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-on-surface-variant hover:bg-surface-variant rounded-full transition-colors flex items-center justify-center">
+            <span className="material-symbols-outlined">arrow_back</span>
+          </button>
+        )}
+        <h1 className="font-headline-xl text-[32px] font-bold text-on-surface">My Bookings</h1>
+      </div>
 
       <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
         {filters.map(f => (

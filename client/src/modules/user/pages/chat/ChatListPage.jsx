@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getChats } from '../../services/userApi';
 import { useSocket } from '../../../../context/SocketContext';
 import PageHeader from '../../../../components/common/PageHeader';
@@ -10,6 +10,8 @@ const ChatListPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromProfile = location.state?.fromProfile;
   const { socket } = useSocket();
 
   useEffect(() => { 
@@ -46,8 +48,15 @@ const ChatListPage = () => {
 
   return (
     <div className="space-y-6 animate-fade-in w-full">
-      <PageHeader title="Messages" />
-      <h1 className="hidden md:block font-headline-xl text-[32px] font-bold text-on-surface">Messages</h1>
+      <PageHeader title="Messages" fallbackPath="/profile" />
+      <div className="hidden md:flex items-center gap-4">
+        {fromProfile && (
+          <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-on-surface-variant hover:bg-surface-variant rounded-full transition-colors flex items-center justify-center">
+            <span className="material-symbols-outlined">arrow_back</span>
+          </button>
+        )}
+        <h1 className="font-headline-xl text-[32px] font-bold text-on-surface">Messages</h1>
+      </div>
       
       {chats.length > 0 && (
         <div className="relative mb-6">

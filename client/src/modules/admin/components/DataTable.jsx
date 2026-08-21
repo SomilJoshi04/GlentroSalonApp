@@ -46,7 +46,7 @@ const DataTable = ({ columns, data, loading, error, pagination, onPageChange }) 
               </tr>
             ) : (
               data.map((row, rowIdx) => (
-                <tr key={rowIdx} className="hover:bg-surface-variant/50 transition-colors">
+                <tr key={rowIdx} className="hover:bg-surface-variant/80 transition-colors duration-200">
                   {columns.map((col, colIdx) => (
                     <td key={colIdx} className="px-6 py-4 align-middle">
                       {col.render ? col.render(row) : <span className="font-body-sm text-[14px] text-on-surface">{row[col.accessor]}</span>}
@@ -69,7 +69,7 @@ const DataTable = ({ columns, data, loading, error, pagination, onPageChange }) 
             <button 
               onClick={() => onPageChange(pagination.currentPage - 1)}
               disabled={pagination.currentPage === 1}
-              className="p-1.5 rounded-lg border border-border text-muted-text hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-1.5 rounded-lg border border-border text-muted-text hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 hover:-translate-y-0.5 active:translate-y-0"
             >
               <span className="material-symbols-outlined text-[20px]">chevron_left</span>
             </button>
@@ -86,7 +86,7 @@ const DataTable = ({ columns, data, loading, error, pagination, onPageChange }) 
                 <button 
                   key={pageNum}
                   onClick={() => onPageChange(pageNum)}
-                  className={`w-8 h-8 rounded-lg font-label-sm text-[13px] flex items-center justify-center transition-colors ${pagination.currentPage === pageNum ? 'bg-primary/10 text-primary border border-primary/20 font-bold' : 'text-on-surface hover:bg-surface-variant'}`}
+                  className={`w-8 h-8 rounded-lg font-label-sm text-[13px] flex items-center justify-center transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 ${pagination.currentPage === pageNum ? 'bg-primary/10 text-primary border border-primary/20 font-bold' : 'text-on-surface hover:bg-surface-variant'}`}
                 >
                   {pageNum}
                 </button>
@@ -96,7 +96,7 @@ const DataTable = ({ columns, data, loading, error, pagination, onPageChange }) 
             <button 
               onClick={() => onPageChange(pagination.currentPage + 1)}
               disabled={pagination.currentPage === pagination.totalPages}
-              className="p-1.5 rounded-lg border border-border text-muted-text hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-1.5 rounded-lg border border-border text-muted-text hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 hover:-translate-y-0.5 active:translate-y-0"
             >
               <span className="material-symbols-outlined text-[20px]">chevron_right</span>
             </button>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getFavoriteSalons } from '../../services/userApi';
 import { getImageUrl } from '../../../../utils/imageUtils';
 import PageHeader from '../../../../components/common/PageHeader';
@@ -11,6 +11,8 @@ const FavoritesPage = () => {
   const [salons, setSalons] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromProfile = location.state?.fromProfile;
   const { isFavorite, toggleFavoriteStatus } = useFavorites();
 
   useEffect(() => {
@@ -34,6 +36,14 @@ const FavoritesPage = () => {
       <PageHeader title="My Favourites" fallbackPath="/profile" />
 
       <main className="px-4 md:px-margin-desktop py-6 max-w-7xl mx-auto w-full">
+        <div className="hidden md:flex items-center gap-4 mb-6">
+          {fromProfile && (
+            <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-on-surface-variant hover:bg-surface-variant rounded-full transition-colors flex items-center justify-center">
+              <span className="material-symbols-outlined">arrow_back</span>
+            </button>
+          )}
+          <h1 className="font-headline-xl text-[32px] font-bold text-on-surface">My Favourites</h1>
+        </div>
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {Array.from({ length: 4 }).map((_, i) => (

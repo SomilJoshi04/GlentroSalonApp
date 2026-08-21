@@ -112,4 +112,53 @@ const updateFcmToken = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-module.exports = { getUsers, getUserById, updateProfile, updateLocation, toggleUserStatus, updateFcmToken };
+// @desc    Delete user account (Soft Delete)
+// @route   DELETE /api/users/account
+const deleteAccount = async (req, res, next) => {
+  try {
+    const { reason } = req.body;
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (user.accountStatus === 'deleted') {
+      return res.status(400).json({ success: false, message: 'Account is already deleted' });
+    }
+
+    user.accountStatus = 'deleted';
+    user.deleteAccount = {
+      deletedAt: new Date(),
+      deletedBy: 'user',
+      reason: reason || null
+    };
+
+    // Note: We don't change recoverAccount here because they might have previously 
+    // recovered and deleted again, or they might request recovery later. 
+    // Wait, if they had a previous recovery request that was rejected, should we clear it? 
+    // Better to clear `recoverAccount` to reset state.
+    user.recoverAccount = {
+      requestedAt: null,
+      reason: null,
+      recoveredAt: null,
+      recoveredBy: null
+    };
+
+    await user.save();
+
+    // In a real production app, we would also clear active sessions, tokens, etc.
+    // For JWT based flow without token blacklisting, the frontend clearing token is sufficient.
+    // If we have FCM tokens, we might want to clear it so we don't send notifications to deleted users.
+    await User.findByIdAndUpdate(req.user.id, { fcmToken: '' });
+
+    res.json({
+      success: true,
+      message: 'Your account has been deleted successfully.'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getUsers, getUserById, updateProfile, updateLocation, toggleUserStatus, updateFcmToken, deleteAccount };

@@ -39,7 +39,7 @@ const LoginPage = () => {
               <span className="material-symbols-outlined text-[36px] text-white">spa</span>
             </div>
           )}
-          <h1 className="text-2xl font-bold text-on-surface">{settings?.appName || 'LuxeSalon'}</h1>
+          <h1 className="text-2xl font-bold text-on-surface">{settings?.appName || 'Glentro Salon'}</h1>
           <p className="text-muted-text text-sm mt-1">Vendor Management Portal</p>
         </div>
         <div className="bg-surface rounded-2xl shadow-xl p-8 border border-border">

@@ -15,7 +15,7 @@ const getSubcategories = async (req, res, next) => {
       const total = await Subcategory.countDocuments(query);
       const subcategories = await Subcategory.find(query)
         .populate('category', 'name')
-        .sort({ name: 1 })
+        .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit));
       return res.json({
@@ -29,7 +29,7 @@ const getSubcategories = async (req, res, next) => {
       });
     }
 
-    const subcategories = await Subcategory.find(query).populate('category', 'name').sort({ name: 1 });
+    const subcategories = await Subcategory.find(query).populate('category', 'name').sort({ createdAt: -1 });
     res.json({ success: true, data: subcategories });
   } catch (error) { next(error); }
 };

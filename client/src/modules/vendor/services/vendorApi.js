@@ -34,6 +34,9 @@ export const getSubcategories = (params) => api.get('/subcategories', { params }
 
 // Bookings
 export const getSalonBookings = (salonId, params) => api.get(`/bookings/salon/${salonId}`, { params });
+export const getVendorRecentBookings = (params) => api.get('/bookings/vendor/recent', { params });
+export const getVendorStats = () => api.get('/bookings/vendor/stats');
+export const getVendorAnalytics = (params) => api.get('/bookings/vendor/analytics', { params });
 export const getBookingById = (id) => api.get(`/bookings/${id}`);
 export const acceptBooking = (id) => api.patch(`/bookings/${id}/accept`);
 export const rejectBooking = (id, data) => api.patch(`/bookings/${id}/reject`, data);

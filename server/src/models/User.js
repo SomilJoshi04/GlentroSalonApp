@@ -55,9 +55,57 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    accountStatus: {
+      type: String,
+      enum: ['active', 'deleted', 'recovery_requested'],
+      default: 'active',
+      index: true
+    },
+    deleteAccount: {
+      deletedAt: {
+        type: Date,
+        default: null
+      },
+      deletedBy: {
+        type: String,
+        enum: ['user', 'admin'],
+        default: null
+      },
+      reason: {
+        type: String,
+        trim: true,
+        maxlength: 500,
+        default: null
+      }
+    },
+    recoverAccount: {
+      requestedAt: {
+        type: Date,
+        default: null
+      },
+      reason: {
+        type: String,
+        trim: true,
+        maxlength: 500,
+        default: null
+      },
+      recoveredAt: {
+        type: Date,
+        default: null
+      },
+      recoveredBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
+      }
+    },
     isActive: {
       type: Boolean,
       default: true,
+    },
+    lastLogin: {
+      type: Date,
+      default: null
     },
     favorites: [
       {

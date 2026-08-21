@@ -12,3 +12,16 @@ export const updateAppName = (name) =>
 
 export const updateSearchRadius = (radius) =>
   axiosInstance.put('/settings/search-radius', { radius });
+
+export const updateBulkSettings = (settings) =>
+  axiosInstance.put('/settings/bulk', { settings });
+
+export const updateLoginImage = (formData) =>
+  axiosInstance.put('/settings/login-image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+
+export const updateRegisterImage = (formData) =>
+  axiosInstance.put('/settings/register-image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
