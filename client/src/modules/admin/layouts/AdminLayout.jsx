@@ -48,8 +48,10 @@ const AdminLayout = () => {
 
   const navItems = [
     { to: '/admin', label: 'Dashboard', icon: 'grid_view' },
+    { to: '/admin/analytics', label: 'Analytics', icon: 'monitoring' },
     { to: '/admin/users', label: 'Users', icon: 'group' },
     { to: '/admin/vendors', label: 'Vendors', icon: 'storefront', count: pendingCounts.vendors },
+    { to: '/admin/vendors/cash-control', label: 'Cash Control', icon: 'account_balance_wallet' },
     { to: '/admin/salons', label: 'Salons', icon: 'store' },
     { to: '/admin/categories', label: 'Categories', icon: 'category' },
     { to: '/admin/services', label: 'Services', icon: 'cut' },
@@ -59,7 +61,8 @@ const AdminLayout = () => {
     { to: '/admin/reviews', label: 'Reviews', icon: 'star_rate' },
     { to: '/admin/coupons', label: 'Coupons', icon: 'local_activity' },
     { to: '/admin/promotional-videos', label: 'Promotional Videos', icon: 'videocam' },
-    { to: '/admin/commissions', label: 'Financials', icon: 'account_balance_wallet' },
+    { to: '/admin/commissions', label: 'Commissions Config', icon: 'percent' },
+    { to: '/admin/payments', label: 'Payments & Revenue', icon: 'account_balance_wallet' },
     { to: '/admin/notifications', label: 'Notifications', icon: 'notifications' },
     { to: '/admin/content', label: 'Content (CMS)', icon: 'article' },
     { to: '/admin/settings', label: 'Settings', icon: 'settings' },

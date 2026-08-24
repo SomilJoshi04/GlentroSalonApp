@@ -106,7 +106,7 @@ const notifyBookingAccepted = async (booking) => {
     type: 'BOOKING_ACCEPTED',
     title: 'Booking Confirmed!',
     message: `Your booking for ${new Date(booking.bookingDate).toLocaleDateString()} at ${booking.startTime} has been confirmed.`,
-    data: { bookingId: booking._id },
+    data: { bookingId: booking._id, salonId: booking.salon },
   });
 };
 
@@ -121,7 +121,7 @@ const notifyBookingRejected = async (booking) => {
     type: 'BOOKING_REJECTED',
     title: 'Booking Rejected',
     message: `Your booking for ${new Date(booking.bookingDate).toLocaleDateString()} has been declined.${booking.rejectionReason ? ' Reason: ' + booking.rejectionReason : ''}`,
-    data: { bookingId: booking._id },
+    data: { bookingId: booking._id, salonId: booking.salon },
   });
 };
 
@@ -137,7 +137,7 @@ const notifyBookingCancelled = async (booking, recipientId, recipientRole) => {
     type: 'BOOKING_CANCELLED',
     title: 'Booking Cancelled',
     message: `Booking for ${new Date(booking.bookingDate).toLocaleDateString()} at ${booking.startTime} has been cancelled.`,
-    data: { bookingId: booking._id, cancellationFee: booking.cancellationFee },
+    data: { bookingId: booking._id, cancellationFee: booking.cancellationFee, salonId: booking.salon },
   });
 };
 

@@ -55,12 +55,14 @@ const DashboardPage = () => {
   }, [range]);
 
   const statCards = stats ? [
-    { label: 'Total Revenue', value: `₹${(stats.totalRevenue || 0).toLocaleString()}`, icon: 'payments', color: 'text-success', bg: 'bg-success/10', path: '/admin/bookings' },
-    { label: 'Platform Fee', value: `₹${(stats.totalPlatformFee || 0).toLocaleString()}`, icon: 'account_balance', color: 'text-primary', bg: 'bg-primary/10', path: '/admin/commissions' },
-    { label: 'Total Users', value: stats.totalUsers || 0, icon: 'group', color: 'text-blue-500', bg: 'bg-blue-500/10', path: '/admin/users' },
-    { label: 'Active Vendors', value: stats.activeVendors || 0, icon: 'storefront', color: 'text-purple-500', bg: 'bg-purple-500/10', path: '/admin/vendors' },
+    { label: 'Total Revenue', value: `₹${(stats.totalRevenue || 0).toLocaleString()}`, icon: 'account_balance_wallet', color: 'text-success', bg: 'bg-success/10', path: '/admin/payments' },
+    { label: 'Platform Fee Revenue', value: `₹${(stats.totalPlatformFee || 0).toLocaleString()}`, icon: 'percent', color: 'text-blue-500', bg: 'bg-blue-500/10', path: '/admin/payments' },
+    { label: 'Admin Commission', value: `₹${(stats.totalCommission || 0).toLocaleString()}`, icon: 'payments', color: 'text-indigo-500', bg: 'bg-indigo-500/10', path: '/admin/payments' },
     { label: 'Total Bookings', value: stats.totalBookings || 0, icon: 'calendar_month', color: 'text-emerald-500', bg: 'bg-emerald-500/10', path: '/admin/bookings' },
+    { label: 'Completed Bookings', value: stats.completedBookings || 0, icon: 'check_circle', color: 'text-green-500', bg: 'bg-green-500/10', path: '/admin/bookings' },
     { label: 'Pending Bookings', value: stats.pendingBookings || 0, icon: 'pending_actions', color: 'text-warning', bg: 'bg-warning/10', path: '/admin/bookings' },
+    { label: 'Active Vendors', value: stats.activeVendors || 0, icon: 'storefront', color: 'text-purple-500', bg: 'bg-purple-500/10', path: '/admin/vendors' },
+    { label: 'Total Users', value: stats.totalUsers || 0, icon: 'group', color: 'text-pink-500', bg: 'bg-pink-500/10', path: '/admin/users' },
   ] : [];
 
   const CustomTooltip = ({ active, payload, label }) => {
@@ -203,130 +205,30 @@ const DashboardPage = () => {
               </div>
               <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={analytics.bookingTrend} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                  <AreaChart data={analytics.revenueOverview} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                     <defs>
-                      <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#F59E0B" stopOpacity={0}/>
+                      <linearGradient id="colorCommission" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorFee" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                     <XAxis dataKey="_id" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} dy={10} />
                     <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => `₹${val}`} tick={{ fill: '#6B7280', fontSize: 12 }} />
                     <RechartsTooltip content={<CustomTooltip />} />
-                    <Area type="monotone" name="Revenue" dataKey="revenue" stroke="#F59E0B" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+                    <Legend verticalAlign="top" height={36} />
+                    <Area type="monotone" name="Admin Commission" dataKey="adminCommission" stackId="1" stroke="#8B5CF6" strokeWidth={3} fillOpacity={1} fill="url(#colorCommission)" />
+                    <Area type="monotone" name="Platform Fee" dataKey="platformFee" stackId="1" stroke="#3B82F6" strokeWidth={3} fillOpacity={1} fill="url(#colorFee)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8 animate-slide-up-fade stagger-3">
-            {/* Booking Status */}
-            <div className="bg-surface border border-border rounded-2xl p-6 shadow-sm flex flex-col items-center">
-              <div className="mb-2 w-full">
-                <h2 className="font-headline-sm text-[18px] text-on-surface">Booking Status</h2>
-                <p className="font-body-sm text-muted-text">Distribution of booking states</p>
-              </div>
-              <div className="h-[300px] w-full flex justify-center">
-                {analytics.bookingStatus?.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={analytics.bookingStatus}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={80}
-                        outerRadius={110}
-                        paddingAngle={5}
-                        dataKey="count"
-                        nameKey="_id"
-                      >
-                        {analytics.bookingStatus.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip 
-                        formatter={(value, name) => [value, name]}
-                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                      />
-                      <Legend layout="horizontal" verticalAlign="bottom" align="center" />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted-text">No data available</div>
-                )}
-              </div>
-            </div>
-
-            {/* User Growth */}
-            <div className="bg-surface border border-border rounded-2xl p-6 shadow-sm">
-              <div className="mb-6">
-                <h2 className="font-headline-sm text-[18px] text-on-surface">User Growth</h2>
-                <p className="font-body-sm text-muted-text">New registrations over time</p>
-              </div>
-              <div className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={analytics.userGrowth} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                    <XAxis dataKey="_id" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} dy={10} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
-                    <RechartsTooltip content={<CustomTooltip />} />
-                    <Legend verticalAlign="top" height={36} />
-                    <Line type="monotone" dataKey="count" name="New Users" stroke="#8B5CF6" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8 animate-slide-up-fade stagger-4">
-            {/* Top Salons */}
-            <div className="bg-surface border border-border rounded-2xl p-6 shadow-sm">
-              <div className="mb-6">
-                <h2 className="font-headline-sm text-[18px] text-on-surface">Top Salons</h2>
-                <p className="font-body-sm text-muted-text">Highest performing salons by revenue</p>
-              </div>
-              <div className="h-[300px] w-full">
-                {analytics.topSalons?.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={analytics.topSalons} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E5E7EB" />
-                      <XAxis type="number" hide />
-                      <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: '#374151', fontSize: 13, fontWeight: 500 }} width={120} />
-                      <RechartsTooltip content={<CustomTooltip />} />
-                      <Bar dataKey="revenue" name="Revenue" fill="#F59E0B" radius={[0, 4, 4, 0]} barSize={24} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted-text">No data available</div>
-                )}
-              </div>
-            </div>
-
-            {/* Top Services */}
-            <div className="bg-surface border border-border rounded-2xl p-6 shadow-sm">
-              <div className="mb-6">
-                <h2 className="font-headline-sm text-[18px] text-on-surface">Top Services</h2>
-                <p className="font-body-sm text-muted-text">Most booked services across platform</p>
-              </div>
-              <div className="h-[300px] w-full">
-                {analytics.topServices?.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={analytics.topServices} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E5E7EB" />
-                      <XAxis type="number" hide />
-                      <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: '#374151', fontSize: 13, fontWeight: 500 }} width={120} />
-                      <RechartsTooltip content={<CustomTooltip />} />
-                      <Bar dataKey="count" name="Bookings" fill="#10B981" radius={[0, 4, 4, 0]} barSize={24} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted-text">No data available</div>
-                )}
-              </div>
-            </div>
-          </div>
         </>
       ) : null}
 

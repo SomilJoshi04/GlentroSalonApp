@@ -32,6 +32,14 @@ const serviceSchema = new mongoose.Schema(
       required: [true, 'Price is required'],
       min: [0, 'Price cannot be negative'],
     },
+    pricePaise: {
+      type: Number,
+      min: [0, 'Price in paise cannot be negative'],
+    },
+    discountedPricePaise: {
+      type: Number,
+      min: [0, 'Discounted price in paise cannot be negative'],
+    },
     duration: {
       type: Number, // in minutes
       required: [true, 'Duration is required'],

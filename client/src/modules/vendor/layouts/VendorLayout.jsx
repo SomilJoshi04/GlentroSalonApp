@@ -4,6 +4,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useSettings } from '../../../context/SettingContext';
 import { useNotifications } from '../../../context/NotificationContext';
 import { getImageUrl } from '../../../utils/imageUtils';
+import BranchSwitcher from '../components/BranchSwitcher';
 
 const VendorLayout = () => {
   const { vendor: user, logout } = useAuth();
@@ -17,12 +18,14 @@ const VendorLayout = () => {
 
   const navItems = [
     { to: '/vendor', label: 'Dashboard', icon: 'grid_view' },
+    { to: '/vendor/analytics', label: 'Analytics', icon: 'monitoring' },
     { to: '/vendor/salons', label: 'My Salons', icon: 'store' },
     { to: '/vendor/bookings', label: 'Bookings', icon: 'calendar_today' },
     { to: '/vendor/chats', label: 'Chats', icon: 'chat' },
     { to: '/vendor/staff', label: 'Staff', icon: 'group' },
     { to: '/vendor/services', label: 'Services', icon: 'cut' },
     { to: '/vendor/packages', label: 'Offers & Packages', icon: 'redeem' },
+    { to: '/vendor/financials', label: 'Financials', icon: 'account_balance_wallet' },
     { to: '/vendor/reviews', label: 'Reviews', icon: 'star_rate' },
     { to: '/vendor/notifications', label: 'Notifications', icon: 'notifications', count: unreadCount },
     { to: '/vendor/profile', label: 'Profile', icon: 'person' },
@@ -77,24 +80,52 @@ const VendorLayout = () => {
       <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
         {!hideHeader && (
           <header className="shrink-0 z-30 bg-surface/95 backdrop-blur-md border-b border-border h-[72px] px-4 md:px-6 flex items-center justify-between">
-            <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 -ml-2 rounded-xl text-muted-text hover:bg-surface-variant flex items-center">
-              <span className="material-symbols-outlined">menu</span>
-            </button>
-            <div onClick={() => navigate('/vendor/profile')} className="flex items-center gap-3 ml-auto cursor-pointer hover:opacity-80 transition-opacity">
+            <div className="flex items-center gap-4">
+              <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 -ml-2 rounded-xl text-muted-text hover:bg-surface-variant flex items-center">
+                <span className="material-symbols-outlined">menu</span>
+              </button>
+              
+              {/* Branch Switcher Component */}
+              <div className="hidden sm:block">
+                <BranchSwitcher />
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4 ml-auto">
+              {/* Mobile Branch Switcher */}
+              <div className="block sm:hidden">
+                <BranchSwitcher />
+              </div>
+              
+              <div onClick={() => navigate('/vendor/profile')} className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-semibold text-on-surface leading-tight">{user?.businessName || user?.name}</p>
                 <p className="text-[10px] text-muted-text uppercase tracking-wider font-semibold mt-0.5">{user?.businessName ? 'Vendor' : 'Owner'}</p>
               </div>
-              <div className="w-9 h-9 rounded-full bg-soft-primary flex items-center justify-center text-primary text-[13px] font-bold shrink-0 overflow-hidden border border-primary/20">
-                {user?.avatar ? (
-                  <img src={user.avatar.startsWith('data:') ? user.avatar : getImageUrl(user.avatar)} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  user?.businessName?.charAt(0)?.toUpperCase() || user?.name?.charAt(0)?.toUpperCase() || 'V'
-                )}
-              </div>
+              <img src={getImageUrl(user?.avatar) || `https://ui-avatars.com/api/?name=${user?.name}&background=7c3aed&color=fff`} alt={user?.name} className="w-10 h-10 rounded-full object-cover border-2 border-primary/20 shadow-sm" />
+             </div>
             </div>
           </header>
         )}
+
+        {/* --- Global Suspension Banner --- */}
+        {user?.accountStatus === 'suspended' && user?.suspensionReasons?.includes('CASH_LIMIT_EXCEEDED') && (
+          <div className="bg-red-50 border-b border-red-200 px-4 py-3 flex items-center justify-between shrink-0 z-20 shadow-sm">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-red-600">warning</span>
+              <p className="text-sm font-medium text-red-800">
+                Your account has been suspended because you exceeded the cash holding limit.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/vendor/financials')}
+              className="text-sm font-semibold bg-red-600 text-white px-4 py-1.5 rounded-lg shadow-sm hover:bg-red-700 transition-colors"
+            >
+              Settle Now
+            </button>
+          </div>
+        )}
+
         <main className={`flex-1 overflow-y-auto min-h-0 ${hideHeader ? '' : 'p-4 md:p-6 flex flex-col'}`}>
           <Outlet />
         </main>

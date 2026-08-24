@@ -8,6 +8,10 @@ const {
   getUsers,
   updateUserStatus,
   getVendors,
+  getVendorDetail,
+  createVendor,
+  updateVendor,
+  updateKycStatus,
   updateVendorStatus,
   getPendingCounts,
   getAllBookings,
@@ -18,7 +22,9 @@ const {
   getAccountRecoveryRequestById,
   approveAccountRecovery,
   rejectAccountRecovery,
-  getAnalytics
+  getAnalytics,
+  getVendorCashControl,
+  updateVendorCashLimit
 } = require('../controllers/adminController');
 
 // Apply protection and authorization to all admin routes
@@ -52,11 +58,33 @@ router.get('/services', getServices);
 
 // Vendors Management
 router.get('/vendors', getVendors);
+router.post('/vendors', createVendor);
+router.get('/vendors/:id', getVendorDetail);
+router.put('/vendors/:id', updateVendor);
 router.put('/vendors/:id/status', updateVendorStatus);
+router.patch('/vendors/:id/kyc', updateKycStatus);
+
+// Vendor Cash Control
+router.get('/vendor-cash-control', getVendorCashControl);
+router.put('/vendor-cash-control/:id', updateVendorCashLimit);
 
 // Content Management
 const { getAdminContentByType, updateContent } = require('../controllers/contentController');
 router.get('/content/:type', getAdminContentByType);
 router.put('/content/:type', updateContent);
 
+// ── Admin Vendor Withdrawals ───────────────────────────────────────────────────
+const multer = require('multer');
+const proofUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+});
+const withdrawalController = require('../controllers/withdrawalController');
+router.get('/withdrawals', withdrawalController.adminListWithdrawals);
+router.get('/withdrawals/:id', withdrawalController.adminGetWithdrawal);
+router.patch('/withdrawals/:id/process', withdrawalController.adminProcessWithdrawal);
+router.post('/withdrawals/:id/pay', proofUpload.single('proofFile'), withdrawalController.adminMarkPaid);
+router.patch('/withdrawals/:id/reject', withdrawalController.adminRejectWithdrawal);
+
 module.exports = router;
+

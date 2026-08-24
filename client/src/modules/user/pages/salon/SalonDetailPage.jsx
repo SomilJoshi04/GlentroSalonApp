@@ -14,6 +14,7 @@ import Button from '../../../../components/common/Button';
 import { SalonDetailSkeleton } from '../../components/skeletons/SalonDetailSkeleton';
 import { Skeleton, SkeletonAvatar, SkeletonText } from '../../../../components/common/Skeleton';
 import { useFavorites } from '../../../../context/FavoriteContext';
+import { formatPaise } from '../../../../utils/money';
 
 const SalonDetailPage = () => {
   const { id } = useParams();
@@ -89,7 +90,8 @@ const SalonDetailPage = () => {
     );
   };
 
-  const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
+  const totalPricePaise = selectedServices.reduce((sum, s) => sum + (s.pricePaise ?? Math.round((s.price || 0) * 100)), 0);
+  const totalPriceLegacy = selectedServices.reduce((sum, s) => sum + (s.price || 0), 0);
 
   if (loading) return <SalonDetailSkeleton />;
   if (!salon) return <div className="text-center py-20 bg-background min-h-screen pt-32"><h2 className="text-[20px] font-semibold text-on-surface">Salon not found</h2></div>;
@@ -189,7 +191,7 @@ const SalonDetailPage = () => {
                           <div className="flex justify-between items-start mb-2">
                             <h4 className="font-bold text-on-surface text-[18px]">{pkg.name}</h4>
                             <span className="text-xs font-semibold text-success bg-success/10 px-2.5 py-1 rounded-lg shrink-0">
-                              Save ₹{pkg.totalPrice - pkg.discountedPrice}
+                              Save {formatPaise(pkg.totalPricePaise - pkg.discountedPricePaise, pkg.totalPrice - pkg.discountedPrice)}
                             </span>
                           </div>
                           
@@ -201,7 +203,7 @@ const SalonDetailPage = () => {
                               {pkg.services?.map(s => (
                                 <div key={s._id} className="flex justify-between items-center text-sm">
                                   <span className="text-on-surface">• {s.name}</span>
-                                  <span className="text-muted-text line-through text-xs">₹{s.price}</span>
+                                  <span className="text-muted-text line-through text-xs">{formatPaise(s.pricePaise, s.price)}</span>
                                 </div>
                               ))}
                             </div>
@@ -212,8 +214,8 @@ const SalonDetailPage = () => {
                           <div>
                             <p className="text-xs text-muted-text mb-0.5">Offer Price</p>
                             <div className="flex items-baseline gap-2">
-                              <span className="text-[22px] font-bold text-primary">₹{pkg.discountedPrice}</span>
-                              <span className="text-sm text-muted-text line-through">₹{pkg.totalPrice}</span>
+                              <span className="text-[22px] font-bold text-primary">{formatPaise(pkg.discountedPricePaise, pkg.discountedPrice)}</span>
+                              <span className="text-sm text-muted-text line-through">{formatPaise(pkg.totalPricePaise, pkg.totalPrice)}</span>
                             </div>
                           </div>
                           <button 
@@ -251,7 +253,7 @@ const SalonDetailPage = () => {
                         </div>
                         <p className="font-body-sm text-[14px] text-muted-text mb-2 line-clamp-2">{service.category?.name || 'General'}</p>
                         <div className="flex items-center gap-3 mt-1">
-                          <span className="font-label-md text-[14px] text-primary font-bold">₹{service.price}</span>
+                          <span className="font-label-md text-[14px] text-primary font-bold">{formatPaise(service.pricePaise, service.price)}</span>
                           <span className="text-outline text-[12px]">•</span>
                           <span className="font-body-sm text-[14px] text-muted-text flex items-center gap-1">
                             <span className="material-symbols-outlined text-[16px]">schedule</span> {service.duration} min
@@ -396,7 +398,7 @@ const SalonDetailPage = () => {
           <div className="w-full max-w-container-max px-4 py-4 flex justify-between items-center bg-surface">
             <div className="flex flex-col">
               <span className="font-label-sm text-[12px] text-muted-text">{selectedServices.length} service{selectedServices.length > 1 ? 's' : ''} selected</span>
-              <span className="font-headline-sm text-[20px] font-bold text-on-surface mt-0.5">₹{totalPrice}</span>
+              <span className="font-headline-sm text-[20px] font-bold text-on-surface mt-0.5">{formatPaise(totalPricePaise, totalPriceLegacy)}</span>
             </div>
             <button 
               onClick={() => navigate(`/salon/${id}/book`, { state: { salon, selectedServices, staff } })}

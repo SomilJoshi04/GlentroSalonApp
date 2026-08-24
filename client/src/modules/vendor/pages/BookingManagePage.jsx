@@ -1,25 +1,26 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { getVendorSalons, getSalonBookings, acceptBooking, rejectBooking, completeBooking } from '../services/vendorApi';
+import { getVendorRecentBookings, getSalonBookings, acceptBooking, rejectBooking, completeBooking } from '../services/vendorApi';
+import { useBranch } from '../../../context/BranchContext';
 import Pagination from '../../../components/common/Pagination';
 import VendorPageLayout from '../../../components/vendor/layout/VendorPageLayout';
 import VendorPageHeader from '../../../components/vendor/layout/VendorPageHeader';
 import VendorListToolbar from '../../../components/vendor/layout/VendorListToolbar';
 import VendorTableContainer from '../../../components/vendor/layout/VendorTableContainer';
 import VendorPagination from '../../../components/vendor/layout/VendorPagination';
+import SearchableSelect from '../../../components/common/SearchableSelect';
+import { formatPaise } from '../../../utils/money';
 
 const statusColors = { PENDING: 'bg-yellow-100 text-yellow-700', CONFIRMED: 'bg-blue-100 text-blue-700', COMPLETED: 'bg-green-100 text-green-700', CANCELLED: 'bg-red-100 text-red-700', REJECTED: 'bg-gray-100 text-gray-700' };
 
 const BookingManagePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [salons, setSalons] = useState([]);
   const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
   const navigate = useNavigate();
 
-  const selectedSalon = searchParams.get('salon') || '';
+  const { selectedSalon, loadingBranches } = useBranch();
   const filter = searchParams.get('status') || '';
 
   const [pagination, setPagination] = useState({
@@ -29,15 +30,6 @@ const BookingManagePage = () => {
     limit: 6
   });
 
-  const handleSalonChange = (val) => {
-    if (val) localStorage.setItem('vendor_selected_salon', val);
-    else localStorage.removeItem('vendor_selected_salon');
-    setSearchParams(prev => {
-      if (val) prev.set('salon', val); else prev.delete('salon');
-      return prev;
-    }, { replace: true });
-  };
-
   const handleFilterChange = (val) => {
     setSearchParams(prev => {
       if (val) prev.set('status', val); else prev.delete('status');
@@ -45,46 +37,25 @@ const BookingManagePage = () => {
     }, { replace: true });
   };
 
-  useEffect(() => { loadSalons(); }, []);
-  useEffect(() => { if (selectedSalon) loadBookings(1); }, [selectedSalon, filter]);
+  useEffect(() => { loadBookings(1); }, [selectedSalon, filter]);
 
-  const loadSalons = async () => { 
-    try { 
-      const r = await getVendorSalons(); 
-      const loadedSalons = r.data.data;
-      setSalons(loadedSalons); 
-      
-      if (loadedSalons.length > 0) {
-        const currentSalonId = searchParams.get('salon');
-        const savedSalonId = localStorage.getItem('vendor_selected_salon');
-        
-        if (currentSalonId && loadedSalons.some(s => s._id === currentSalonId)) {
-          localStorage.setItem('vendor_selected_salon', currentSalonId);
-        } else {
-          const fallbackId = (savedSalonId && loadedSalons.some(s => s._id === savedSalonId))
-            ? savedSalonId 
-            : loadedSalons[0]._id;
-          
-          setSearchParams(prev => {
-            prev.set('salon', fallbackId);
-            return prev;
-          }, { replace: true });
-          localStorage.setItem('vendor_selected_salon', fallbackId);
-        }
-      }
-    } catch (e) {} 
-    setLoading(false); 
-  };
-  
   const loadBookings = async (page = 1) => { 
     setIsFetching(true);
     try { 
       const params = { page, limit: pagination.limit };
       if (filter) params.status = filter;
-      const r = await getSalonBookings(selectedSalon, params); 
+
+      let r;
+      if (selectedSalon) {
+        r = await getSalonBookings(selectedSalon._id, params);
+      } else {
+        r = await getVendorRecentBookings(params);
+      }
       
       const data = r.data?.data;
-      const list = data?.bookings || data || [];
+      // getSalonBookings returns { bookings, total, page, totalPages }
+      // getVendorRecentBookings returns data (array) and r.data.pagination
+      const list = data?.bookings || (Array.isArray(data) ? data : []);
       setBookings(Array.isArray(list) ? list : []); 
 
       if (data && data.bookings) {
@@ -92,6 +63,13 @@ const BookingManagePage = () => {
           currentPage: data.page || page,
           totalPages: data.totalPages || 1,
           total: data.total || list.length,
+          limit: pagination.limit
+        });
+      } else if (r.data?.pagination) {
+        setPagination({
+          currentPage: r.data.pagination.currentPage || page,
+          totalPages: r.data.pagination.totalPages || 1,
+          total: r.data.pagination.totalItems || list.length,
           limit: pagination.limit
         });
       } else {
@@ -102,7 +80,9 @@ const BookingManagePage = () => {
           limit: pagination.limit
         });
       }
-    } catch (e) {} 
+    } catch (e) {
+      console.error(e);
+    } 
     setIsFetching(false);
   };
 
@@ -115,7 +95,7 @@ const BookingManagePage = () => {
     } catch (e) { alert(e.response?.data?.message || 'Failed'); }
   };
 
-  if (loading) {
+  if (loadingBranches) {
     return (
       <VendorPageLayout>
         <div className="flex flex-col gap-6">
@@ -138,9 +118,7 @@ const BookingManagePage = () => {
       />
 
       <VendorListToolbar>
-        <select value={selectedSalon} onChange={e => handleSalonChange(e.target.value)} className="w-full sm:max-w-xs px-4 py-2.5 rounded-xl border border-border text-sm bg-surface text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shrink-0 shadow-sm">
-          {salons.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
-        </select>
+        {/* BranchSwitcher is now in the global header, so we just show filters here */}
         <div className="flex flex-wrap gap-2 w-full sm:w-auto sm:justify-end md:ml-auto">
           {['', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'].map(f => (
             <button key={f} onClick={() => handleFilterChange(f)}
@@ -182,7 +160,7 @@ const BookingManagePage = () => {
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${statusColors[b.status]}`}>{b.status}</span>
                     <div className="mt-2">
                       <p className="text-[11px] text-muted-text uppercase tracking-wider">Net Payout</p>
-                      <p className="text-sm font-bold text-success">₹{b.vendorPayout !== undefined ? b.vendorPayout : b.finalAmount}</p>
+                      <p className="text-sm font-bold text-success">{b.vendorPayoutPaise !== undefined ? formatPaise(b.vendorPayoutPaise, b.vendorPayout) : formatPaise(b.finalAmountPaise, b.finalAmount)}</p>
                     </div>
                   </div>
                 </div>

@@ -11,69 +11,85 @@ const Category = require('../models/Category');
 const Subcategory = require('../models/Subcategory');
 const AccountRecoveryRequest = require('../models/AccountRecoveryRequest');
 const Notification = require('../models/Notification');
+const PaymentTransaction = require('../models/PaymentTransaction');
 const { getIO } = require('../config/socket');
+const { sanitizeVendorForAdmin } = require('../utils/kycUtils');
 
 // @desc    Get admin dashboard stats
 // @route   GET /api/admin/dashboard
 // @access  Private/Admin
 const getDashboardStats = async (req, res, next) => {
   try {
+    const range = req.query.range || '30d';
+    let startDate = new Date();
+    
+    // Set startDate based on range
+    if (range === '7d') startDate.setDate(startDate.getDate() - 7);
+    else if (range === '30d') startDate.setDate(startDate.getDate() - 30);
+    else if (range === '3m') startDate.setMonth(startDate.getMonth() - 3);
+    else if (range === '6m') startDate.setMonth(startDate.getMonth() - 6);
+    else if (range === '12m') startDate.setFullYear(startDate.getFullYear() - 1);
+    else startDate.setDate(startDate.getDate() - 30); // fallback
+
+    const dateFilter = { createdAt: { $gte: startDate } };
+
     const [
-      totalUsers, totalVendors, totalSalons, totalBookings,
-      pendingBookings, completedBookings, totalServices, totalStaff,
-      pendingPackages, activeVendors, revenueData, recentSignupUsers, chartData
+      totalUsers, totalVendors, totalSalons, 
+      activeVendors, revenueData, bookingStats
     ] = await Promise.all([
-      User.countDocuments({ role: 'user' }),
-      Vendor.countDocuments(),
-      Salon.countDocuments(),
-      Booking.countDocuments(),
-      Booking.countDocuments({ status: 'PENDING' }),
-      Booking.countDocuments({ status: 'COMPLETED' }),
-      Service.countDocuments(),
-      Staff.countDocuments(),
-      Package.countDocuments({ status: 'PENDING' }),
-      Vendor.countDocuments({ isActive: true, isApproved: true }),
-      Booking.aggregate([
-        { $match: { status: 'COMPLETED' } },
-        { $group: { _id: null, totalRevenue: { $sum: '$finalAmount' }, totalCommission: { $sum: '$commission' }, totalPlatformFee: { $sum: '$platformFee' } } },
+      User.countDocuments({ role: 'user' }), // Absolute count
+      Vendor.countDocuments(),               // Absolute count
+      Salon.countDocuments(),                // Absolute count
+      Vendor.countDocuments({ isActive: true, isApproved: true }), // Absolute count
+
+      // Payment aggregation for the date range
+      PaymentTransaction.aggregate([
+        { $match: { ...dateFilter, status: 'PAID' } },
+        { $group: {
+          _id: null,
+          totalAdminRevenue: { $sum: '$pricing.adminRevenue' },
+          totalCommission: { $sum: '$pricing.commissionAmount' },
+          totalPlatformFee: { $sum: '$pricing.platformFee' },
+          totalGrossOnline: { $sum: { $cond: [{ $eq: ['$paymentMethod', 'ONLINE'] }, '$amount', 0] } },
+          totalGrossCash: { $sum: { $cond: [{ $eq: ['$paymentMethod', 'CASH'] }, '$amount', 0] } },
+        }}
       ]),
-      User.find({ role: 'user' })
-        .sort({ createdAt: -1 })
-        .limit(5)
-        .select('name email phone createdAt avatar accountStatus'),
+
+      // Booking aggregation for the date range
       Booking.aggregate([
-        { $match: { status: 'COMPLETED', createdAt: { $gte: new Date(new Date().setMonth(new Date().getMonth() - 6)) } } },
-        {
-          $group: {
-            _id: { $month: "$createdAt" },
-            revenue: { $sum: "$finalAmount" },
-            bookings: { $sum: 1 }
-          }
-        },
-        { $sort: { "_id": 1 } }
+        { $match: dateFilter },
+        { $group: {
+          _id: null,
+          totalBookings: { $sum: 1 },
+          completedBookings: { $sum: { $cond: [{ $eq: ['$status', 'COMPLETED'] }, 1, 0] } },
+          pendingBookings: { $sum: { $cond: [{ $eq: ['$status', 'PENDING'] }, 1, 0] } },
+        }}
       ])
     ]);
 
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const formattedChartData = chartData.map(item => ({
-      name: months[item._id - 1],
-      Revenue: item.revenue,
-      Bookings: item.bookings
-    }));
-
-    const revenue = revenueData[0] || { totalRevenue: 0, totalCommission: 0, totalPlatformFee: 0 };
+    const revenue = revenueData[0] || { totalAdminRevenue: 0, totalCommission: 0, totalPlatformFee: 0, totalGrossOnline: 0, totalGrossCash: 0 };
+    const bookings = bookingStats[0] || { totalBookings: 0, completedBookings: 0, pendingBookings: 0 };
 
     res.json({
       success: true,
       data: {
-        totalUsers, totalVendors, totalSalons, totalBookings,
-        pendingBookings, completedBookings, totalServices, totalStaff,
-        pendingPackages, activeVendors,
-        totalRevenue: revenue.totalRevenue,
+        // Absolute counts (not affected by date range)
+        totalUsers, 
+        totalVendors, 
+        totalSalons, 
+        activeVendors,
+        
+        // Range-based metrics
+        totalBookings: bookings.totalBookings,
+        pendingBookings: bookings.pendingBookings,
+        completedBookings: bookings.completedBookings,
+
+        totalRevenue: revenue.totalAdminRevenue,
         totalCommission: revenue.totalCommission,
         totalPlatformFee: revenue.totalPlatformFee,
-        recentSignupUsers,
-        chartData: formattedChartData,
+        
+        totalGrossOnline: revenue.totalGrossOnline,
+        totalGrossCash: revenue.totalGrossCash,
       },
     });
   } catch (error) { next(error); }
@@ -215,6 +231,7 @@ const getVendors = async (req, res, next) => {
       query.$or = [
         { businessName: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
+        { name: { $regex: search, $options: 'i' } },
       ];
     }
 
@@ -229,9 +246,9 @@ const getVendors = async (req, res, next) => {
       .skip((page - 1) * limit)
       .limit(limit);
 
-    // Populate salon and stats
+    // Populate ALL salons per vendor (not just the first one)
     const vendorIds = vendors.map(v => v._id);
-    const salons = await Salon.find({ vendor: { $in: vendorIds } }).select('vendor name address city location');
+    const salons = await Salon.find({ vendor: { $in: vendorIds } }).select('vendor name address city location status isActive isApproved');
     const salonIds = salons.map(s => s._id);
     
     const bookingsCount = await Booking.aggregate([
@@ -240,16 +257,23 @@ const getVendors = async (req, res, next) => {
     ]);
 
     const vendorsWithStats = vendors.map(vendor => {
-      const vSalon = salons.find(s => s.vendor.toString() === vendor._id.toString());
-      let bCount = 0;
-      if (vSalon) {
-        const foundCount = bookingsCount.find(b => b._id.toString() === vSalon._id.toString());
-        if (foundCount) bCount = foundCount.count;
-      }
+      // Get ALL salons for this vendor
+      const vendorSalons = salons.filter(s => s.vendor.toString() === vendor._id.toString());
+      const vendorSalonIds = vendorSalons.map(s => s._id.toString());
+
+      // Sum bookings across ALL vendor's salons
+      let totalBookingsCount = 0;
+      bookingsCount.forEach(b => {
+        if (vendorSalonIds.includes(b._id.toString())) {
+          totalBookingsCount += b.count;
+        }
+      });
+
       return {
         ...vendor.toObject(),
-        salon: vSalon || null,
-        totalBookings: bCount
+        salons: vendorSalons,
+        salonCount: vendorSalons.length,
+        totalBookings: totalBookingsCount
       };
     });
 
@@ -264,7 +288,138 @@ const getVendors = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-// @desc    Update vendor status (Approve/Suspend)
+// @desc    Get vendor detail with all salons (Admin)
+// @route   GET /api/admin/vendors/:id
+// @access  Private/Admin
+const getVendorDetail = async (req, res, next) => {
+  try {
+    const vendor = await Vendor.findById(req.params.id).select('-password');
+    if (!vendor) return res.status(404).json({ success: false, message: 'Vendor not found' });
+
+    const salons = await Salon.find({ vendor: vendor._id });
+    const salonIds = salons.map(s => s._id);
+
+    // Get aggregate stats
+    const [bookingStats, staffCount, serviceCount] = await Promise.all([
+      Booking.aggregate([
+        { $match: { salon: { $in: salonIds } } },
+        { $group: { _id: null, total: { $sum: 1 } } }
+      ]),
+      Staff.countDocuments({ salon: { $in: salonIds } }),
+      Service.countDocuments({ salon: { $in: salonIds } }),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        vendor: sanitizeVendorForAdmin(vendor),
+        salons,
+        stats: {
+          totalBookings: bookingStats[0]?.total || 0,
+          totalStaff: staffCount,
+          totalServices: serviceCount,
+          totalSalons: salons.length,
+        }
+      }
+    });
+  } catch (error) { next(error); }
+};
+
+// @desc    Create vendor (Admin) — creates business owner, NOT a salon
+// @route   POST /api/admin/vendors
+// @access  Private/Admin
+const createVendor = async (req, res, next) => {
+  try {
+    const {
+      name, email, phone, password, businessName,
+      businessType, businessDescription, businessEmail, businessContact,
+      registeredAddress, city, state, country,
+      commissionRate, kycStatus, accountStatus
+    } = req.body;
+
+    // Check for existing vendor
+    const existing = await Vendor.findOne({ email });
+    if (existing) return res.status(400).json({ success: false, message: 'Vendor with this email already exists' });
+
+    const vendorData = {
+      name, email, phone, password: password || 'Temp@1234',
+      businessName,
+      businessType: businessType || '',
+      businessDescription: businessDescription || '',
+      businessEmail: businessEmail || '',
+      businessContact: businessContact || '',
+      registeredAddress: registeredAddress || '',
+      city: city || '',
+      state: state || '',
+      country: country || 'India',
+      commissionRate: commissionRate || 0,
+      kycStatus: kycStatus || 'pending',
+      accountStatus: accountStatus || 'active',
+      isApproved: false,
+    };
+
+    const vendor = await Vendor.create(vendorData);
+    res.status(201).json({ success: true, message: 'Vendor created successfully', data: vendor });
+  } catch (error) { next(error); }
+};
+
+// @desc    Update vendor details (Admin)
+// @route   PUT /api/admin/vendors/:id
+// @access  Private/Admin
+const updateVendor = async (req, res, next) => {
+  try {
+    const vendor = await Vendor.findById(req.params.id);
+    if (!vendor) return res.status(404).json({ success: false, message: 'Vendor not found' });
+
+    // Allow updating all vendor-level fields
+    const allowedFields = [
+      'name', 'phone', 'businessName', 'businessType', 'businessDescription',
+      'businessEmail', 'businessContact', 'registeredAddress', 'city', 'state', 'country',
+      'commissionRate', 'accountStatus'
+    ];
+
+    const updateData = {};
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) updateData[field] = req.body[field];
+    });
+
+    // Handle bank details
+    if (req.body.bank) {
+      Object.keys(req.body.bank).forEach(key => {
+        updateData[`bank.${key}`] = req.body.bank[key];
+      });
+    }
+
+    const updated = await Vendor.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true }).select('-password');
+    res.json({ success: true, message: 'Vendor updated', data: updated });
+  } catch (error) { next(error); }
+};
+
+// @desc    Update KYC status (Admin — verify/reject)
+// @route   PATCH /api/admin/vendors/:id/kyc
+// @access  Private/Admin
+const updateKycStatus = async (req, res, next) => {
+  try {
+    const { kycStatus, kycRejectReason } = req.body;
+    if (!['pending', 'submitted', 'verified', 'rejected'].includes(kycStatus)) {
+      return res.status(400).json({ success: false, message: 'Invalid KYC status' });
+    }
+
+    const updateData = { kycStatus };
+    if (kycStatus === 'rejected' && kycRejectReason) {
+      updateData.kycRejectReason = kycRejectReason;
+    } else {
+      updateData.kycRejectReason = '';
+    }
+
+    const vendor = await Vendor.findByIdAndUpdate(req.params.id, updateData, { new: true }).select('-password');
+    if (!vendor) return res.status(404).json({ success: false, message: 'Vendor not found' });
+
+    res.json({ success: true, message: `KYC status updated to ${kycStatus}`, data: vendor });
+  } catch (error) { next(error); }
+};
+
+// @desc    Update vendor status (Approve/Suspend) — cascades to salons
 // @route   PUT /api/admin/vendors/:id/status
 // @access  Private/Admin
 const updateVendorStatus = async (req, res, next) => {
@@ -277,9 +432,17 @@ const updateVendorStatus = async (req, res, next) => {
     }
 
     if (isApproved !== undefined) vendor.isApproved = isApproved;
-    if (isActive !== undefined) vendor.isActive = isActive;
+    if (isActive !== undefined) {
+      vendor.isActive = isActive;
+      vendor.accountStatus = isActive ? 'active' : 'suspended';
+    }
 
     await vendor.save();
+
+    // When vendor is suspended, suspend all their salons
+    if (isActive === false) {
+      await Salon.updateMany({ vendor: vendor._id }, { isActive: false, status: 'suspended' });
+    }
 
     res.json({ success: true, data: vendor });
   } catch (error) { next(error); }
@@ -449,6 +612,72 @@ const getServices = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+// ── Vendor Cash Control ────────────────────────────────────────────────────────
+const { getVendorFinancials } = require('../services/vendorCashService');
+const VendorFinancialSettings = require('../models/VendorFinancialSettings');
+
+// @desc    Get all vendors with their cash limit status
+// @route   GET /api/admin/vendor-cash-control
+// @access  Private/Admin
+const getVendorCashControl = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 20;
+
+    const total = await Vendor.countDocuments();
+    const vendors = await Vendor.find()
+      .select('name businessName email phone accountStatus suspensionReasons isActive isApproved')
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    const vendorCashStats = await Promise.all(
+      vendors.map(async (vendor) => {
+        const financials = await getVendorFinancials(vendor._id);
+        return {
+          ...vendor.toObject(),
+          cashFinancials: financials,
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      count: vendorCashStats.length,
+      total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      data: vendorCashStats,
+    });
+  } catch (error) { next(error); }
+};
+
+// @desc    Update a vendor's cash limit
+// @route   PUT /api/admin/vendor-cash-control/:id
+// @access  Private/Admin
+const updateVendorCashLimit = async (req, res, next) => {
+  try {
+    const { cashLimitEnabled, cashHoldingLimitPaise } = req.body;
+    const vendorId = req.params.id;
+
+    const settings = await VendorFinancialSettings.findOneAndUpdate(
+      { vendor: vendorId },
+      {
+        cashLimitEnabled,
+        cashHoldingLimitPaise,
+        updatedBy: req.user.id,
+      },
+      { new: true, upsert: true }
+    );
+    
+    // Recalculate suspension if needed
+    const { syncVendorCashSuspension } = require('../services/vendorCashService');
+    await syncVendorCashSuspension(vendorId);
+
+    res.json({ success: true, data: settings, message: 'Vendor cash limit updated' });
+  } catch (error) { next(error); }
+};
+
+// ── Account Recovery Requests ──────────────────────────────────────────────────
 // @desc    Get all account recovery requests
 // @route   GET /api/admin/account-recovery
 // @access  Private/Admin
@@ -809,6 +1038,31 @@ const getAnalytics = async (req, res, next) => {
         }
       }
     ]);
+    // 7. Revenue Overview (from PaymentTransaction)
+    const revenueOverviewAgg = await PaymentTransaction.aggregate([
+      { $match: { createdAt: { $gte: startDate }, status: 'PAID' } },
+      {
+        $group: {
+          _id: groupByFormat,
+          platformFee: { $sum: '$pricing.platformFee' },
+          adminCommission: { $sum: '$pricing.commissionAmount' },
+          grossBookingValue: { $sum: '$amount' }
+        }
+      },
+      { $sort: { "_id": 1 } }
+    ]);
+
+    // 8. Payment Method Overview
+    const paymentMethodAgg = await PaymentTransaction.aggregate([
+      { $match: { createdAt: { $gte: startDate }, status: { $in: ['PAID', 'REFUNDED', 'PARTIALLY_REFUNDED'] } } },
+      {
+        $group: {
+          _id: "$paymentMethod",
+          count: { $sum: 1 },
+          volume: { $sum: "$amount" }
+        }
+      }
+    ]);
 
     res.json({
       success: true,
@@ -818,7 +1072,9 @@ const getAnalytics = async (req, res, next) => {
         userGrowth: userGrowthAgg,
         vendorGrowth: vendorGrowthAgg,
         topSalons: topSalonsAgg,
-        topServices: topServicesAgg
+        topServices: topServicesAgg,
+        revenueOverview: revenueOverviewAgg,
+        paymentMethods: paymentMethodAgg
       }
     });
   } catch (error) {
@@ -833,6 +1089,10 @@ module.exports = {
   getUsers,
   updateUserStatus,
   getVendors,
+  getVendorDetail,
+  createVendor,
+  updateVendor,
+  updateKycStatus,
   updateVendorStatus,
   getPendingCounts,
   getAllBookings,
@@ -843,5 +1103,7 @@ module.exports = {
   getCategories,
   getSubcategories,
   getServices,
-  getAnalytics
+  getAnalytics,
+  getVendorCashControl,
+  updateVendorCashLimit
 };

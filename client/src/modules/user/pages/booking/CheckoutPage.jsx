@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { createBooking, validateCoupon, createPaymentOrder, verifyPayment, getPublicPlatformFee } from '../../services/userApi';
+import { createBooking, validateCoupon, createPaymentOrder, verifyPayment, previewBookingTotal } from '../../services/userApi';
 import { useAuth } from '../../../../context/AuthContext';
 import { goBack } from '../../../../utils/navigation';
 import { getImageUrl } from '../../../../utils/imageUtils';
+import { formatPaise } from '../../../../utils/money';
 
 const CheckoutPage = () => {
   const { id: salonId } = useParams();
@@ -27,43 +28,54 @@ const CheckoutPage = () => {
   const packageDoc = bookingContext?.packageDoc || null;
 
   const [couponCode, setCouponCode] = useState(bookingContext?.couponCode || '');
-  const [couponResult, setCouponResult] = useState(bookingContext?.couponResult || null);
   const [couponError, setCouponError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false); // prevents double-click race condition
   const [success, setSuccess] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('ONLINE');
-  const [platformFeePercentage, setPlatformFeePercentage] = useState(0);
+  const [paymentError, setPaymentError] = useState('');
+  
+  // Preview State (Source of Truth for Frontend)
+  const [previewData, setPreviewData] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(true);
 
   useEffect(() => {
-    getPublicPlatformFee().then(res => {
-      if (res.data?.data?.feePercentage) {
-        setPlatformFeePercentage(res.data.data.feePercentage);
-      }
-    }).catch(() => {});
+    if (salon && date && time && selectedServices.length > 0) {
+      loadPreview();
+    }
   }, []);
+
+  const loadPreview = async (appliedCouponCode = '') => {
+    setPreviewLoading(true);
+    setPaymentError('');
+    try {
+      const payload = {
+        salon: salonId,
+        services: selectedServices.map(s => ({
+          service: s._id,
+          staff: serviceStaff[s._id] || null
+        })),
+        couponCode: appliedCouponCode || couponCode,
+        ...(packageId && { packageId })
+      };
+      const res = await previewBookingTotal(payload);
+      setPreviewData(res.data.data);
+    } catch (e) {
+      console.error('Failed to load preview', e);
+      setPaymentError(e.response?.data?.message || 'Failed to calculate booking total');
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
 
   // Persist current state to sessionStorage so it survives refresh
   useEffect(() => {
     if (salon && date && time && selectedServices.length > 0) {
       sessionStorage.setItem('pendingBooking', JSON.stringify({
-        salon, selectedServices, date, time, serviceStaff, couponCode, couponResult, packageId, packageDoc
+        salon, selectedServices, date, time, serviceStaff, couponCode, packageId, packageDoc
       }));
     }
-  }, [salon, selectedServices, date, time, serviceStaff, couponCode, couponResult, packageId, packageDoc]);
-
-  const originalTotalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
-  const baseAmount = packageDoc ? packageDoc.discountedPrice : originalTotalPrice;
-  const packageDiscount = packageDoc ? (originalTotalPrice - packageDoc.discountedPrice) : 0;
-  
-  // Calculate subtotal after discounts
-  const subtotalAfterDiscounts = couponResult ? couponResult.finalAmount : baseAmount;
-  const couponDiscountAmount = couponResult ? couponResult.discount : 0;
-  
-  // Platform fee calculated on subtotal
-  const platformFeeAmount = Math.round((subtotalAfterDiscounts * platformFeePercentage) / 100 * 100) / 100;
-  
-  // Final amount to pay
-  const finalAmount = Math.round((subtotalAfterDiscounts + platformFeeAmount) * 100) / 100;
+  }, [salon, selectedServices, date, time, serviceStaff, couponCode, packageId, packageDoc]);
 
   if (!salon || !date || !time || selectedServices.length === 0) {
     return (
@@ -78,22 +90,26 @@ const CheckoutPage = () => {
     if (!couponCode) return;
     setCouponError('');
     try {
-      const res = await validateCoupon({ code: couponCode, amount: baseAmount, packageId });
-      setCouponResult(res.data.data);
+      await loadPreview(couponCode);
+      if (previewData && !previewData.coupon) {
+        // If preview returns successfully but doesn't apply coupon (maybe logic failed locally but api passed)
+        // Usually preview error will be caught in loadPreview
+      }
     } catch (e) {
       setCouponError(e.response?.data?.message || 'Invalid coupon');
-      setCouponResult(null);
     }
   };
 
+
   const handleSubmit = async () => {
+    // Guard: prevent double submission from rapid clicks
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setPaymentError('');
+
     if (!user) {
-      // State is already persisted in sessionStorage by useEffect
-      navigate('/login', {
-        state: {
-          from: location.pathname
-        }
-      });
+      submittingRef.current = false;
+      navigate('/login', { state: { from: location.pathname } });
       return;
     }
 
@@ -107,15 +123,16 @@ const CheckoutPage = () => {
         })),
         bookingDate: date,
         startTime: time,
-        paymentMethod: paymentMethod,
-        ...(couponResult && { couponCode }),
+        // Always send normalized ONLINE or CASH
+        paymentMethod: paymentMethod === 'ONLINE' ? 'ONLINE' : 'CASH',
+        ...(previewData?.coupon && { couponCode: previewData.coupon.code }),
         ...(packageId && { packageId }),
       };
 
       const res = await createBooking(bookingData);
       const booking = res.data.data.booking;
 
-      if (paymentMethod === 'AT_SALON') {
+      if (paymentMethod === 'CASH') {
         sessionStorage.removeItem('pendingBooking');
         setSuccess(true);
         setTimeout(() => navigate(`/booking/${booking._id}`), 1500);
@@ -134,7 +151,7 @@ const CheckoutPage = () => {
           order_id: order.id,
           handler: async function (response) {
             try {
-              setSubmitting(true); // Keep submitting true while verifying
+              setSubmitting(true);
               const verifyRes = await verifyPayment({
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
@@ -147,8 +164,9 @@ const CheckoutPage = () => {
                 setTimeout(() => navigate(`/booking/${booking._id}`), 1500);
               }
             } catch (err) {
-              alert(err.response?.data?.message || 'Payment verification failed');
+              setPaymentError(err.response?.data?.message || 'Payment verification failed. Please check your booking status.');
               setSubmitting(false);
+              submittingRef.current = false;
             }
           },
           prefill: {
@@ -156,20 +174,30 @@ const CheckoutPage = () => {
             email: user.email,
             contact: user.phone
           },
-          theme: {
-            color: "#6D3EA8"
+          theme: { color: "#6D3EA8" },
+          modal: {
+            ondismiss: function () {
+              // User closed popup — do NOT mark as failed
+              setPaymentError('Payment was not completed. You can retry from your Booking Details page.');
+              setSubmitting(false);
+              submittingRef.current = false;
+            }
           }
         };
         const rzp = new window.Razorpay(options);
         rzp.on('payment.failed', function (response) {
-          alert(response.error.description || "Payment failed. Please try again.");
+          setPaymentError(response.error?.description || 'Payment failed. Please try again.');
           setSubmitting(false);
+          submittingRef.current = false;
         });
         rzp.open();
+        // Don't reset submitting here — modal handles it
+        return;
       }
     } catch (e) {
-      alert(e.response?.data?.message || 'Booking failed');
+      setPaymentError(e.response?.data?.message || 'Booking failed. Please try again.');
       setSubmitting(false);
+      submittingRef.current = false;
     }
   };
 
@@ -192,8 +220,8 @@ const CheckoutPage = () => {
 
   return (
     <div className="bg-background text-on-surface font-body-md antialiased min-h-screen flex flex-col pb-[120px]">
-      {/* Top App Bar */}
-      <header className="sticky top-[env(safe-area-inset-top)] w-full z-50 bg-background/90 backdrop-blur-md shadow-sm flex justify-between items-center px-4 md:px-margin-desktop h-16">
+      {/* Local Checkout Header */}
+      <header className="relative w-full bg-surface shadow-sm flex justify-between items-center px-4 md:px-margin-desktop h-16 rounded-2xl mt-4 mb-2 max-w-md mx-auto">
         <button onClick={() => goBack(navigate, `/salon/${salonId}/book`)} className="text-on-surface-variant hover:bg-soft-primary p-2 rounded-full transition-colors active:scale-95 duration-150 flex items-center justify-center -ml-2">
           <span className="material-symbols-outlined text-[24px]">arrow_back</span>
         </button>
@@ -245,7 +273,7 @@ const CheckoutPage = () => {
                   <span className="font-body-md text-[16px] font-medium text-on-surface">{s.name}</span>
                   <span className="font-body-sm text-[14px] text-muted-text">{s.duration} min</span>
                 </div>
-                <span className="font-label-md text-[14px] text-on-surface">₹{s.price}</span>
+                <span className="font-label-md text-[14px] text-on-surface">{formatPaise(s.pricePaise, s.price)}</span>
               </div>
             ))}
           </div>
@@ -257,56 +285,73 @@ const CheckoutPage = () => {
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted-text">sell</span>
             <input
               value={couponCode}
-              onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponError(''); setCouponResult(null); }}
-              className="w-full pl-10 pr-4 py-3 bg-background-alt border border-border rounded-lg font-body-md text-[16px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-              placeholder="Promo code"
-              type="text"
+              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+              placeholder="Enter coupon code"
+              className="w-full bg-surface-variant font-body-md text-[16px] text-on-surface py-3 pl-10 pr-4 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary uppercase"
             />
           </div>
           <button
             onClick={handleValidateCoupon}
-            className="bg-surface-variant text-primary font-label-md text-[14px] px-6 py-3 rounded-lg hover:bg-soft-primary active:scale-95 transition-all"
+            disabled={previewLoading || !couponCode}
+            className="bg-surface-variant text-primary font-label-md text-[14px] px-6 py-3 rounded-lg hover:bg-soft-primary active:scale-95 transition-all disabled:opacity-50"
           >
             Apply
           </button>
         </section>
-        {couponError && <p className="text-error text-sm px-1 -mt-4">{couponError}</p>}
-        {couponResult && (
+        {paymentError && (
+          <div className="text-error text-sm px-3 py-2 bg-error/5 border border-error/20 rounded-lg flex items-center gap-2">
+            <span className="material-symbols-outlined text-[16px]">error</span>
+            {paymentError}
+          </div>
+        )}
+        {couponError && (
+          <div className="text-error text-sm px-3 py-2 bg-error/5 border border-error/20 rounded-lg flex items-center gap-2 -mt-2">
+            <span className="material-symbols-outlined text-[16px]">error</span>
+            {couponError}
+          </div>
+        )}
+        {previewData?.coupon && (
           <p className="text-success text-sm px-1 -mt-4 font-medium flex items-center gap-1">
             <span className="material-symbols-outlined text-[16px] text-success">check_circle</span>
-            Saved ₹{couponResult.discount}
+            Saved {formatPaise(previewData.couponDiscountPaise)}
           </p>
         )}
 
         {/* Price Breakdown */}
         <section className="bg-surface rounded-[18px] border border-border shadow-sm p-5 flex flex-col gap-3">
-          <div className="flex justify-between items-center">
-            <span className="font-body-md text-[16px] text-muted-text">Original Total</span>
-            <span className="font-body-md text-[16px] text-on-surface">₹{originalTotalPrice}</span>
-          </div>
-          {packageDoc && (
-            <div className="flex justify-between items-center text-success">
-              <span className="font-body-md text-[16px]">{packageDoc.name} Discount</span>
-              <span className="font-body-md text-[16px]">-₹{packageDiscount}</span>
-            </div>
+          {previewLoading ? (
+             <div className="text-center py-4 text-muted-text text-sm">Calculating total...</div>
+          ) : previewData && (
+            <>
+              <div className="flex justify-between items-center">
+                <span className="font-body-md text-[16px] text-muted-text">Original Total</span>
+                <span className="font-body-md text-[16px] text-on-surface">{formatPaise(previewData.totalAmountPaise)}</span>
+              </div>
+              {previewData.package && (
+                <div className="flex justify-between items-center text-success">
+                  <span className="font-body-md text-[16px]">{previewData.package.name} Discount</span>
+                  <span className="font-body-md text-[16px]">-{formatPaise(previewData.packageDiscountPaise)}</span>
+                </div>
+              )}
+              {previewData.coupon && (
+                <div className="flex justify-between items-center text-success">
+                  <span className="font-body-md text-[16px]">Coupon Discount</span>
+                  <span className="font-body-md text-[16px]">-{formatPaise(previewData.couponDiscountPaise)}</span>
+                </div>
+              )}
+              {previewData.platformFeePercentage > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="font-body-md text-[16px] text-muted-text">Platform Fee ({previewData.platformFeePercentage}%)</span>
+                  <span className="font-body-md text-[16px] text-on-surface">{formatPaise(previewData.platformFeeAmountPaise)}</span>
+                </div>
+              )}
+              <div className="h-[1px] w-full bg-border my-2"></div>
+              <div className="flex justify-between items-center">
+                <span className="font-headline-sm text-[20px] text-on-surface">Total</span>
+                <span className="font-headline-sm text-[20px] text-primary">{formatPaise(previewData.finalAmountPaise)}</span>
+              </div>
+            </>
           )}
-          {couponResult && (
-            <div className="flex justify-between items-center text-success">
-              <span className="font-body-md text-[16px]">Coupon Discount</span>
-              <span className="font-body-md text-[16px]">-₹{couponDiscountAmount}</span>
-            </div>
-          )}
-          {platformFeePercentage > 0 && (
-            <div className="flex justify-between items-center">
-              <span className="font-body-md text-[16px] text-muted-text">Platform Fee ({platformFeePercentage}%)</span>
-              <span className="font-body-md text-[16px] text-on-surface">₹{platformFeeAmount}</span>
-            </div>
-          )}
-          <div className="h-[1px] w-full bg-border my-2"></div>
-          <div className="flex justify-between items-center">
-            <span className="font-headline-sm text-[20px] text-on-surface">Total</span>
-            <span className="font-headline-sm text-[20px] text-primary">₹{finalAmount}</span>
-          </div>
         </section>
 
         {/* Payment Method */}
@@ -323,13 +368,13 @@ const CheckoutPage = () => {
                 <span className="font-body-sm text-muted-text text-[12px]">Credit/Debit Cards, UPI, NetBanking</span>
               </div>
             </label>
-            <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${paymentMethod === 'AT_SALON' ? 'border-primary bg-primary/5' : 'border-border hover:bg-surface-variant'}`}>
-              <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${paymentMethod === 'AT_SALON' ? 'border-primary' : 'border-on-surface-variant'}`}>
-                {paymentMethod === 'AT_SALON' && <div className="w-3 h-3 rounded-full bg-primary"></div>}
+            <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${paymentMethod === 'CASH' ? 'border-primary bg-primary/5' : 'border-border hover:bg-surface-variant'}`}>
+              <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${paymentMethod === 'CASH' ? 'border-primary' : 'border-on-surface-variant'}`}>
+                {paymentMethod === 'CASH' && <div className="w-3 h-3 rounded-full bg-primary"></div>}
               </div>
-              <input type="radio" name="payment" value="AT_SALON" checked={paymentMethod === 'AT_SALON'} onChange={() => setPaymentMethod('AT_SALON')} className="hidden" />
+              <input type="radio" name="payment" value="CASH" checked={paymentMethod === 'CASH'} onChange={() => setPaymentMethod('CASH')} className="hidden" />
               <div className="flex flex-col">
-                <span className="font-body-md text-on-surface">Pay at Salon</span>
+                <span className="font-body-md text-on-surface">Pay at Salon (Cash)</span>
                 <span className="font-body-sm text-muted-text text-[12px]">Pay by cash or card after service</span>
               </div>
             </label>
@@ -340,9 +385,9 @@ const CheckoutPage = () => {
         <section className="flex items-start gap-2 bg-inverse-on-surface p-4 rounded-lg">
           <span className="material-symbols-outlined text-[20px] text-primary shrink-0 mt-0.5">info</span>
           <p className="font-body-sm text-[14px] text-on-surface-variant">
-            {paymentMethod === 'AT_SALON'
-              ? "Pay at the salon after your service is completed. You can cancel your booking anytime."
-              : "Securely pay online now. Cancellation policies apply."}
+            {paymentMethod === 'CASH'
+              ? "Pay at the salon after your service is completed. You can cancel anytime."
+              : "Securely pay online now. Cancellation and refund policies apply."}
           </p>
         </section>
       </main>
@@ -352,10 +397,10 @@ const CheckoutPage = () => {
         <div className="w-full max-w-md mx-auto">
           <button
             onClick={handleSubmit}
-            disabled={submitting}
+            disabled={submitting || previewLoading || !previewData}
             className="w-full bg-primary text-white font-label-md text-[16px] py-4 rounded-xl shadow-sm hover:bg-primary-dark active:scale-[0.98] transition-all flex justify-center items-center gap-2 disabled:opacity-70"
           >
-            {submitting ? 'Confirming...' : `Confirm Booking - ₹${finalAmount}`}
+            {submitting ? 'Confirming...' : `Confirm Booking - ${previewData ? formatPaise(previewData.finalAmountPaise) : ''}`}
           </button>
         </div>
       </div>

@@ -41,6 +41,35 @@ const getSalonStaff = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+// @desc    Get all staff across vendor's salons
+const getVendorStaff = async (req, res, next) => {
+  try {
+    const { search, isActive, page = 1, limit = 12 } = req.query;
+    
+    // Get all salons for this vendor
+    const salons = await Salon.find({ vendor: req.user.id }, '_id');
+    const salonIds = salons.map(s => s._id);
+
+    const query = { salon: { $in: salonIds } };
+    if (search) query.name = { $regex: search, $options: 'i' };
+    if (isActive !== undefined && isActive !== 'all') query.isActive = isActive === 'true';
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const total = await Staff.countDocuments(query);
+    const staff = await Staff.find(query).populate('salon', 'name').skip(skip).limit(parseInt(limit));
+    
+    res.json({
+      success: true,
+      data: {
+        staff,
+        total,
+        page: parseInt(page),
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) { next(error); }
+};
+
 // @desc    Update staff
 const updateStaff = async (req, res, next) => {
   try {
@@ -108,4 +137,4 @@ const deleteStaff = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-module.exports = { addStaff, getSalonStaff, updateStaff, toggleStaffStatus, updateSchedule, getAvailability, deleteStaff };
+module.exports = { addStaff, getSalonStaff, getVendorStaff, updateStaff, toggleStaffStatus, updateSchedule, getAvailability, deleteStaff };

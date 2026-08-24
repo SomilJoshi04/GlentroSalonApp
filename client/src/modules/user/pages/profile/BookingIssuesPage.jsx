@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useAuth } from '../../../../context/AuthContext';
 import PageHeader from '../../../../components/common/PageHeader';
 import { getMyBookings, getMyBookingIssues, createBookingIssue } from '../../services/userApi';
 import StatusBadge from '../../../admin/components/StatusBadge';
@@ -30,10 +31,15 @@ const BookingIssuesPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const fromProfile = location.state?.fromProfile;
+  const { user } = useAuth();
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (user) {
+      loadData();
+    } else {
+      setLoading(false);
+    }
+  }, [user]);
 
   const loadData = async () => {
     setLoading(true);
@@ -137,7 +143,7 @@ const BookingIssuesPage = () => {
           </div>
           <p className="text-muted-text text-lg">Report and track problems related to your specific bookings.</p>
 
-          {!showForm && (
+          {!showForm && user && (
             <button
               onClick={() => setShowForm(true)}
               className="md:hidden mt-6 w-full flex items-center justify-center gap-2 px-5 py-3 bg-primary text-white rounded-xl font-medium shadow-sm"
@@ -151,12 +157,29 @@ const BookingIssuesPage = () => {
 
       <div className="w-full max-w-2xl md:max-w-4xl lg:max-w-5xl mx-auto px-4 sm:px-6">
 
-        {message.text && (
-          <div className={`mb-6 p-4 rounded-xl text-sm font-medium flex items-start gap-3 ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-            <span className="material-symbols-outlined mt-0.5">{message.type === 'success' ? 'check_circle' : 'error'}</span>
-            <p>{message.text}</p>
+        {!user ? (
+          <div className="bg-surface rounded-3xl border border-border p-12 text-center shadow-sm">
+            <div className="w-16 h-16 bg-surface-variant rounded-full flex items-center justify-center mx-auto mb-4 text-primary">
+              <span className="material-symbols-outlined text-[32px]">lock</span>
+            </div>
+            <h3 className="text-xl font-bold text-on-surface mb-2">Login Required</h3>
+            <p className="text-muted-text max-w-md mx-auto mb-6">You must be logged in to view and report booking issues.</p>
+            <Link
+              to="/login"
+              state={{ from: location.pathname }}
+              className="inline-flex items-center justify-center px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors"
+            >
+              Log In to Continue
+            </Link>
           </div>
-        )}
+        ) : (
+          <>
+            {message.text && (
+              <div className={`mb-6 p-4 rounded-xl text-sm font-medium flex items-start gap-3 ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                <span className="material-symbols-outlined mt-0.5">{message.type === 'success' ? 'check_circle' : 'error'}</span>
+                <p>{message.text}</p>
+              </div>
+            )}
 
         {showForm ? (
           <div className="bg-surface rounded-3xl border border-border p-6 sm:p-8 shadow-sm">
@@ -282,6 +305,8 @@ const BookingIssuesPage = () => {
               </div>
             )}
           </div>
+        )}
+          </>
         )}
       </div>
     </div>

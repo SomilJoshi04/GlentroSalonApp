@@ -25,25 +25,59 @@ export const LocationProvider = ({ children }) => {
   // Sync with Auth Context when user logs in/out
   useEffect(() => {
     if (isAuthenticated && user) {
-      // User is logged in, extract location from user profile
-      if (user.location && user.location.coordinates && user.location.coordinates.length === 2) {
-        setSelectedLocation({
-          formattedAddress: user.formattedAddress || user.city || 'Saved Location',
-          city: user.city || '',
-          lat: user.location.coordinates[1],
-          lng: user.location.coordinates[0],
-        });
-      } else if (user.city) {
-        setSelectedLocation({ name: user.city, city: user.city });
+      const isGuestUpdatedThisSession = sessionStorage.getItem('guest_location_updated') === 'true';
+
+      if (isGuestUpdatedThisSession) {
+        // The user intentionally updated location during this guest session, then logged in.
+        // Sync this new location to the backend instead of overwriting it with stale backend data.
+        try {
+          const saved = localStorage.getItem('guest_location');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            setSelectedLocation(parsed);
+            
+            // Sync to backend
+            api.put('/users/location', {
+              latitude: parsed.lat,
+              longitude: parsed.lng,
+              city: parsed.city,
+              formattedAddress: parsed.formattedAddress,
+            }).catch(e => console.error('Failed to sync guest location on login:', e));
+          }
+        } catch (e) {
+          console.error('Error reading guest location:', e);
+        }
+      } else {
+        // User is logged in and hasn't manually changed location this session.
+        // Extract location from user profile.
+        if (user.location && user.location.coordinates && user.location.coordinates.length === 2) {
+          const loc = {
+            formattedAddress: user.formattedAddress || user.city || 'Saved Location',
+            city: user.city || '',
+            lat: user.location.coordinates[1],
+            lng: user.location.coordinates[0],
+          };
+          setSelectedLocation(loc);
+          // Sync it back to local storage so logout falls back to the correct last known location
+          localStorage.setItem('guest_location', JSON.stringify(loc));
+        } else if (user.city) {
+          const loc = { name: user.city, city: user.city };
+          setSelectedLocation(loc);
+          localStorage.setItem('guest_location', JSON.stringify(loc));
+        }
       }
     } else {
-      // User logged out, fallback to guest location
+      // User logged out (or is a guest), fallback to guest location
       try {
         const saved = localStorage.getItem('guest_location');
         setSelectedLocation(saved ? JSON.parse(saved) : null);
       } catch (e) {
         setSelectedLocation(null);
       }
+      
+      // On explicit logout (transition from auth to guest), we clear the session flag
+      // so if they login again it doesn't think they manually set it as guest
+      sessionStorage.removeItem('guest_location_updated');
     }
   }, [isAuthenticated, user]);
 
@@ -64,6 +98,12 @@ export const LocationProvider = ({ children }) => {
 
     setSelectedLocation(normalizedLocation);
 
+    // ALWAYS save to localStorage so logout falls back to it gracefully
+    localStorage.setItem('guest_location', JSON.stringify(normalizedLocation));
+    
+    // Set a session flag indicating the user explicitly set a location THIS session
+    sessionStorage.setItem('guest_location_updated', 'true');
+
     if (isAuthenticated) {
       try {
         // Persist to backend
@@ -79,11 +119,9 @@ export const LocationProvider = ({ children }) => {
         setLocationError('Unable to save location permanently.');
         return false;
       }
-    } else {
-      // Save to localStorage for guest
-      localStorage.setItem('guest_location', JSON.stringify(normalizedLocation));
-      return true;
     }
+    
+    return true;
   };
 
   /**

@@ -25,24 +25,70 @@ const bookingSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['PENDING', 'CONFIRMED', 'REJECTED', 'CANCELLED', 'COMPLETED'],
+      enum: ['PENDING', 'CONFIRMED', 'REJECTED', 'CANCELLED', 'COMPLETED', 'NO_SHOW'],
       default: 'PENDING',
     },
+
+    // ─── Service Price Totals ──────────────────────────────────────────────────
     totalAmount: {
       type: Number,
       required: true,
       min: 0,
+    },
+    totalAmountPaise: {
+      type: Number,
     },
     discountAmount: {
       type: Number,
       default: 0,
       min: 0,
     },
+    discountAmountPaise: {
+      type: Number,
+    },
     finalAmount: {
       type: Number,
       required: true,
       min: 0,
     },
+    finalAmountPaise: {
+      type: Number,
+    },
+    pointsCalculationAmount: {
+      type: Number,
+      default: 0,
+    },
+    pointsEarned: {
+      type: Number,
+      default: 0,
+    },
+
+    // ─── Financial Snapshot (immutable after creation) ─────────────────────────
+    // All values saved at booking time; never recalculated using current config.
+    pricing: {
+      subtotal: { type: Number, default: 0 },          // Sum of services
+      subtotalPaise: { type: Number },
+      packageDiscount: { type: Number, default: 0 },   // Package offer discount
+      packageDiscountPaise: { type: Number },
+      couponDiscount: { type: Number, default: 0 },    // Coupon discount
+      couponDiscountPaise: { type: Number },
+      grossAmount: { type: Number, default: 0 },       // subtotal - all discounts
+      grossAmountPaise: { type: Number },
+      platformFee: { type: Number, default: 0 },       // Platform fee (charged on top)
+      platformFeePaise: { type: Number },
+      commissionAmount: { type: Number, default: 0 },  // Commission (deducted from vendor)
+      commissionAmountPaise: { type: Number },
+      finalAmount: { type: Number, default: 0 },       // What customer pays
+      finalAmountPaise: { type: Number },
+      vendorNetAmount: { type: Number, default: 0 },   // What vendor earns
+      vendorNetAmountPaise: { type: Number },
+      adminRevenue: { type: Number, default: 0 },      // platform fee + commission
+      adminRevenuePaise: { type: Number },
+      platformFeePercentage: { type: Number, default: 0 },
+      commissionPercentage: { type: Number, default: 0 },
+      vendorPlanType: { type: String, enum: ['COMMISSION', 'SUBSCRIPTION'] },
+    },
+
     coupon: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Coupon',
@@ -58,9 +104,13 @@ const bookingSchema = new mongoose.Schema(
       offerPrice: Number,
       discount: Number,
     },
+
     cancellationFee: {
       type: Number,
       default: 0,
+    },
+    cancellationFeePaise: {
+      type: Number,
     },
     cancellationReason: {
       type: String,
@@ -74,44 +124,40 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
-    // Razorpay payment fields
+
+    // ─── Payment ───────────────────────────────────────────────────────────────
+    // Normalized values only: ONLINE or CASH (no more AT_SALON / online / cash lowercase)
     paymentMethod: {
       type: String,
-      enum: ['ONLINE', 'AT_SALON', 'CASH', 'online', 'at_salon', 'cash'],
-      default: 'AT_SALON',
-    },
-    razorpayOrderId: {
-      type: String,
-    },
-    razorpayPaymentId: {
-      type: String,
+      enum: ['ONLINE', 'CASH'],
+      default: 'CASH',
     },
     paymentStatus: {
       type: String,
-      enum: ['PENDING', 'PAID', 'REFUNDED', 'FAILED', 'pending', 'paid', 'refunded', 'failed'],
+      enum: ['PENDING', 'AUTHORIZED', 'PAID', 'FAILED', 'REFUND_PENDING', 'PARTIALLY_REFUNDED', 'REFUNDED'],
       default: 'PENDING',
     },
-    // Financial breakdown
-    commission: {
-      type: Number,
-      default: 0,
+
+    // Reference to the successful PaymentTransaction (set after payment)
+    paymentTransactionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'PaymentTransaction',
     },
-    platformFee: {
-      type: Number,
-      default: 0,
-    },
-    vendorPayout: {
-      type: Number,
-      default: 0,
-    },
-    platformFeePercentage: {
-      type: Number,
-      default: 0,
-    },
-    adminCommissionPercentage: {
-      type: Number,
-      default: 0,
-    },
+
+    // Razorpay identifiers (kept on booking for quick lookup)
+    razorpayOrderId: { type: String, unique: true, sparse: true },
+    razorpayPaymentId: { type: String, unique: true, sparse: true },
+
+    // ─── Financial Breakdown (legacy fields — kept for backwards compatibility)
+    // These mirror pricing.* and are preserved so existing queries don't break.
+    commission: { type: Number, default: 0 },
+    platformFee: { type: Number, default: 0 },
+    vendorPayout: { type: Number, default: 0 },
+    commissionPaise: { type: Number },
+    platformFeePaise: { type: Number },
+    vendorPayoutPaise: { type: Number },
+    platformFeePercentage: { type: Number, default: 0 },
+    adminCommissionPercentage: { type: Number, default: 0 },
     vendorPlanType: {
       type: String,
       enum: ['COMMISSION', 'SUBSCRIPTION'],
@@ -126,5 +172,6 @@ const bookingSchema = new mongoose.Schema(
 bookingSchema.index({ user: 1, status: 1 });
 bookingSchema.index({ salon: 1, status: 1 });
 bookingSchema.index({ bookingDate: 1, salon: 1 });
+bookingSchema.index({ paymentStatus: 1 });
 
 module.exports = mongoose.model('Booking', bookingSchema);

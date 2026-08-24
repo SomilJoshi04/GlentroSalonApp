@@ -12,6 +12,9 @@ const subscriptionSchema = new mongoose.Schema(
       required: [true, 'Price is required'],
       min: 0,
     },
+    pricePaise: {
+      type: Number,
+    },
     duration: {
       type: Number, // in months
       required: [true, 'Duration is required'],

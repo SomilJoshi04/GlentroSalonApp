@@ -81,14 +81,28 @@ const loginUser = async (req, res, next) => {
 // @route   POST /api/auth/register/vendor
 const registerVendor = async (req, res, next) => {
   try {
-    const { name, email, phone, password, businessName } = req.body;
+    const { 
+      name, email, phone, password, businessName,
+      businessType, businessDescription, businessEmail, businessContact,
+      registeredAddress, city, state, country
+    } = req.body;
 
     const existingVendor = await Vendor.findOne({ email });
     if (existingVendor) {
       return res.status(400).json({ success: false, message: 'Vendor already exists with this email' });
     }
 
-    const vendor = await Vendor.create({ name, email, phone, password, businessName });
+    const vendorData = { name, email, phone, password, businessName };
+    if (businessType !== undefined) vendorData.businessType = businessType;
+    if (businessDescription !== undefined) vendorData.businessDescription = businessDescription;
+    if (businessEmail !== undefined) vendorData.businessEmail = businessEmail;
+    if (businessContact !== undefined) vendorData.businessContact = businessContact;
+    if (registeredAddress !== undefined) vendorData.registeredAddress = registeredAddress;
+    if (city !== undefined) vendorData.city = city;
+    if (state !== undefined) vendorData.state = state;
+    if (country !== undefined) vendorData.country = country;
+
+    const vendor = await Vendor.create(vendorData);
     const token = generateToken(vendor._id, 'vendor');
 
     res.status(201).json({

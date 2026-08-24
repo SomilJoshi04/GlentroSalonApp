@@ -9,6 +9,7 @@ import AdminLayout from '../layouts/AdminLayout';
 import LoginPage from '../pages/LoginPage';
 
 const DashboardPage = lazy(() => import('../pages/DashboardPage'));
+const AnalyticsPage = lazy(() => import('../pages/AnalyticsPage'));
 const UsersPage = lazy(() => import('../pages/UsersPage'));
 const VendorsPage = lazy(() => import('../pages/VendorsPage'));
 const SalonsPage = lazy(() => import('../pages/SalonsPage'));
@@ -30,6 +31,8 @@ const AdminFAQPage = lazy(() => import('../pages/AdminFAQPage'));
 const AdminBookingIssuesPage = lazy(() => import('../pages/AdminBookingIssuesPage'));
 const ProfilePage = lazy(() => import('../pages/ProfilePage'));
 const ReviewsPage = lazy(() => import('../pages/ReviewsPage'));
+const AdminPaymentsPage = lazy(() => import('../pages/AdminPaymentsPage'));
+const VendorCashControlPage = lazy(() => import('../pages/VendorCashControlPage'));
 
 const SuspenseWrapper = ({ children }) => (
   <Suspense fallback={<Loader text="Loading..." />}>
@@ -44,8 +47,10 @@ export default function AdminRoutes() {
 
       <Route element={<ProtectedRoute role="admin"><AdminLayout /></ProtectedRoute>}>
         <Route index element={<SuspenseWrapper><DashboardPage /></SuspenseWrapper>} />
+        <Route path="analytics" element={<SuspenseWrapper><AnalyticsPage /></SuspenseWrapper>} />
         <Route path="users" element={<SuspenseWrapper><UsersPage /></SuspenseWrapper>} />
         <Route path="vendors" element={<SuspenseWrapper><VendorsPage /></SuspenseWrapper>} />
+        <Route path="vendors/cash-control" element={<SuspenseWrapper><VendorCashControlPage /></SuspenseWrapper>} />
         <Route path="salons" element={<SuspenseWrapper><SalonsPage /></SuspenseWrapper>} />
         <Route path="bookings" element={<SuspenseWrapper><BookingsPage /></SuspenseWrapper>} />
         <Route path="categories" element={<SuspenseWrapper><CategoriesPage /></SuspenseWrapper>} />
@@ -65,6 +70,7 @@ export default function AdminRoutes() {
         <Route path="support/:chatId" element={<SuspenseWrapper><SupportChatPage /></SuspenseWrapper>} />
         <Route path="profile" element={<SuspenseWrapper><ProfilePage /></SuspenseWrapper>} />
         <Route path="reviews" element={<SuspenseWrapper><ReviewsPage /></SuspenseWrapper>} />
+        <Route path="payments" element={<SuspenseWrapper><AdminPaymentsPage /></SuspenseWrapper>} />
       </Route>
     </Routes>
   );

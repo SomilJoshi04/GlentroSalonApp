@@ -24,6 +24,38 @@ const getServices = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+const getVendorServices = async (req, res, next) => {
+  try {
+    const { category, subcategory, gender, search, isActive, page = 1, limit = 50 } = req.query;
+    
+    // Get all salons for this vendor
+    const salons = await Salon.find({ vendor: req.user.id }, '_id');
+    const salonIds = salons.map(s => s._id);
+
+    const query = { salon: { $in: salonIds } };
+    
+    if (isActive !== undefined && isActive !== 'all') {
+      query.isActive = isActive === 'true';
+    }
+    if (category) query.category = category;
+    if (subcategory) query.subcategory = subcategory;
+    if (gender) query.gender = { $in: [gender, 'unisex'] };
+    if (search) query.name = { $regex: search, $options: 'i' };
+
+    const services = await Service.find(query)
+      .populate('category', 'name')
+      .populate('subcategory', 'name')
+      .populate('salon', 'name')
+      .sort({ name: 1 })
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
+      
+    const total = await Service.countDocuments(query);
+
+    res.json({ success: true, data: { services, total, page: parseInt(page), totalPages: Math.ceil(total / limit) } });
+  } catch (error) { next(error); }
+};
+
 const getServiceById = async (req, res, next) => {
   try {
     const service = await Service.findById(req.params.id).populate('category', 'name').populate('subcategory', 'name').populate('salon', 'name');
@@ -78,4 +110,4 @@ const toggleServiceStatus = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-module.exports = { getServices, getServiceById, createService, updateService, deleteService, toggleServiceStatus };
+module.exports = { getServices, getVendorServices, getServiceById, createService, updateService, deleteService, toggleServiceStatus };

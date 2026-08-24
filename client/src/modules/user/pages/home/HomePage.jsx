@@ -23,7 +23,7 @@ const HomePage = () => {
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
   const [salonListTitle, setSalonListTitle] = useState('Nearby Salons');
-  const { selectedLocation } = useLocationContext();
+  const { selectedLocation, requestCurrentLocation } = useLocationContext();
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
   const navigate = useNavigate();
@@ -87,10 +87,31 @@ const HomePage = () => {
 
   // Trigger permission modal on first load if no location exists
   useEffect(() => {
-    if (!selectedLocation && !localStorage.getItem('location_prompt_dismissed')) {
-      setIsPermissionModalOpen(true);
-    }
-  }, [selectedLocation]);
+    const checkLocationPermission = async () => {
+      if (!selectedLocation && !localStorage.getItem('location_prompt_dismissed')) {
+        if (navigator.permissions && navigator.permissions.query) {
+          try {
+            const result = await navigator.permissions.query({ name: 'geolocation' });
+            if (result.state === 'granted') {
+              // Silently fetch location if already granted
+              requestCurrentLocation();
+            } else if (result.state === 'prompt') {
+              setIsPermissionModalOpen(true);
+            } else {
+              // Denied: Skip modal and rely on user to manually select
+              localStorage.setItem('location_prompt_dismissed', 'true');
+            }
+          } catch (error) {
+            // Fallback for browsers that don't fully support permissions API
+            setIsPermissionModalOpen(true);
+          }
+        } else {
+          setIsPermissionModalOpen(true);
+        }
+      }
+    };
+    checkLocationPermission();
+  }, [selectedLocation, requestCurrentLocation]);
 
   useEffect(() => {
     loadInitialData();

@@ -22,9 +22,15 @@ const packageSchema = new mongoose.Schema(
       type: Number,
       required: [true, 'Total price is required'],
     },
+    totalPricePaise: {
+      type: Number,
+    },
     discountedPrice: {
       type: Number,
       required: [true, 'Discounted price is required'],
+    },
+    discountedPricePaise: {
+      type: Number,
     },
     description: {
       type: String,

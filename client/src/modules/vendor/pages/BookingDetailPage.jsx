@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getBookingById, acceptBooking, rejectBooking, completeBooking } from '../services/vendorApi';
 import { goBack } from '../../../utils/navigation';
+import api from '../../../services/api/axiosInstance';
 
 const BookingDetailPage = () => {
   const { id } = useParams();
@@ -10,8 +11,21 @@ const BookingDetailPage = () => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [error, setError] = useState(null);
+
   useEffect(() => { load(); }, [id]);
-  const load = async () => { try { const r = await getBookingById(id); setBooking(r.data.data.booking); setServices(r.data.data.services); } catch (e) {} setLoading(false); };
+  const load = async () => { 
+    try { 
+      const r = await getBookingById(id); 
+      setBooking(r.data.data.booking); 
+      setServices(r.data.data.services); 
+      setError(null);
+    } catch (e) {
+      console.error('Failed to load booking:', e);
+      setError(e.response?.data?.message || e.message || 'Failed to load booking');
+    } 
+    setLoading(false); 
+  };
 
   const handleAction = async (action) => {
     try {
@@ -20,6 +34,16 @@ const BookingDetailPage = () => {
       else if (action === 'complete') await completeBooking(id);
       load();
     } catch (e) { alert(e.response?.data?.message || 'Failed'); }
+  };
+
+  const handleRecordCash = async () => {
+    if (!window.confirm('Confirm recording cash payment of ₹' + booking.finalAmount + ' received from customer?')) return;
+    try {
+      await api.post('/payments/cash', { bookingId: id });
+      load();
+    } catch (e) {
+      alert(e.response?.data?.message || 'Failed to record cash payment');
+    }
   };
 
   if (loading) {
@@ -33,6 +57,18 @@ const BookingDetailPage = () => {
       </div>
     );
   }
+
+  if (error) {
+    return (
+      <div className="text-center py-20 bg-surface rounded-2xl border border-border mt-6 max-w-2xl mx-auto">
+        <span className="material-symbols-outlined text-4xl text-error mb-2">error</span>
+        <h3 className="text-lg font-semibold text-on-surface">Unable to load booking</h3>
+        <p className="text-muted-text text-sm mt-1">{error}</p>
+        <button onClick={load} className="mt-4 px-4 py-2 bg-primary text-white rounded-lg text-sm">Retry</button>
+      </div>
+    );
+  }
+
   if (!booking) return <div className="text-center py-20 text-muted-text">Booking not found</div>;
 
   const statusColors = { 
@@ -121,8 +157,8 @@ const BookingDetailPage = () => {
             ))}
           </div>
           <div className="flex justify-between font-bold text-[16px] mt-2 pt-3 border-t border-border">
-            <span className="text-on-surface">Grand Total</span>
-            <span className="text-primary text-lg">₹{booking.finalAmount}</span>
+            <span className="text-on-surface">Services Subtotal</span>
+            <span className="text-primary text-lg">₹{booking.totalAmount}</span>
           </div>
         </div>
 
@@ -133,17 +169,55 @@ const BookingDetailPage = () => {
                 <span className="material-symbols-outlined text-[18px] text-primary">payments</span>
                 Payment Details
               </h3>
-              <span className="text-sm text-muted-text mt-1">Method: {['ONLINE', 'online'].includes(booking.paymentMethod) ? 'Online (Razorpay)' : 'Pay at Salon'}</span>
+              <span className="text-sm text-muted-text mt-1">Method: {booking.paymentMethod === 'ONLINE' ? 'Online (Razorpay)' : 'Cash / Pay at Salon'}</span>
             </div>
-            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${booking.paymentStatus === 'PAID' || booking.paymentStatus === 'paid' ? 'bg-success/20 text-success' : 'bg-yellow-500/20 text-yellow-700'}`}>
-              {booking.paymentStatus === 'PAID' || booking.paymentStatus === 'paid' ? 'Paid' : 'Pending'}
-            </span>
+            <div className="flex flex-col items-end gap-1">
+              <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
+                booking.paymentStatus === 'PAID' ? 'bg-success/20 text-success' :
+                booking.paymentStatus === 'REFUNDED' ? 'bg-blue-100 text-blue-700' :
+                booking.paymentStatus === 'REFUND_PENDING' ? 'bg-orange-100 text-orange-700' :
+                'bg-yellow-500/20 text-yellow-700'
+              }`}>
+                {booking.paymentStatus === 'PAID' ? 'Paid' :
+                 booking.paymentStatus === 'REFUNDED' ? 'Refunded' :
+                 booking.paymentStatus === 'REFUND_PENDING' ? 'Refund Pending' : 'Pending'}
+              </span>
+            </div>
           </div>
           <div className="space-y-2 text-sm text-on-surface pt-3 border-t border-primary/10">
-            <div className="flex justify-between"><span className="text-muted-text">Subtotal</span><span className="font-medium">₹{booking.totalAmount}</span></div>
-            {booking.discountAmount > 0 && <div className="flex justify-between text-success"><span>Discount (Coupon)</span><span className="font-semibold">-₹{booking.discountAmount}</span></div>}
+            <div className="flex justify-between">
+              <span className="text-muted-text">Services Subtotal</span>
+              <span className="font-medium">₹{booking.totalAmount}</span>
+            </div>
+            
+            {booking.discountAmount > 0 && (
+              <div className="flex justify-between text-success">
+                <span>Discount</span>
+                <span className="font-semibold">-₹{booking.discountAmount}</span>
+              </div>
+            )}
+            
+            {(booking.pricing?.packageDiscount > 0 || booking.packageSnapshot?.discount > 0) && (
+              <div className="flex justify-between text-on-surface">
+                <span>Package Offer Price</span>
+                <span className="font-medium">₹{booking.packageSnapshot?.offerPrice || (booking.totalAmount - (booking.pricing?.packageDiscount || booking.packageSnapshot?.discount))}</span>
+              </div>
+            )}
+
+            {(booking.discountAmount > 0 || booking.pricing?.packageDiscount > 0 || booking.packageSnapshot?.discount > 0) && (
+              <div className="flex justify-between text-muted-text text-xs border-t border-dashed border-border pt-2 mt-1">
+                <span>Amount Before Platform Fee</span>
+                <span>₹{(booking.totalAmount - booking.discountAmount)}</span>
+              </div>
+            )}
+
+            <div className="flex justify-between text-primary mt-1">
+              <span>Platform Fee ({booking.platformFeePercentage ? `${booking.platformFeePercentage}%` : ''})</span>
+              <span className="font-semibold">+₹{booking.platformFee || 0}</span>
+            </div>
+
             <div className="flex justify-between font-bold text-[16px] pt-3 mt-1 border-t border-primary/10">
-              <span className="text-on-surface">Final Amount</span>
+              <span className="text-on-surface">Customer Payable</span>
               <span className="text-primary text-lg">₹{booking.finalAmount}</span>
             </div>
           </div>
@@ -155,12 +229,12 @@ const BookingDetailPage = () => {
             Financial Settlement
           </h3>
           <div className="space-y-2 text-sm text-on-surface pt-3">
-            <div className="flex justify-between"><span className="text-muted-text">Customer Paid (Final Amount)</span><span className="font-medium">₹{booking.finalAmount}</span></div>
-            <div className="flex justify-between text-error"><span className="text-muted-text">Platform Fee ({booking.platformFeePercentage ? booking.platformFeePercentage + '%' : ''})</span><span className="font-semibold">-₹{booking.platformFee || 0}</span></div>
+            <div className="flex justify-between"><span className="text-muted-text">Customer Paid</span><span className="font-medium">₹{booking.finalAmount}</span></div>
+            <div className="flex justify-between text-error"><span className="text-muted-text">Platform Fee ({booking.platformFeePercentage ? `${booking.platformFeePercentage}%` : ''})</span><span className="font-semibold">-₹{booking.platformFee || 0}</span></div>
             {booking.vendorPlanType === 'SUBSCRIPTION' ? (
                <div className="flex justify-between text-success"><span className="text-muted-text">Admin Commission (Subscription)</span><span className="font-semibold">-₹0</span></div>
             ) : (
-               <div className="flex justify-between text-error"><span className="text-muted-text">Admin Commission ({booking.adminCommissionPercentage ? booking.adminCommissionPercentage + '%' : (booking.commission > 0 ? '' : '0%')})</span><span className="font-semibold">-₹{booking.commission || 0}</span></div>
+               <div className="flex justify-between text-error"><span className="text-muted-text">Admin Commission ({booking.adminCommissionPercentage ? `${booking.adminCommissionPercentage}%` : (booking.commission > 0 ? '' : '0%')})</span><span className="font-semibold">-₹{booking.commission || 0}</span></div>
             )}
             <div className="flex justify-between font-bold text-[16px] pt-3 mt-1 border-t border-border">
               <span className="text-on-surface">Your Net Earning</span>
@@ -188,6 +262,18 @@ const BookingDetailPage = () => {
             </button>
           </div>
         )}
+        {/* Record Cash Payment — only for CASH bookings that are PENDING payment */}
+        {booking.paymentMethod === 'CASH' &&
+          booking.paymentStatus === 'PENDING' &&
+          ['CONFIRMED', 'COMPLETED'].includes(booking.status) && (
+            <button
+              onClick={handleRecordCash}
+              className="w-full py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 active:scale-[0.98] transition-all shadow-sm flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined text-[20px]">payments</span>
+              Record Cash Payment (₹{booking.finalAmount})
+            </button>
+          )}
         {booking.status === 'CONFIRMED' && (
           <button onClick={() => handleAction('complete')} className="w-full py-3 bg-primary/10 border border-primary/30 text-primary rounded-xl font-semibold hover:bg-primary hover:text-white transition-all shadow-sm flex items-center justify-center gap-1.5">
             <span className="material-symbols-outlined text-[18px]">task_alt</span>

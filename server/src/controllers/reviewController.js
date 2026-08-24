@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Review = require('../models/Review');
 const Booking = require('../models/Booking');
 const Salon = require('../models/Salon');
@@ -210,12 +211,22 @@ exports.getVendorReviews = async (req, res) => {
     const limit = parseInt(req.query.limit, 10) || 20;
     const page = parseInt(req.query.page, 10) || 1;
     const vendorId = req.user.id;
+    const { salon } = req.query;
 
     // First find all salons belonging to this vendor
     const vendorSalons = await Salon.find({ vendor: vendorId }).select('_id');
     const salonIds = vendorSalons.map(s => s._id);
 
-    const reviews = await Review.find({ salon: { $in: salonIds } })
+    // If a specific salon is requested, make sure it belongs to the vendor
+    let targetSalonIds = salonIds;
+    if (salon) {
+      if (!salonIds.some(id => id.toString() === salon.toString())) {
+        return res.status(403).json({ success: false, message: 'Not authorized for this salon' });
+      }
+      targetSalonIds = [new mongoose.Types.ObjectId(salon)];
+    }
+
+    const reviews = await Review.find({ salon: { $in: targetSalonIds } })
       .populate('user', 'name email')
       .populate('salon', 'name')
       .populate('booking', 'bookingDate status')
@@ -223,7 +234,7 @@ exports.getVendorReviews = async (req, res) => {
       .skip((page - 1) * limit)
       .limit(limit);
 
-    const total = await Review.countDocuments({ salon: { $in: salonIds } });
+    const total = await Review.countDocuments({ salon: { $in: targetSalonIds } });
 
     res.status(200).json({
       success: true,

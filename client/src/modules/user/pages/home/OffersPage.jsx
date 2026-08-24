@@ -7,6 +7,7 @@ import PageHeader from '../../../../components/common/PageHeader';
 import { getImageUrl } from '../../../../utils/imageUtils';
 import { Skeleton, SkeletonText } from '../../../../components/common/Skeleton';
 import toast from 'react-hot-toast';
+import { formatPaise } from '../../../../utils/money';
 
 const OffersPage = () => {
   const navigate = useNavigate();
@@ -423,8 +424,8 @@ const OffersPage = () => {
                     <div className="flex flex-col">
                       <span className="text-[10px] text-muted-text">Bundle Price</span>
                       <div className="flex items-baseline gap-1.5 mt-0.5">
-                        <span className="text-lg font-bold text-primary">₹{p.discountedPrice}</span>
-                        <span className="text-xs text-muted-text line-through font-medium">₹{p.totalPrice}</span>
+                        <span className="text-lg font-bold text-primary">{formatPaise(p.discountedPricePaise, p.discountedPrice)}</span>
+                        <span className="text-xs text-muted-text line-through font-medium">{formatPaise(p.totalPricePaise, p.totalPrice)}</span>
                       </div>
                     </div>
                     

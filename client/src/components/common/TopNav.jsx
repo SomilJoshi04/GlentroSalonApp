@@ -23,9 +23,9 @@ const TopNav = () => {
           onClick={() => navigate('/')}
         >
           {settings?.appLogo ? (
-            <img src={getImageUrl(settings.appLogo)} alt={`${settings?.appName || 'Luxe Salon'} Logo`} className="h-8 md:h-10 object-contain" />
+            <img src={getImageUrl(settings.appLogo)} alt={`${settings?.appName || 'GlentroSalon'} Logo`} className="h-8 md:h-10 object-contain" />
           ) : (
-            <span className="font-headline-md text-[20px] md:text-[24px] font-bold text-white">{settings?.appName || 'Luxe Salon'}</span>
+            <span className="font-headline-md text-[20px] md:text-[24px] font-bold text-white">{settings?.appName || 'GlentroSalon'}</span>
           )}
         </div>
         

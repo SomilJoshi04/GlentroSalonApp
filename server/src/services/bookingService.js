@@ -31,12 +31,15 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
     if (!vendor || !vendor.isActive) {
       throw new Error('Vendor not found or not active');
     }
+    if (vendor.accountStatus === 'suspended') {
+      throw new Error('Salon is currently unavailable for new bookings');
+    }
 
     // Validate and prepare services
     const requestedDateStr = new Date(bookingDate).toISOString().split('T')[0];
     const todayStr = new Date().toISOString().split('T')[0];
     const isToday = requestedDateStr === todayStr;
-    
+
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     const [h, m] = startTime.split(':').map(Number);
@@ -46,7 +49,7 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
     if (isToday && startMinutes <= currentMinutes) {
       throw new Error("This time slot is no longer available. Please select another time.");
     }
-    
+
     // Validate Package if provided
     let pkg = null;
     if (packageId) {
@@ -62,17 +65,17 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
       if (nowTime < new Date(pkg.validFrom) || nowTime > new Date(pkg.validTo)) {
         throw new Error('This Offer/Package has expired or is not yet valid');
       }
-      
+
       // Verify services match the package exactly (or is a subset if allowed, but strict match is safer)
       const requestedServiceIds = services.map(s => s.service.toString()).sort();
       const packageServiceIds = pkg.services.map(s => s.toString()).sort();
-      
+
       // Basic subset/match validation - user must book all services in the package
       const allPackageServicesIncluded = packageServiceIds.every(id => requestedServiceIds.includes(id));
       if (!allPackageServicesIncluded) {
         throw new Error('Booking must include all services from the selected Offer/Package');
       }
-      
+
       // Optional: Check usage limit
       if (pkg.usageLimit > 0) {
         const usageCount = await Booking.countDocuments({ package: pkg._id, status: { $ne: 'CANCELLED' } });
@@ -129,6 +132,7 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
         startTime: currentTime,
         endTime,
         price: service.price,
+        pricePaise: service.pricePaise !== undefined ? service.pricePaise : Math.round((service.price || 0) * 100),
         duration: service.duration,
         staffAutoAssigned,
       });
@@ -150,24 +154,27 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
     const currentPlatformFeePercentage = platformFeeDoc ? platformFeeDoc.feePercentage : 5;
 
     // Calculate totals including platform fee
-    const { 
-      totalAmount, 
-      subtotalAfterDiscounts,
-      discountAmount, 
-      finalAmount, 
-      packageDiscount, 
-      couponDiscount,
-      platformFeeAmount,
-      platformFeePercentage
+    const {
+      totalAmountPaise,
+      subtotalAfterDiscountsPaise,
+      discountAmountPaise,
+      finalAmountPaise,
+      packageDiscountPaise,
+      couponDiscountPaise,
+      platformFeeAmountPaise,
+      platformFeePercentage,
     } = calculateBookingTotal(
       bookingServices,
       coupon,
       pkg,
       currentPlatformFeePercentage
     );
+    
+    const pointsEarned = 0; // Not implemented yet
+    const pointsCalculationAmount = 0;
 
     // Calculate financial breakdown based on subtotal
-    const financials = await calculateFinancialBreakdown(vendor, subtotalAfterDiscounts, platformFeeAmount);
+    const financials = await calculateFinancialBreakdown(vendor, subtotalAfterDiscountsPaise, platformFeeAmountPaise);
 
     // Create booking
     const [booking] = await Booking.create(
@@ -179,9 +186,23 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
           startTime,
           endTime: currentTime,
           status: 'PENDING',
-          totalAmount,
-          discountAmount,
-          finalAmount,
+          // Legacy fields (divided by 100)
+          totalAmount: totalAmountPaise / 100,
+          discountAmount: discountAmountPaise / 100,
+          finalAmount: finalAmountPaise / 100,
+          commission: financials.commissionPaise / 100,
+          platformFee: financials.platformFeePaise / 100,
+          vendorPayout: financials.vendorPayoutPaise / 100,
+          // New explicit Paise fields at root
+          totalAmountPaise,
+          discountAmountPaise,
+          finalAmountPaise,
+          commissionPaise: financials.commissionPaise,
+          platformFeePaise: financials.platformFeePaise,
+          vendorPayoutPaise: financials.vendorPayoutPaise,
+          
+          pointsEarned,
+          pointsCalculationAmount,
           coupon: coupon ? coupon._id : undefined,
           package: pkg ? pkg._id : undefined,
           packageSnapshot: pkg ? {
@@ -189,15 +210,38 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
             name: pkg.name,
             originalPrice: pkg.totalPrice,
             offerPrice: pkg.discountedPrice,
-            discount: packageDiscount,
+            discount: packageDiscountPaise / 100, // Legacy display
           } : undefined,
-          paymentMethod: paymentMethod || 'AT_SALON',
-          commission: financials.commission,
-          platformFee: financials.platformFee,
-          vendorPayout: financials.vendorPayout,
+          paymentMethod: ['ONLINE', 'online'].includes(paymentMethod) ? 'ONLINE' : 'CASH',
+          
           platformFeePercentage: financials.platformFeePercentage,
           adminCommissionPercentage: financials.adminCommissionPercentage,
           vendorPlanType: financials.vendorPlanType,
+
+          // New strict paise fields inside pricing snapshot
+          pricing: {
+            subtotal: totalAmountPaise / 100,
+            subtotalPaise: totalAmountPaise, 
+            packageDiscount: packageDiscountPaise / 100,
+            packageDiscountPaise,
+            couponDiscount: couponDiscountPaise / 100,
+            couponDiscountPaise,
+            grossAmount: subtotalAfterDiscountsPaise / 100,
+            grossAmountPaise: subtotalAfterDiscountsPaise,
+            platformFee: platformFeeAmountPaise / 100,
+            platformFeePaise: platformFeeAmountPaise,
+            commissionAmount: financials.commissionPaise / 100,
+            commissionAmountPaise: financials.commissionPaise,
+            finalAmount: finalAmountPaise / 100,
+            finalAmountPaise,
+            vendorNetAmount: financials.vendorPayoutPaise / 100,
+            vendorNetAmountPaise: financials.vendorPayoutPaise,
+            adminRevenue: (financials.platformFeePaise + financials.commissionPaise) / 100,
+            adminRevenuePaise: financials.platformFeePaise + financials.commissionPaise,
+            platformFeePercentage: financials.platformFeePercentage,
+            commissionPercentage: financials.adminCommissionPercentage,
+            vendorPlanType: financials.vendorPlanType,
+          }
         },
       ],
       { session, ordered: true }
@@ -296,14 +340,18 @@ const rejectBooking = async (bookingId, vendorId, reason) => {
 };
 
 /**
- * Cancel a booking - applies cancellation fee based on timing
+ * Cancel a booking — applies cancellation fee based on timing.
+ * For PAID ONLINE bookings: automatically initiates a refund via paymentService.
  */
-const cancelBooking = async (bookingId, userId, reason) => {
-  const booking = await Booking.findById(bookingId);
+const cancelBooking = async (bookingId, userId, userRole, reason) => {
+  const booking = await Booking.findById(bookingId).populate('salon');
   if (!booking) throw new Error('Booking not found');
 
-  // Only the user who created or the vendor can cancel
-  if (booking.user.toString() !== userId.toString()) {
+  if (userRole === 'user' && booking.user.toString() !== userId.toString()) {
+    throw new Error('Not authorized to cancel this booking');
+  }
+  
+  if (userRole === 'vendor' && booking.salon.vendor.toString() !== userId.toString()) {
     throw new Error('Not authorized to cancel this booking');
   }
 
@@ -311,7 +359,21 @@ const cancelBooking = async (bookingId, userId, reason) => {
     throw new Error(`Cannot cancel booking with status ${booking.status}`);
   }
 
-  // Calculate cancellation fee
+  // If paid online: delegate to paymentService which handles cancellation fee,
+  // refund creation, ledger reversal, and status updates atomically.
+  if (booking.paymentStatus === 'PAID' && booking.paymentMethod === 'ONLINE') {
+    const paymentService = require('./paymentService');
+    const result = await paymentService.initiateRefund({
+      bookingId,
+      userId,
+      userRole,
+      reason: reason || 'Booking cancelled',
+    });
+    // Return the updated booking
+    return await Booking.findById(bookingId);
+  }
+
+  // For CASH / PENDING bookings: simple cancellation
   const { cancellationFee } = await calculateCancellationFee(booking);
 
   booking.status = 'CANCELLED';
@@ -341,10 +403,68 @@ const completeBooking = async (bookingId, vendorId) => {
   return booking;
 };
 
-module.exports = {
-  createBooking,
-  acceptBooking,
-  rejectBooking,
-  cancelBooking,
-  completeBooking,
+const previewBookingTotal = async ({ salonId, services, couponCode, packageId }) => {
+  const salon = await Salon.findById(salonId);
+  if (!salon) throw new Error('Salon not found');
+
+  let pkg = null;
+  if (packageId) {
+    const Package = require('../models/Package');
+    pkg = await Package.findById(packageId);
+    if (!pkg || pkg.salon.toString() !== salonId.toString()) throw new Error('Offer/Package not found');
+  }
+
+  const Service = require('../models/Service');
+  const bookingServices = [];
+  for (const item of services) {
+    const service = await Service.findById(item.service);
+    if (!service) throw new Error(`Service not found`);
+    bookingServices.push({
+      service: service._id,
+      price: service.price,
+      pricePaise: service.pricePaise !== undefined ? service.pricePaise : Math.round((service.price || 0) * 100),
+    });
+  }
+
+  let coupon = null;
+  if (couponCode) {
+    const couponService = require('./couponService');
+    const totalForCoupon = bookingServices.reduce((sum, s) => sum + s.price, 0);
+    coupon = await couponService.validateCoupon(couponCode, totalForCoupon);
+  }
+
+  const PlatformFee = require('../models/PlatformFee');
+  const platformFeeDoc = await PlatformFee.findOne({ isActive: true });
+  const currentPlatformFeePercentage = platformFeeDoc ? platformFeeDoc.feePercentage : 5;
+
+  const {
+    totalAmountPaise,
+    subtotalAfterDiscountsPaise,
+    discountAmountPaise,
+    finalAmountPaise,
+    packageDiscountPaise,
+    couponDiscountPaise,
+    platformFeeAmountPaise,
+    platformFeePercentage,
+  } = calculateBookingTotal(
+    bookingServices,
+    coupon,
+    pkg,
+    currentPlatformFeePercentage
+  );
+
+  return {
+    totalAmountPaise,
+    subtotalAfterDiscountsPaise,
+    discountAmountPaise,
+    finalAmountPaise,
+    packageDiscountPaise,
+    couponDiscountPaise,
+    platformFeeAmountPaise,
+    platformFeePercentage,
+    coupon: coupon ? { code: coupon.code, discountValuePaise: coupon.discountValuePaise, discountType: coupon.discountType } : null,
+    package: pkg ? { name: pkg.name } : null
+  };
 };
+
+module.exports = { createBooking, previewBookingTotal, acceptBooking, rejectBooking, cancelBooking, completeBooking };

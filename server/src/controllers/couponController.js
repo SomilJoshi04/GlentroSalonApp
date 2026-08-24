@@ -1,5 +1,6 @@
 const Coupon = require('../models/Coupon');
 const couponService = require('../services/couponService');
+const { isDateInPast, isEndDateValid } = require('../utils/dateUtils');
 
 const getCoupons = async (req, res, next) => {
   try {
@@ -22,6 +23,13 @@ const getCouponById = async (req, res, next) => {
 
 const createCoupon = async (req, res, next) => {
   try {
+    if (isDateInPast(req.body.validFrom)) {
+      return res.status(400).json({ success: false, message: 'Valid From date cannot be in the past' });
+    }
+    if (!isEndDateValid(req.body.validFrom, req.body.validTo)) {
+      return res.status(400).json({ success: false, message: 'Valid To date cannot be earlier than Valid From date' });
+    }
+
     const coupon = await Coupon.create({ ...req.body, code: req.body.code.toUpperCase() });
     res.status(201).json({ success: true, message: 'Coupon created', data: coupon });
   } catch (error) { next(error); }
@@ -29,8 +37,23 @@ const createCoupon = async (req, res, next) => {
 
 const updateCoupon = async (req, res, next) => {
   try {
+    const existingCoupon = await Coupon.findById(req.params.id);
+    if (!existingCoupon) return res.status(404).json({ success: false, message: 'Coupon not found' });
+
+    if (req.body.validFrom && new Date(req.body.validFrom).toISOString().split('T')[0] !== new Date(existingCoupon.validFrom).toISOString().split('T')[0]) {
+      if (isDateInPast(req.body.validFrom)) {
+        return res.status(400).json({ success: false, message: 'Valid From date cannot be changed to a past date' });
+      }
+    }
+
+    const validFromToUse = req.body.validFrom || existingCoupon.validFrom;
+    const validToToUse = req.body.validTo || existingCoupon.validTo;
+
+    if (!isEndDateValid(validFromToUse, validToToUse)) {
+      return res.status(400).json({ success: false, message: 'Valid To date cannot be earlier than Valid From date' });
+    }
+
     const coupon = await Coupon.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-    if (!coupon) return res.status(404).json({ success: false, message: 'Coupon not found' });
     res.json({ success: true, message: 'Coupon updated', data: coupon });
   } catch (error) { next(error); }
 };

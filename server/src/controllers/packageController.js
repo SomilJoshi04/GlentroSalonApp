@@ -1,12 +1,21 @@
+const mongoose = require('mongoose');
 const Package = require('../models/Package');
 const Salon = require('../models/Salon');
 const Service = require('../models/Service');
 const AppSetting = require('../models/AppSetting');
 const { notifyPackageStatus, notifyAdminApprovalRequest } = require('../services/notificationService');
 const { processAndStoreImage, deleteImageSafe } = require('../services/imageService');
+const { isDateInPast, isEndDateValid } = require('../utils/dateUtils');
 
 const createPackage = async (req, res, next) => {
   try {
+    if (isDateInPast(req.body.validFrom)) {
+      return res.status(400).json({ success: false, message: 'Valid From date cannot be in the past' });
+    }
+    if (!isEndDateValid(req.body.validFrom, req.body.validTo)) {
+      return res.status(400).json({ success: false, message: 'Valid To date cannot be earlier than Valid From date' });
+    }
+
     const salon = await Salon.findOne({ _id: req.body.salon, vendor: req.user.id });
     if (!salon) return res.status(404).json({ success: false, message: 'Salon not found or not authorized' });
 
@@ -252,11 +261,20 @@ const getPackages = async (req, res, next) => {
 
 const getVendorPackages = async (req, res, next) => {
   try {
-    const { status, search, page, limit } = req.query;
+    const { status, search, page, limit, salon } = req.query;
     const salons = await Salon.find({ vendor: req.user.id });
     const salonIds = salons.map((s) => s._id);
     
-    const query = { salon: { $in: salonIds } };
+    // If a specific salon is requested, make sure it belongs to the vendor
+    let targetSalonIds = salonIds;
+    if (salon) {
+      if (!salonIds.some(id => id.toString() === salon.toString())) {
+        return res.status(403).json({ success: false, message: 'Not authorized for this salon' });
+      }
+      targetSalonIds = [new mongoose.Types.ObjectId(salon)];
+    }
+    
+    const query = { salon: { $in: targetSalonIds } };
     if (status) query.status = status;
     if (search) query.name = { $regex: search, $options: 'i' };
 
@@ -314,6 +332,19 @@ const updatePackage = async (req, res, next) => {
     if (!pkg) return res.status(404).json({ success: false, message: 'Package not found' });
     if (pkg.salon.vendor.toString() !== req.user.id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    if (req.body.validFrom && new Date(req.body.validFrom).toISOString().split('T')[0] !== new Date(pkg.validFrom).toISOString().split('T')[0]) {
+      if (isDateInPast(req.body.validFrom)) {
+        return res.status(400).json({ success: false, message: 'Valid From date cannot be changed to a past date' });
+      }
+    }
+
+    const validFromToUse = req.body.validFrom || pkg.validFrom;
+    const validToToUse = req.body.validTo || pkg.validTo;
+
+    if (!isEndDateValid(validFromToUse, validToToUse)) {
+      return res.status(400).json({ success: false, message: 'Valid To date cannot be earlier than Valid From date' });
     }
 
     let services = req.body.services;

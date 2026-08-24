@@ -23,6 +23,7 @@ export const rejectAccountRecovery = (id, data) => api.patch(`/admin/account-rec
 
 // Vendor Management
 export const getVendors = (params) => api.get('/admin/vendors', { params });
+export const createVendor = (data) => api.post('/admin/vendors', data);
 export const updateVendorStatus = (id, statusData) => api.put(`/admin/vendors/${id}/status`, statusData);
 
 // Content Management
@@ -66,6 +67,7 @@ export const updatePlatformFee = (data) => api.put('/commissions/platform-fee', 
 // Coupons
 export const getCoupons = (params) => api.get('/coupons', { params });
 export const createCoupon = (data) => api.post('/coupons', data);
+export const updateCoupon = (id, data) => api.put(`/coupons/${id}`, data);
 export const deleteCoupon = (id) => api.delete(`/coupons/${id}`);
 
 // Offers & Packages
@@ -119,3 +121,9 @@ export const deleteFAQ = (id) => api.delete(`/faqs/${id}`);
 // Booking Issues
 export const getAdminBookingIssues = () => api.get('/booking-issues/admin');
 export const updateBookingIssueStatus = (id, status) => api.patch(`/booking-issues/${id}/status`, { status });
+
+// Payments & Financials
+export const getAdminTransactions = (params) => api.get('/payments/transactions', { params });
+export const getAdminFinancialSummary = (params) => api.get('/payments/admin-financial-summary', { params });
+export const getAdminSettlements = (params) => api.get('/payments/admin-settlements', { params });
+export const recordAdminSettlement = (data) => api.post('/payments/admin-settlement', data);

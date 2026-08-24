@@ -216,6 +216,12 @@ const getSalonById = async (req, res, next) => {
   try {
     const salon = await Salon.findById(req.params.id).populate('vendor', 'name businessName phone email');
     if (!salon) return res.status(404).json({ success: false, message: 'Salon not found' });
+    
+    // Check active status
+    const isOwnerOrAdmin = req.user && (req.user.role === 'admin' || (req.user.role === 'vendor' && salon.vendor._id.toString() === req.user.id));
+    if (!salon.isActive && !isOwnerOrAdmin) {
+      return res.status(403).json({ success: false, message: 'Salon currently unavailable' });
+    }
 
     const services = await Service.find({ salon: salon._id, isActive: true }).populate('category', 'name').populate('subcategory', 'name');
     const staff = await Staff.find({ salon: salon._id, isActive: true });

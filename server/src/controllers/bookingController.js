@@ -1,6 +1,8 @@
+const mongoose = require('mongoose');
 const Booking = require('../models/Booking');
 const BookingService = require('../models/BookingService');
 const Salon = require('../models/Salon');
+const PaymentTransaction = require('../models/PaymentTransaction');
 const bookingService = require('../services/bookingService');
 const { getSalonAvailability, getComplexAvailability } = require('../services/availabilityService');
 const { notifyBookingCreated, notifyBookingAccepted, notifyBookingRejected, notifyBookingCancelled } = require('../services/notificationService');
@@ -27,6 +29,21 @@ const createBooking = async (req, res, next) => {
       return res.status(400).json({ success: false, message: error.message });
     }
     next(error);
+  }
+};
+
+// @desc    Preview booking total (calculates full financial breakdown)
+const calculateTotal = async (req, res, next) => {
+  try {
+    const { salon, services, couponCode, packageId } = req.body;
+    // We only need the calculation part of createBooking, but we can reuse calculateBookingTotal from bookingService
+    // Let's import it directly or create a wrapper in bookingService.
+    const result = await bookingService.previewBookingTotal({
+      salonId: salon, services, couponCode, packageId
+    });
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
@@ -70,6 +87,25 @@ const getBookingById = async (req, res, next) => {
   try {
     const booking = await Booking.findById(req.params.id).populate('salon', 'name address phone vendor images').populate('user', 'name email phone').populate('coupon', 'code discountType discountValue');
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+
+    // Authorization check
+    if (req.user.role === 'user') {
+      if (!booking.user || booking.user._id.toString() !== req.user.id.toString()) {
+        return res.status(403).json({ success: false, message: 'Not authorized to view this booking' });
+      }
+    }
+    
+    if (req.user.role === 'vendor') {
+      if (!booking.salon) {
+        return res.status(403).json({ success: false, message: 'Not authorized: booking has no salon' });
+      }
+      if (booking.salon.vendor.toString() !== req.user.id.toString()) {
+        return res.status(403).json({ 
+          success: false, 
+          message: `Not authorized: salon vendor (${booking.salon.vendor.toString()}) does not match your ID (${req.user.id.toString()})` 
+        });
+      }
+    }
 
     const services = await BookingService.find({ booking: booking._id }).populate('service', 'name price duration category').populate('staff', 'name avatar');
     const review = await require('../models/Review').findOne({ booking: booking._id });
@@ -117,7 +153,7 @@ const rejectBooking = async (req, res, next) => {
 // @desc    Cancel booking (User)
 const cancelBooking = async (req, res, next) => {
   try {
-    const booking = await bookingService.cancelBooking(req.params.id, req.user.id, req.body.reason);
+    const booking = await bookingService.cancelBooking(req.params.id, req.user.id, req.user.role, req.body.reason);
     try {
       const populatedBooking = await Booking.findById(booking._id).populate('salon');
       await notifyBookingCancelled(booking, populatedBooking.salon.vendor, 'vendor');
@@ -180,22 +216,27 @@ const getAllBookings = async (req, res, next) => {
 // @desc    Get all recent bookings across all vendor's salons (Vendor Dashboard)
 const getVendorRecentBookings = async (req, res, next) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 5;
-
-    // Get all salons owned by this vendor
+    const { page = 1, limit = 5, salon } = req.query;
     const salons = await Salon.find({ vendor: req.user.id }, '_id');
     const salonIds = salons.map(s => s._id);
 
-    const query = { salon: { $in: salonIds } };
-    const skip = (page - 1) * limit;
+    let targetSalonIds = salonIds;
+    if (salon) {
+      if (!salonIds.some(id => id.toString() === salon.toString())) {
+        return res.status(403).json({ success: false, message: 'Not authorized for this salon' });
+      }
+      targetSalonIds = [new mongoose.Types.ObjectId(salon)];
+    }
+
+    const query = { salon: { $in: targetSalonIds } };
+    const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const bookings = await Booking.find(query)
       .populate('salon', 'name address')
       .populate('user', 'name email phone')
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit)
+      .limit(parseInt(limit))
       .lean();
 
     const totalItems = await Booking.countDocuments(query);
@@ -205,12 +246,12 @@ const getVendorRecentBookings = async (req, res, next) => {
       success: true,
       data: bookings,
       pagination: {
-        currentPage: page,
+        currentPage: parseInt(page),
         totalPages,
         totalItems,
-        itemsPerPage: limit,
-        hasNextPage: page < totalPages,
-        hasPreviousPage: page > 1
+        itemsPerPage: parseInt(limit),
+        hasNextPage: parseInt(page) < totalPages,
+        hasPreviousPage: parseInt(page) > 1
       }
     });
   } catch (error) {
@@ -221,46 +262,83 @@ const getVendorRecentBookings = async (req, res, next) => {
 // @desc    Get dashboard statistics for vendor
 const getVendorStats = async (req, res, next) => {
   try {
+    const { salon } = req.query;
     const salons = await Salon.find({ vendor: req.user.id }, '_id');
     const salonIds = salons.map(s => s._id);
 
+    let targetSalonIds = salonIds;
+    if (salon) {
+      if (!salonIds.some(id => id.toString() === salon.toString())) {
+        return res.status(403).json({ success: false, message: 'Not authorized for this salon' });
+      }
+      targetSalonIds = [new mongoose.Types.ObjectId(salon)];
+    }
+
+    const range = req.query.range || '30d';
+    let startDate = new Date();
+
+    if (range === '7d') startDate.setDate(startDate.getDate() - 7);
+    else if (range === '30d') startDate.setDate(startDate.getDate() - 30);
+    else if (range === '3m') startDate.setMonth(startDate.getMonth() - 3);
+    else if (range === '6m') startDate.setMonth(startDate.getMonth() - 6);
+    else if (range === '12m') startDate.setFullYear(startDate.getFullYear() - 1);
+    else startDate.setDate(startDate.getDate() - 30);
+
+    const dateFilter = { createdAt: { $gte: startDate } };
+
     // Get counts per status
     const statsPipeline = [
-      { $match: { salon: { $in: salonIds } } },
-      { 
+      { $match: { ...dateFilter, salon: { $in: targetSalonIds } } },
+      {
         $group: {
           _id: '$status',
           count: { $sum: 1 }
         }
       }
     ];
-    
-    // Revenue logic: We only consider COMPLETED bookings for revenue.
-    // Calculate today's boundaries.
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    const endOfToday = new Date();
-    endOfToday.setHours(23, 59, 59, 999);
 
     const revenuePipeline = [
       {
         $match: {
-          salon: { $in: salonIds },
-          status: 'COMPLETED',
-          createdAt: { $gte: startOfToday, $lte: endOfToday }
+          ...dateFilter,
+          salon: { $in: targetSalonIds },
+          status: 'PAID' // PaymentTransaction status
         }
       },
       {
         $group: {
           _id: null,
-          todayRevenue: { $sum: '$finalAmount' }
+          totalEarnings: { $sum: '$pricing.vendorNetAmount' },
+          totalGrossCustomerPaid: { $sum: '$amount' },
+          onlinePayments: { $sum: { $cond: [{ $eq: ['$paymentMethod', 'ONLINE'] }, '$amount', 0] } },
+          cashPayments: { $sum: { $cond: [{ $eq: ['$paymentMethod', 'CASH'] }, '$amount', 0] } }
         }
       }
     ];
 
-    const [statusStats, revenueStats] = await Promise.all([
+    // Today's revenue for a specific card (unaffected by range filter)
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const todayRevenuePipeline = [
+      {
+        $match: {
+          salon: { $in: targetSalonIds },
+          status: 'PAID',
+          createdAt: { $gte: startOfToday }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          todayRevenue: { $sum: '$pricing.vendorNetAmount' }
+        }
+      }
+    ];
+
+    const [statusStats, revenueStats, todayStats] = await Promise.all([
       Booking.aggregate(statsPipeline),
-      Booking.aggregate(revenuePipeline)
+      PaymentTransaction.aggregate(revenuePipeline),
+      PaymentTransaction.aggregate(todayRevenuePipeline)
     ]);
 
     let pendingBookings = 0;
@@ -275,7 +353,8 @@ const getVendorStats = async (req, res, next) => {
       if (stat._id === 'COMPLETED') completedBookings = stat.count;
     });
 
-    const todayRevenue = revenueStats.length > 0 ? revenueStats[0].todayRevenue : 0;
+    const revenue = revenueStats[0] || { totalEarnings: 0, totalGrossCustomerPaid: 0, onlinePayments: 0, cashPayments: 0 };
+    const todayRevenue = todayStats[0]?.todayRevenue || 0;
 
     res.json({
       success: true,
@@ -284,6 +363,10 @@ const getVendorStats = async (req, res, next) => {
         pendingBookings,
         confirmedBookings,
         completedBookings,
+        totalEarnings: revenue.totalEarnings,
+        totalGrossCustomerPaid: revenue.totalGrossCustomerPaid,
+        onlinePayments: revenue.onlinePayments,
+        cashPayments: revenue.cashPayments,
         todayRevenue
       }
     });
@@ -295,7 +378,7 @@ const getVendorStats = async (req, res, next) => {
 // @desc    Get analytics for vendor
 const getVendorAnalytics = async (req, res, next) => {
   try {
-    const { range = '7d' } = req.query;
+    const { range = '7d', salon } = req.query;
     let days = 7;
     if (range === '30d') days = 30;
     else if (range === '3m') days = 90;
@@ -309,15 +392,23 @@ const getVendorAnalytics = async (req, res, next) => {
     const salons = await Salon.find({ vendor: req.user.id }, '_id name');
     const salonIds = salons.map(s => s._id);
 
+    let targetSalonIds = salonIds;
+    if (salon) {
+      if (!salonIds.some(id => id.toString() === salon.toString())) {
+        return res.status(403).json({ success: false, message: 'Not authorized for this salon' });
+      }
+      targetSalonIds = [new mongoose.Types.ObjectId(salon)];
+    }
+
     // 1. Booking Trend (Group by day or month)
     const groupByFormat = days > 90 ? "%Y-%m" : "%Y-%m-%d";
-    
+
     const bookingTrendPipeline = [
-      { 
-        $match: { 
-          salon: { $in: salonIds }, 
-          createdAt: { $gte: startDate } 
-        } 
+      {
+        $match: {
+          salon: { $in: targetSalonIds },
+          createdAt: { $gte: startDate }
+        }
       },
       {
         $group: {
@@ -328,19 +419,20 @@ const getVendorAnalytics = async (req, res, next) => {
       { $sort: { _id: 1 } }
     ];
 
-    // 2. Revenue Trend
+    // 2. Revenue Trend (from PaymentTransaction)
     const revenueTrendPipeline = [
-      { 
-        $match: { 
-          salon: { $in: salonIds }, 
-          status: 'COMPLETED',
-          createdAt: { $gte: startDate } 
-        } 
+      {
+        $match: {
+          salon: { $in: targetSalonIds },
+          status: 'PAID',
+          createdAt: { $gte: startDate }
+        }
       },
       {
         $group: {
           _id: { $dateToString: { format: groupByFormat, date: "$createdAt" } },
-          revenue: { $sum: "$finalAmount" }
+          revenue: { $sum: "$pricing.vendorNetAmount" },
+          grossCustomerPaid: { $sum: "$amount" }
         }
       },
       { $sort: { _id: 1 } }
@@ -348,11 +440,11 @@ const getVendorAnalytics = async (req, res, next) => {
 
     // 3. Booking Status
     const statusPipeline = [
-      { 
-        $match: { 
-          salon: { $in: salonIds }, 
-          createdAt: { $gte: startDate } 
-        } 
+      {
+        $match: {
+          salon: { $in: targetSalonIds },
+          createdAt: { $gte: startDate }
+        }
       },
       {
         $group: {
@@ -371,18 +463,18 @@ const getVendorAnalytics = async (req, res, next) => {
 
     // 4. Salon Performance
     const salonPerformancePipeline = [
-      { 
-        $match: { 
-          salon: { $in: salonIds }, 
-          createdAt: { $gte: startDate } 
-        } 
+      {
+        $match: {
+          salon: { $in: targetSalonIds },
+          createdAt: { $gte: startDate }
+        }
       },
       {
         $group: {
           _id: "$salon",
           bookings: { $sum: 1 },
-          revenue: { 
-            $sum: { $cond: [ { $eq: ["$status", "COMPLETED"] }, "$finalAmount", 0 ] } 
+          revenue: {
+            $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, "$finalAmount", 0] }
           }
         }
       }
@@ -478,7 +570,7 @@ const getVendorAnalytics = async (req, res, next) => {
       staffPerformance
     ] = await Promise.all([
       Booking.aggregate(bookingTrendPipeline),
-      Booking.aggregate(revenueTrendPipeline),
+      PaymentTransaction.aggregate(revenueTrendPipeline),
       Booking.aggregate(statusPipeline),
       Booking.aggregate(salonPerformancePipeline),
       BookingService.aggregate(topServicesPipeline),
@@ -488,7 +580,7 @@ const getVendorAnalytics = async (req, res, next) => {
     // Format trends to ensure dates are nicely mapped
     const bookingTrend = rawBookingTrend.map(item => ({ date: item._id, bookings: item.bookings }));
     const revenueTrend = rawRevenueTrend.map(item => ({ date: item._id, revenue: item.revenue }));
-    
+
     // Format salon performance to inject real salon names
     const salonPerformance = rawSalonPerformance.map(item => {
       const salonMatch = salons.find(s => s._id.toString() === item._id.toString());
@@ -515,4 +607,19 @@ const getVendorAnalytics = async (req, res, next) => {
   }
 };
 
-module.exports = { createBooking, getMyBookings, getSalonBookings, getBookingById, acceptBooking, rejectBooking, cancelBooking, completeBooking, getAvailability, getAllBookings, getVendorRecentBookings, getVendorStats, getVendorAnalytics };
+module.exports = {
+  createBooking,
+  calculateTotal,
+  getMyBookings,
+  getSalonBookings,
+  getBookingById,
+  acceptBooking,
+  rejectBooking,
+  cancelBooking,
+  completeBooking,
+  getAvailability,
+  getAllBookings,
+  getVendorRecentBookings,
+  getVendorStats,
+  getVendorAnalytics
+};

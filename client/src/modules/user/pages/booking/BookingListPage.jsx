@@ -4,6 +4,7 @@ import { getMyBookings } from '../../services/userApi';
 import Loader from '../../../../components/common/Loader';
 import PageHeader from '../../../../components/common/PageHeader';
 import { BookingListSkeleton } from '../../components/skeletons/BookingListSkeleton';
+import { formatPaise } from '../../../../utils/money';
 
 const statusColors = {
   PENDING: 'bg-yellow-100 text-yellow-700',
@@ -90,7 +91,7 @@ const BookingListPage = () => {
               </div>
               <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
                 <span className="text-sm text-text-muted">Booking #{booking._id.slice(-6).toUpperCase()}</span>
-                <span className="font-semibold text-primary-600">₹{booking.finalAmount}</span>
+                <span className="font-semibold text-primary-600">{formatPaise(booking.finalAmountPaise, booking.finalAmount)}</span>
               </div>
             </div>
           ))}

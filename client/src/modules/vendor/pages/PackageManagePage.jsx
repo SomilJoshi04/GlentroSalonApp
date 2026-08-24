@@ -1,18 +1,19 @@
 import { useState, useEffect } from 'react';
 import { getVendorPackages, createPackage, updatePackage, deletePackage, togglePackageStatus, getVendorSalons, getServices } from '../services/vendorApi';
 import Modal from '../../../components/common/Modal';
+import { useBranch } from '../../../context/BranchContext';
 import { getImageUrl } from '../../../utils/imageUtils';
 import VendorPageLayout from '../../../components/vendor/layout/VendorPageLayout';
 import VendorPageHeader from '../../../components/vendor/layout/VendorPageHeader';
 import VendorListToolbar from '../../../components/vendor/layout/VendorListToolbar';
 import VendorTableContainer from '../../../components/vendor/layout/VendorTableContainer';
 import VendorPagination from '../../../components/vendor/layout/VendorPagination';
+import { formatPaise, getRupeesFromPaise } from '../../../utils/money';
 
 const PackageManagePage = () => {
+  const { selectedSalon, loadingBranches, salons } = useBranch();
   const [packages, setPackages] = useState([]);
-  const [salons, setSalons] = useState([]);
   const [services, setServices] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [pagination, setPagination] = useState({ page: 1, limit: 12, total: 0, totalPages: 1 });
@@ -30,23 +31,8 @@ const PackageManagePage = () => {
     validFrom: '', validTo: '', usageLimit: 0, perUserLimit: 0, terms: '' 
   });
 
-  useEffect(() => { loadInit(); }, []);
-  useEffect(() => { loadPackages(1); }, [filters]);
+  useEffect(() => { loadPackages(1); }, [filters, selectedSalon]);
   useEffect(() => { if (form.salon) loadServices(form.salon); }, [form.salon]);
-
-  const loadInit = async () => { 
-    try { 
-      const [p, s] = await Promise.all([getVendorPackages({ page: 1, limit: pagination.limit }), getVendorSalons()]); 
-      if (p.data.data.packages) {
-        setPackages(p.data.data.packages);
-        setPagination(prev => ({ ...prev, page: p.data.data.page, total: p.data.data.total, totalPages: p.data.data.totalPages }));
-      } else {
-        setPackages(p.data.data);
-      }
-      setSalons(s.data.data.salons || s.data.data); 
-    } catch (e) {} 
-    setLoading(false); 
-  };
 
   const loadPackages = async (page = pagination.page) => {
     setIsFetching(true);
@@ -54,6 +40,8 @@ const PackageManagePage = () => {
       const query = { page, limit: pagination.limit };
       if (filters.search) query.search = filters.search;
       if (filters.status) query.status = filters.status;
+      if (selectedSalon) query.salon = selectedSalon._id;
+      
       const r = await getVendorPackages(query);
       if (r.data.data.packages) {
         setPackages(r.data.data.packages);
@@ -89,6 +77,29 @@ const PackageManagePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault(); 
+
+    // Date validation
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const validFromDate = new Date(form.validFrom);
+    validFromDate.setHours(0, 0, 0, 0);
+
+    const isNewValidFromDate = editingPackage && form.validFrom && editingPackage.validFrom
+      ? form.validFrom !== new Date(editingPackage.validFrom).toISOString().split('T')[0]
+      : true;
+
+    if (!editingPackage || isNewValidFromDate) {
+      if (validFromDate < today) {
+        alert('Valid From date cannot be earlier than today.');
+        return;
+      }
+    }
+
+    if (form.validTo && new Date(form.validTo) < validFromDate) {
+      alert('Valid To date cannot be earlier than Valid From date.');
+      return;
+    }
+
     setSaving(true);
     try { 
       const formData = new FormData();
@@ -149,8 +160,8 @@ const PackageManagePage = () => {
       name: p.name,
       salon: p.salon?._id || '',
       services: p.services?.map(s => s._id) || [],
-      totalPrice: p.totalPrice,
-      discountedPrice: p.discountedPrice,
+      totalPrice: p.totalPricePaise ? getRupeesFromPaise(p.totalPricePaise) : p.totalPrice,
+      discountedPrice: p.discountedPricePaise ? getRupeesFromPaise(p.discountedPricePaise) : p.discountedPrice,
       description: p.description || '',
       validFrom: p.validFrom ? new Date(p.validFrom).toISOString().split('T')[0] : '',
       validTo: p.validTo ? new Date(p.validTo).toISOString().split('T')[0] : '',
@@ -170,7 +181,7 @@ const PackageManagePage = () => {
     REJECTED: 'bg-red-100 text-red-700 border-red-200' 
   };
 
-  if (loading) {
+  if (loadingBranches) {
     return (
       <VendorPageLayout>
         <div className="flex justify-center py-12"><div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" /></div>
@@ -262,11 +273,11 @@ const PackageManagePage = () => {
             </div>
             <div>
               <label className="text-sm font-medium text-muted-text mb-1 block">Valid From*</label>
-              <input type="date" value={form.validFrom} onChange={e => setForm({...form, validFrom: e.target.value})} required className="w-full px-3.5 py-2.5 bg-surface text-on-surface rounded-xl border border-border text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" />
+              <input type="date" min={(!editingPackage || (form.validFrom && form.validFrom >= new Date().toISOString().split('T')[0])) ? new Date().toISOString().split('T')[0] : undefined} value={form.validFrom} onChange={e => setForm({...form, validFrom: e.target.value})} required className="w-full px-3.5 py-2.5 bg-surface text-on-surface rounded-xl border border-border text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" />
             </div>
             <div>
               <label className="text-sm font-medium text-muted-text mb-1 block">Valid To*</label>
-              <input type="date" value={form.validTo} onChange={e => setForm({...form, validTo: e.target.value})} required className="w-full px-3.5 py-2.5 bg-surface text-on-surface rounded-xl border border-border text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" />
+              <input type="date" min={form.validFrom || new Date().toISOString().split('T')[0]} value={form.validTo} onChange={e => setForm({...form, validTo: e.target.value})} required className="w-full px-3.5 py-2.5 bg-surface text-on-surface rounded-xl border border-border text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" />
             </div>
             <div>
               <label className="text-sm font-medium text-muted-text mb-1 block">Total Usage Limit</label>
@@ -292,14 +303,15 @@ const PackageManagePage = () => {
                         const newServices = e.target.checked ? [...form.services, s._id] : form.services.filter(x => x !== s._id);
                         const newTotal = newServices.reduce((sum, id) => {
                           const service = services.find(srv => srv._id === id);
-                          return sum + (service ? service.price : 0);
+                          const price = service ? (service.pricePaise ? getRupeesFromPaise(service.pricePaise) : service.price) : 0;
+                          return sum + price;
                         }, 0);
                         setForm({...form, services: newServices, totalPrice: newTotal});
                       }} 
                     />
                     <div className="flex flex-col">
                       <span className="font-semibold">{s.name}</span>
-                      <span className="text-xs text-muted-text">₹{s.price} • {s.duration} min</span>
+                      <span className="text-xs text-muted-text">{formatPaise(s.pricePaise, s.price)} • {s.duration} min</span>
                     </div>
                   </label>
                 ))}
@@ -362,7 +374,7 @@ const PackageManagePage = () => {
             Array.from({ length: 4 }).map((_, i) => (
                <div key={i} className="h-[320px] bg-surface rounded-2xl animate-pulse border border-border shadow-sm"></div>
             ))
-          ) : packages.length === 0 && !loading ? (
+          ) : packages.length === 0 ? (
             <div className="col-span-full py-16 text-center text-muted-text bg-surface rounded-2xl border border-border border-dashed flex flex-col items-center">
               <span className="material-symbols-outlined text-4xl text-muted-text/30 mb-2">inventory_2</span>
               <p className="font-semibold text-on-surface">No offers or packages found</p>
@@ -417,10 +429,10 @@ const PackageManagePage = () => {
                 </div>
                 
                 <div className="flex items-baseline gap-2 mb-4">
-                  <span className="text-[26px] font-bold text-primary">₹{p.discountedPrice}</span>
-                  <span className="text-sm text-muted-text line-through font-medium">₹{p.totalPrice}</span>
+                  <span className="text-[26px] font-bold text-primary">{formatPaise(p.discountedPricePaise, p.discountedPrice)}</span>
+                  <span className="text-sm text-muted-text line-through font-medium">{formatPaise(p.totalPricePaise, p.totalPrice)}</span>
                   <span className="text-xs font-semibold text-success bg-success/10 px-2 py-0.5 rounded-lg ml-auto">
-                    Save {Math.round(((p.totalPrice - p.discountedPrice) / p.totalPrice) * 100)}%
+                    Save {Math.round((((p.totalPricePaise ? getRupeesFromPaise(p.totalPricePaise) : p.totalPrice) - (p.discountedPricePaise ? getRupeesFromPaise(p.discountedPricePaise) : p.discountedPrice)) / (p.totalPricePaise ? getRupeesFromPaise(p.totalPricePaise) : p.totalPrice)) * 100)}%
                   </span>
                 </div>
 

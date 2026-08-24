@@ -1,10 +1,14 @@
 import api from '../../../services/api/axiosInstance';
 
-// Auth
+// Auth & Profile
 export const loginVendor = (data) => api.post('/auth/login/vendor', data);
 export const registerVendor = (data) => api.post('/auth/register/vendor', data);
 export const getProfile = (token) => api.get('/auth/profile', token ? { headers: { Authorization: `Bearer ${token}` } } : {});
 export const updateProfile = (data) => api.put('/vendors/profile', data);
+export const getVendorProfile = () => api.get('/vendors/me');
+export const updateVendorKyc = (data) => api.put('/vendors/kyc', data, { headers: { 'Content-Type': 'multipart/form-data' } });
+export const updateVendorBank = (data) => api.put('/vendors/bank', data);
+export const getVendorDocument = (field) => api.get(`/vendors/documents/${field}`, { responseType: 'blob' });
 export const updateFcmToken = (data) => api.put('/vendors/fcm-token', data);
 
 // Salons
@@ -15,6 +19,7 @@ export const getSalonById = (id) => api.get(`/salons/detail/${id}`);
 
 // Staff
 export const getSalonStaff = (salonId, params) => api.get(`/staff/salon/${salonId}`, { params });
+export const getVendorStaff = (params) => api.get('/staff/vendor/my', { params });
 export const addStaff = (data) => api.post('/staff', data);
 export const updateStaff = (id, data) => api.put(`/staff/${id}`, data);
 export const deleteStaff = (id) => api.delete(`/staff/${id}`);
@@ -23,6 +28,7 @@ export const updateSchedule = (id, data) => api.put(`/staff/${id}/schedule`, dat
 
 // Services
 export const getServices = (params) => api.get('/services', { params });
+export const getVendorServices = (params) => api.get('/services/vendor/my', { params });
 export const createService = (data) => api.post('/services', data);
 export const updateService = (id, data) => api.put(`/services/${id}`, data);
 export const deleteService = (id) => api.delete(`/services/${id}`);
@@ -35,7 +41,7 @@ export const getSubcategories = (params) => api.get('/subcategories', { params }
 // Bookings
 export const getSalonBookings = (salonId, params) => api.get(`/bookings/salon/${salonId}`, { params });
 export const getVendorRecentBookings = (params) => api.get('/bookings/vendor/recent', { params });
-export const getVendorStats = () => api.get('/bookings/vendor/stats');
+export const getVendorStats = (params) => api.get('/bookings/vendor/stats', { params });
 export const getVendorAnalytics = (params) => api.get('/bookings/vendor/analytics', { params });
 export const getBookingById = (id) => api.get(`/bookings/${id}`);
 export const acceptBooking = (id) => api.patch(`/bookings/${id}/accept`);

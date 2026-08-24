@@ -1,4 +1,5 @@
 const PlatformFee = require('../models/PlatformFee');
+const { calculatePercentagePaise, roundToNearestRupeePaise } = require('./money');
 
 /**
  * Calculate cancellation fee based on time until appointment
@@ -7,8 +8,8 @@ const PlatformFee = require('../models/PlatformFee');
  * - >= 60 minutes before: No cancellation fee
  * - < 60 minutes before: Cancellation fee applies (percentage from PlatformFee)
  * 
- * @param {Object} booking - Booking document
- * @returns {Object} { canCancel, cancellationFee, feePercentage }
+ * @param {Object} booking - Booking document (must have finalAmountPaise)
+ * @returns {Object} { canCancel, cancellationFeePaise, feePercentage }
  */
 const calculateCancellationFee = async (booking) => {
   const now = new Date();
@@ -25,116 +26,131 @@ const calculateCancellationFee = async (booking) => {
   if (minutesUntilAppointment >= 60) {
     return {
       canCancel: true,
-      cancellationFee: 0,
+      cancellationFeePaise: 0,
       feePercentage: 0,
       minutesUntilAppointment: Math.round(minutesUntilAppointment),
     };
   }
 
   // Within 59 minutes - fee applies
-  const fee = (booking.finalAmount * cancellationFeePercentage) / 100;
+  // Ensure we use booking.finalAmountPaise, fallback to old finalAmount * 100 if missing
+  const basePaise = booking.finalAmountPaise !== undefined ? booking.finalAmountPaise : Math.round((booking.finalAmount || 0) * 100);
+  const feePaise = calculatePercentagePaise(basePaise, cancellationFeePercentage);
+  
   return {
     canCancel: true,
-    cancellationFee: Math.round(fee * 100) / 100,
+    cancellationFeePaise: roundToNearestRupeePaise(feePaise), // Final customer charge rounded to whole rupee
     feePercentage: cancellationFeePercentage,
     minutesUntilAppointment: Math.round(minutesUntilAppointment),
   };
 };
 
 /**
- * Calculate booking total with optional coupon discount
+ * Calculate booking total using strict integer paise math.
  * 
- * @param {Array} services - Array of service objects with price
- * @param {Object|null} coupon - Coupon document or null
- * @param {Object|null} pkg - Package document or null
- * @returns {Object} { totalAmount, discountAmount, finalAmount, packageDiscount }
+ * @param {Array} services - Array of service objects (must have pricePaise)
+ * @param {Object|null} coupon - Coupon document or null (must have discountValuePaise if flat)
+ * @param {Object|null} pkg - Package document or null (must have discountedPricePaise)
+ * @param {number} platformFeePercentage - Percentage
+ * @returns {Object} Financial breakdown in paise
  */
 const calculateBookingTotal = (services, coupon = null, pkg = null, platformFeePercentage = 0) => {
-  const originalTotal = services.reduce((sum, s) => sum + s.price, 0);
-  let baseAmount = originalTotal;
-  let packageDiscount = 0;
+  // 1. Calculate original total from services
+  // If pricePaise is missing, fallback to price * 100 for backward compatibility during migration
+  const originalTotalPaise = services.reduce((sum, s) => sum + (s.pricePaise !== undefined ? s.pricePaise : Math.round((s.price || 0) * 100)), 0);
+  
+  let baseAmountPaise = originalTotalPaise;
+  let packageDiscountPaise = 0;
 
+  // 2. Apply package discount if applicable
   if (pkg) {
-    baseAmount = pkg.discountedPrice;
-    packageDiscount = originalTotal - baseAmount;
-    if (packageDiscount < 0) packageDiscount = 0; // Guard against bad data
+    baseAmountPaise = pkg.discountedPricePaise !== undefined ? pkg.discountedPricePaise : Math.round((pkg.discountedPrice || 0) * 100);
+    packageDiscountPaise = originalTotalPaise - baseAmountPaise;
+    if (packageDiscountPaise < 0) packageDiscountPaise = 0; // Guard
   }
 
-  let couponDiscount = 0;
+  let couponDiscountPaise = 0;
 
+  // 3. Apply coupon discount if applicable
   if (coupon) {
-    // If a package is applied and the coupon is NOT applicable to offers, skip coupon
     if (pkg && coupon.applicableToOffers === false) {
-      couponDiscount = 0;
+      couponDiscountPaise = 0;
     } else {
       if (coupon.discountType === 'percentage') {
-        couponDiscount = (baseAmount * coupon.discountValue) / 100;
-        if (coupon.maxDiscount && couponDiscount > coupon.maxDiscount) {
-          couponDiscount = coupon.maxDiscount;
+        couponDiscountPaise = calculatePercentagePaise(baseAmountPaise, coupon.discountValue);
+        const maxDiscount = coupon.maxDiscountPaise !== undefined ? coupon.maxDiscountPaise : (coupon.maxDiscount ? Math.round(coupon.maxDiscount * 100) : null);
+        if (maxDiscount !== null && couponDiscountPaise > maxDiscount) {
+          couponDiscountPaise = maxDiscount;
         }
       } else {
-        couponDiscount = coupon.discountValue;
+        // Flat discount
+        couponDiscountPaise = coupon.discountValuePaise !== undefined ? coupon.discountValuePaise : Math.round((coupon.discountValue || 0) * 100);
       }
     }
   }
 
-  couponDiscount = Math.min(couponDiscount, baseAmount);
-  const subtotalAfterDiscounts = Math.round((baseAmount - couponDiscount) * 100) / 100;
-  const totalDiscount = Math.round((packageDiscount + couponDiscount) * 100) / 100;
+  // Ensure discount doesn't exceed base amount
+  couponDiscountPaise = Math.min(couponDiscountPaise, baseAmountPaise);
   
-  const platformFeeAmount = Math.round((subtotalAfterDiscounts * platformFeePercentage) / 100 * 100) / 100;
-  const finalAmount = Math.round((subtotalAfterDiscounts + platformFeeAmount) * 100) / 100;
+  const subtotalAfterDiscountsPaise = baseAmountPaise - couponDiscountPaise;
+  const totalDiscountPaise = packageDiscountPaise + couponDiscountPaise;
+
+  // 4. Calculate Platform Fee
+  const platformFeeAmountPaise = calculatePercentagePaise(subtotalAfterDiscountsPaise, platformFeePercentage);
+  
+  // 5. Calculate raw final amount
+  const rawFinalAmountPaise = subtotalAfterDiscountsPaise + platformFeeAmountPaise;
+
+  // 6. Apply Final Customer Rounding Business Rule (Round to nearest whole Rupee)
+  const finalAmountPaise = roundToNearestRupeePaise(rawFinalAmountPaise);
 
   return {
-    totalAmount: Math.round(originalTotal * 100) / 100, // Original service sum
-    subtotalAfterDiscounts,                             // Service sum minus discounts
-    discountAmount: totalDiscount,
-    couponDiscount: Math.round(couponDiscount * 100) / 100,
-    packageDiscount: Math.round(packageDiscount * 100) / 100,
+    totalAmountPaise: originalTotalPaise,
+    subtotalAfterDiscountsPaise,
+    discountAmountPaise: totalDiscountPaise,
+    couponDiscountPaise,
+    packageDiscountPaise,
     platformFeePercentage,
-    platformFeeAmount,
-    finalAmount,                                        // User pays this
+    platformFeeAmountPaise,
+    finalAmountPaise, // Authoritative final payable amount
   };
 };
 
 /**
- * Calculate financial breakdown for a booking
- * Determines commission vs subscription, platform fee, and vendor payout
+ * Calculate financial breakdown for a booking in paise
  * 
  * @param {Object} vendor - Vendor document
- * @param {number} bookingAmount - Final booking amount
- * @returns {Object} { commission, platformFee, vendorPayout }
+ * @param {number} subtotalAfterDiscountsPaise - The subtotal in paise
+ * @param {number} precalculatedPlatformFeePaise - Platform fee in paise
+ * @returns {Object} { commissionPaise, platformFeePaise, vendorPayoutPaise, ... }
  */
-const calculateFinancialBreakdown = async (vendor, subtotalAfterDiscounts, precalculatedPlatformFeeAmount = 0) => {
+const calculateFinancialBreakdown = async (vendor, subtotalAfterDiscountsPaise, precalculatedPlatformFeePaise = 0) => {
   const platformFeeDoc = await PlatformFee.findOne({ isActive: true });
-  // The platform fee is now an external charge added on top of the subtotal.
-  // It is collected by the admin. We use the precalculated amount if provided, or calculate it.
-  const platformFeePercentage = platformFeeDoc ? platformFeeDoc.feePercentage : 5;
-  const platformFee = precalculatedPlatformFeeAmount || Math.round((subtotalAfterDiscounts * platformFeePercentage) / 100 * 100) / 100;
   
+  const platformFeePercentage = platformFeeDoc ? platformFeeDoc.feePercentage : 5;
+  const platformFeePaise = precalculatedPlatformFeePaise || calculatePercentagePaise(subtotalAfterDiscountsPaise, platformFeePercentage);
+
   const globalAdminCommission = platformFeeDoc && platformFeeDoc.adminCommissionPercentage !== undefined ? platformFeeDoc.adminCommissionPercentage : 10;
 
-  let commission = 0;
+  let commissionPaise = 0;
   let vendorPlanType = 'COMMISSION';
   let appliedCommissionRate = 0;
 
-  // If vendor has active subscription, no commission
   if (vendor.hasActiveSubscription && vendor.hasActiveSubscription()) {
-    commission = 0;
+    commissionPaise = 0;
     vendorPlanType = 'SUBSCRIPTION';
   } else {
-    // Commission plan - use vendor's custom commission rate OR fallback to global admin commission
     appliedCommissionRate = (vendor.commissionRate !== undefined && vendor.commissionRate > 0) ? vendor.commissionRate : globalAdminCommission;
-    commission = Math.round((subtotalAfterDiscounts * appliedCommissionRate) / 100 * 100) / 100;
+    commissionPaise = calculatePercentagePaise(subtotalAfterDiscountsPaise, appliedCommissionRate);
   }
 
-  // Vendor Payout is simply Subtotal minus Commission. Platform fee doesn't eat into their payout.
-  const vendorPayout = Math.round((subtotalAfterDiscounts - commission) * 100) / 100;
+  // Vendor Payout is Subtotal minus Commission.
+  const vendorPayoutPaise = subtotalAfterDiscountsPaise - commissionPaise;
 
   return {
-    commission,
-    platformFee,
-    vendorPayout,
+    commissionPaise,
+    platformFeePaise,
+    vendorPayoutPaise,
     platformFeePercentage,
     adminCommissionPercentage: appliedCommissionRate,
     vendorPlanType,

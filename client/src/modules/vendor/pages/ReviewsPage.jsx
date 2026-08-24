@@ -1,22 +1,28 @@
 import { useState, useEffect } from 'react';
 import { getVendorReviews } from '../services/vendorApi';
+import { useBranch } from '../../../context/BranchContext';
 import VendorPageLayout from '../../../components/vendor/layout/VendorPageLayout';
 import VendorPageHeader from '../../../components/vendor/layout/VendorPageHeader';
 import VendorTableContainer from '../../../components/vendor/layout/VendorTableContainer';
 import VendorPagination from '../../../components/vendor/layout/VendorPagination';
 
 const ReviewsPage = () => {
+  const { selectedSalon, loadingBranches } = useBranch();
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({ page: 1, limit: 12, total: 0, totalPages: 1 });
 
   useEffect(() => {
-    loadReviews(pagination.page);
-  }, []);
+    loadReviews(1);
+  }, [selectedSalon]);
 
   const loadReviews = async (page = 1) => {
+    setLoading(true);
     try {
-      const res = await getVendorReviews({ page, limit: pagination.limit });
+      const query = { page, limit: pagination.limit };
+      if (selectedSalon) query.salon = selectedSalon._id;
+      
+      const res = await getVendorReviews(query);
       setReviews(res.data.data);
       if (res.data.pagination) {
         setPagination(prev => ({ ...prev, page: res.data.pagination.page, total: res.data.pagination.total, totalPages: res.data.pagination.pages }));
@@ -28,7 +34,7 @@ const ReviewsPage = () => {
     }
   };
 
-  if (loading) {
+  if (loadingBranches || loading) {
     return (
       <VendorPageLayout>
         <div className="flex justify-center py-12"><div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" /></div>

@@ -7,6 +7,7 @@ import Loader from '../../../../components/common/Loader';
 import { Skeleton, SkeletonText } from '../../../../components/common/Skeleton';
 import Modal from '../../../../components/common/Modal';
 import PageHeader from '../../../../components/common/PageHeader';
+import { formatPaise } from '../../../../utils/money';
 
 const statusColors = {
   PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -14,6 +15,15 @@ const statusColors = {
   COMPLETED: 'bg-green-100 text-green-800 border-green-200',
   CANCELLED: 'bg-red-100 text-red-800 border-red-200',
   REJECTED: 'bg-gray-100 text-gray-800 border-gray-200',
+};
+
+const paymentStatusConfig = {
+  PENDING: { label: 'Pending', cls: 'bg-yellow-100 text-yellow-700' },
+  PAID: { label: 'Paid', cls: 'bg-green-100 text-green-700' },
+  REFUND_PENDING: { label: 'Refund Pending', cls: 'bg-orange-100 text-orange-700' },
+  PARTIALLY_REFUNDED: { label: 'Partially Refunded', cls: 'bg-blue-100 text-blue-700' },
+  REFUNDED: { label: 'Refunded', cls: 'bg-blue-100 text-blue-700' },
+  FAILED: { label: 'Failed', cls: 'bg-red-100 text-red-700' },
 };
 
 const BookingDetailPage = () => {
@@ -214,7 +224,7 @@ const BookingDetailPage = () => {
                 {bs.staff?.name && `👤 ${bs.staff.name} • `}{bs.startTime}-{bs.endTime} • {bs.duration} min
               </p>
             </div>
-            <span className="font-medium text-sm">₹{bs.price}</span>
+            <span className="font-medium text-sm">{formatPaise(bs.pricePaise, bs.price)}</span>
           </div>
         ))}
       </div>
@@ -224,18 +234,47 @@ const BookingDetailPage = () => {
         <div className="flex justify-between items-center mb-3">
           <div className="flex flex-col">
             <h3 className="font-semibold">Payment Summary</h3>
-            <span className="text-xs text-text-muted mt-0.5">Method: {['ONLINE', 'online'].includes(booking.paymentMethod) ? 'Online' : 'Pay at Salon'}</span>
+            <span className="text-xs text-text-muted mt-0.5">
+              Method: {booking.paymentMethod === 'ONLINE' ? 'Online (Razorpay)' : 'Cash / Pay at Salon'}
+            </span>
           </div>
-          <span className={`px-2 py-0.5 rounded text-xs font-semibold ${booking.paymentStatus === 'PAID' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-            {booking.paymentStatus === 'PAID' ? 'Paid' : 'Pending'}
+          <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+            (paymentStatusConfig[booking.paymentStatus] || paymentStatusConfig.PENDING).cls
+          }`}>
+            {(paymentStatusConfig[booking.paymentStatus] || paymentStatusConfig.PENDING).label}
           </span>
         </div>
         <div className="space-y-2 text-sm">
-          <div className="flex justify-between"><span className="text-text-secondary">Subtotal</span><span>₹{booking.totalAmount}</span></div>
-          {booking.discountAmount > 0 && <div className="flex justify-between text-green-600"><span>Discount</span><span>-₹{booking.discountAmount}</span></div>}
-          {booking.cancellationFee > 0 && <div className="flex justify-between text-red-600"><span>Cancellation Fee</span><span>₹{booking.cancellationFee}</span></div>}
-          <div className="flex justify-between font-bold text-lg pt-2 border-t border-primary-200"><span>Total</span><span className="text-primary-700">₹{booking.finalAmount}</span></div>
+          <div className="flex justify-between"><span className="text-text-secondary">Subtotal</span><span>{formatPaise(booking.totalAmountPaise, booking.totalAmount)}</span></div>
+          {booking.discountAmount > 0 && <div className="flex justify-between text-green-600"><span>Discount</span><span>-{formatPaise(booking.discountAmountPaise, booking.discountAmount)}</span></div>}
+          {booking.platformFee > 0 && (
+            <div className="flex justify-between text-text-secondary">
+              <span>Platform Fee{booking.platformFeePercentage ? ` (${booking.platformFeePercentage}%)` : ''}</span>
+              <span>{formatPaise(booking.platformFeeAmountPaise, booking.platformFee)}</span>
+            </div>
+          )}
+          {booking.cancellationFee > 0 && <div className="flex justify-between text-red-600"><span>Cancellation Fee</span><span>{formatPaise(booking.cancellationFeePaise, booking.cancellationFee)}</span></div>}
+          <div className="flex justify-between font-bold text-lg pt-2 border-t border-primary-200"><span>Total</span><span className="text-primary-700">{formatPaise(booking.finalAmountPaise, booking.finalAmount)}</span></div>
+          {booking.pointsEarned > 0 && (
+            <div className="mt-2 bg-primary-50 rounded-lg p-2 flex justify-between items-center text-primary-700 font-medium">
+              <div className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px]">stars</span>
+                <span>Reward Points</span>
+              </div>
+              <span>+{booking.pointsEarned}</span>
+            </div>
+          )}
         </div>
+        {/* Show refund details if applicable */}
+        {['REFUND_PENDING', 'REFUNDED'].includes(booking.paymentStatus) && (
+          <div className="mt-3 pt-3 border-t border-primary-200">
+            <p className="text-xs font-semibold text-blue-700">
+              {booking.paymentStatus === 'REFUNDED'
+                ? `✓ Refund of ${formatPaise(booking.finalAmountPaise - (booking.cancellationFeePaise || 0), booking.finalAmount - (booking.cancellationFee || 0))} has been processed to your original payment method.`
+                : `⏳ Refund of ${formatPaise(booking.finalAmountPaise - (booking.cancellationFeePaise || 0), booking.finalAmount - (booking.cancellationFee || 0))} is being processed (typically 5–7 business days).`}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Review Section */}
@@ -287,8 +326,8 @@ const BookingDetailPage = () => {
 
       {/* Actions */}
       <div className="flex gap-3">
-        {booking.paymentStatus !== 'PAID' && canCancel && ['ONLINE', 'online'].includes(booking.paymentMethod) && (
-          <Button onClick={handlePayment} className="flex-1 bg-gradient-to-r from-primary-600 to-primary-500 text-white">Pay ₹{booking.finalAmount}</Button>
+        {booking.paymentStatus !== 'PAID' && canCancel && booking.paymentMethod === 'ONLINE' && (
+          <Button onClick={handlePayment} className="flex-1 bg-gradient-to-r from-primary-600 to-primary-500 text-white">Pay {formatPaise(booking.finalAmountPaise, booking.finalAmount)}</Button>
         )}
         {canCancel && <Button variant="danger" onClick={() => setCancelModal(true)} className="flex-1">Cancel Booking</Button>}
         <Button variant="secondary" onClick={handleChat} className="flex-1">Chat</Button>

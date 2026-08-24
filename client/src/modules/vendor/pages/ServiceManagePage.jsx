@@ -1,20 +1,20 @@
 import { useState, useEffect } from 'react';
-import { getVendorSalons, getServices, createService, updateService, deleteService, toggleServiceStatus, getCategories, getSubcategories } from '../services/vendorApi';
+import { getVendorServices, getVendorSalons, getServices, createService, updateService, deleteService, toggleServiceStatus, getCategories, getSubcategories } from '../services/vendorApi';
 import Modal from '../../../components/common/Modal';
+import { useBranch } from '../../../context/BranchContext';
 import Pagination from '../../../components/common/Pagination';
 import VendorPageLayout from '../../../components/vendor/layout/VendorPageLayout';
 import VendorPageHeader from '../../../components/vendor/layout/VendorPageHeader';
 import VendorListToolbar from '../../../components/vendor/layout/VendorListToolbar';
 import VendorTableContainer from '../../../components/vendor/layout/VendorTableContainer';
 import VendorPagination from '../../../components/vendor/layout/VendorPagination';
+import { formatPaise, getRupeesFromPaise } from '../../../utils/money';
 
 const ServiceManagePage = () => {
-  const [salons, setSalons] = useState([]);
-  const [selectedSalon, setSelectedSalon] = useState('');
+  const { selectedSalon, loadingBranches } = useBranch();
   const [services, setServices] = useState([]);
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [pagination, setPagination] = useState({ page: 1, limit: 12, total: 0, totalPages: 1 });
@@ -28,37 +28,32 @@ const ServiceManagePage = () => {
   const [form, setForm] = useState({ name: '', category: '', subcategory: '', gender: 'unisex', price: '', duration: '', description: '' });
 
   useEffect(() => { loadInit(); }, []);
-  useEffect(() => { if (selectedSalon) loadServices(1); }, [selectedSalon, filters]);
+  useEffect(() => { loadServices(1); }, [selectedSalon, filters]);
   useEffect(() => { if (form.category) loadSubs(); }, [form.category]);
 
   const loadInit = async () => {
     try {
-      const [s, c] = await Promise.all([getVendorSalons(), getCategories()]);
-      const loadedSalons = s.data.data.salons || s.data.data;
-      setSalons(loadedSalons); 
+      const c = await getCategories();
       setCategories(c.data.data);
-      if (loadedSalons.length > 0) {
-        const savedSalonId = localStorage.getItem('vendor_selected_salon');
-        if (savedSalonId && loadedSalons.some(salon => salon._id === savedSalonId)) {
-          setSelectedSalon(savedSalonId);
-        } else {
-          setSelectedSalon(loadedSalons[0]._id);
-          localStorage.setItem('vendor_selected_salon', loadedSalons[0]._id);
-        }
-      }
     } catch (e) {}
-    setLoading(false);
   };
 
   const loadServices = async (page = pagination.page) => { 
     setIsFetching(true);
     try { 
-      const queryParams = { salon: selectedSalon, page, limit: pagination.limit };
+      const queryParams = { page, limit: pagination.limit };
       if (filters.search) queryParams.search = filters.search;
       if (filters.category) queryParams.category = filters.category;
       if (filters.isActive !== 'all') queryParams.isActive = filters.isActive;
 
-      const r = await getServices(queryParams); 
+      let r;
+      if (selectedSalon) {
+        queryParams.salon = selectedSalon._id;
+        r = await getServices(queryParams); 
+      } else {
+        r = await getVendorServices(queryParams);
+      }
+      
       setServices(r.data.data.services);
       setPagination(prev => ({ ...prev, page: r.data.data.page, total: r.data.data.total, totalPages: r.data.data.totalPages }));
     } catch (e) {} 
@@ -74,11 +69,15 @@ const ServiceManagePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault(); 
+    if (!selectedSalon) {
+      alert("Please select a specific branch to create or edit a service.");
+      return;
+    }
     setSaving(true);
     try {
       const payload = { 
         ...form, 
-        salon: selectedSalon, 
+        salon: selectedSalon._id, 
         price: Number(form.price), 
         duration: Number(form.duration) 
       };
@@ -115,13 +114,17 @@ const ServiceManagePage = () => {
   };
 
   const openEditForm = (s) => {
+    if (!selectedSalon) {
+      alert("Please select a specific branch to edit this service.");
+      return;
+    }
     setEditingService(s);
     setForm({ 
       name: s.name, 
       category: s.category?._id || '', 
       subcategory: s.subcategory?._id || '', 
       gender: s.gender || 'unisex', 
-      price: s.price, 
+      price: s.pricePaise ? getRupeesFromPaise(s.pricePaise) : s.price, 
       duration: s.duration, 
       description: s.description || '' 
     });
@@ -129,7 +132,7 @@ const ServiceManagePage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  if (loading) {
+  if (loadingBranches) {
     return (
       <VendorPageLayout>
         <div className="flex flex-col gap-6">
@@ -159,17 +162,15 @@ const ServiceManagePage = () => {
       />
       
       <VendorListToolbar>
-        <select value={selectedSalon} onChange={e => { setSelectedSalon(e.target.value); localStorage.setItem('vendor_selected_salon', e.target.value); }} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm bg-surface text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm">
-          {salons.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
-        </select>
-        
-        <input 
-          type="text" 
-          placeholder="Search by name..." 
-          value={filters.search}
-          onChange={e => setFilters({...filters, search: e.target.value})}
-          className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm bg-surface text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" 
-        />
+        <div className="flex-1">
+          <input 
+            type="text" 
+            placeholder="Search by name..." 
+            value={filters.search}
+            onChange={e => setFilters({...filters, search: e.target.value})}
+            className="w-full px-4 py-2.5 rounded-xl border border-border text-sm bg-surface text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" 
+          />
+        </div>
         
         <select 
           value={filters.category}
@@ -252,7 +253,7 @@ const ServiceManagePage = () => {
               <div key={i} className="h-[72px] bg-surface-variant/30 animate-pulse w-full"></div>
             ))}
           </div>
-        ) : services.length === 0 && !loading ? (
+        ) : services.length === 0 && !isFetching ? (
           <div className="py-16 text-center text-muted-text flex flex-col items-center">
             <span className="material-symbols-outlined text-4xl text-muted-text/30 mb-2">content_cut</span>
             <p className="font-medium text-on-surface text-lg">No services found.</p>
@@ -282,7 +283,7 @@ const ServiceManagePage = () => {
                     )}
                   </td>
                   <td className="px-5 py-4 text-on-surface">{s.category?.name || '-'}</td>
-                  <td className="px-5 py-4 font-semibold text-on-surface">₹{s.price}</td>
+                  <td className="px-5 py-4 font-semibold text-on-surface">{formatPaise(s.pricePaise, s.price)}</td>
                   <td className="px-5 py-4 text-muted-text">{s.duration} min</td>
                   <td className="px-5 py-4">
                     <span className={`text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-full border ${s.isActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-600 border-red-200'}`}>

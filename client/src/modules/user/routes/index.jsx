@@ -48,6 +48,8 @@ export default function UserRoutes() {
         <Route path="/salon/:id" element={<SuspenseWrapper><SalonDetailPage /></SuspenseWrapper>} />
         <Route path="/salon/:id/book" element={<SuspenseWrapper><BookingPage /></SuspenseWrapper>} />
         <Route path="/salon/:id/checkout" element={<SuspenseWrapper><CheckoutPage /></SuspenseWrapper>} />
+        <Route path="/support" element={<SuspenseWrapper><SupportPage /></SuspenseWrapper>} />
+        <Route path="/booking-issues" element={<SuspenseWrapper><BookingIssuesPage /></SuspenseWrapper>} />
       </Route>
 
       {/* Protected Routes under MainLayout */}
@@ -59,9 +61,6 @@ export default function UserRoutes() {
         <Route path="/notifications" element={<SuspenseWrapper><NotificationsPage /></SuspenseWrapper>} />
         <Route path="/profile" element={<SuspenseWrapper><ProfilePage /></SuspenseWrapper>} />
         <Route path="/favorites" element={<SuspenseWrapper><FavoritesPage /></SuspenseWrapper>} />
-        {/* Support Pages */}
-        <Route path="/support" element={<SuspenseWrapper><SupportPage /></SuspenseWrapper>} />
-        <Route path="/booking-issues" element={<SuspenseWrapper><BookingIssuesPage /></SuspenseWrapper>} />
       </Route>
 
       {/* Guest/Public Legal Pages */}

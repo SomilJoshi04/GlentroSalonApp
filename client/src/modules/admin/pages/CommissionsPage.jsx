@@ -129,14 +129,27 @@ const CommissionsPage = () => {
     {
       header: 'Action',
       render: (row) => (
-        <button 
-          onClick={() => handleDelete(row._id)} 
-          disabled={saving} 
-          className="p-2 text-error hover:bg-error/10 rounded-lg flex items-center gap-1 transition-colors disabled:opacity-50 ml-auto"
-        >
-          <span className="material-symbols-outlined text-[18px]">delete</span>
-          <span className="text-sm font-medium">Remove</span>
-        </button>
+        <div className="flex items-center justify-end gap-2">
+          <button 
+            onClick={() => {
+              setCommForm({ vendor: row.vendor?._id || '', percentage: row.percentage });
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }} 
+            disabled={saving} 
+            className="p-2 text-primary hover:bg-primary/10 rounded-lg flex items-center gap-1 transition-colors disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined text-[18px]">edit</span>
+            <span className="text-sm font-medium">Edit</span>
+          </button>
+          <button 
+            onClick={() => handleDelete(row._id)} 
+            disabled={saving} 
+            className="p-2 text-error hover:bg-error/10 rounded-lg flex items-center gap-1 transition-colors disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined text-[18px]">delete</span>
+            <span className="text-sm font-medium">Remove</span>
+          </button>
+        </div>
       )
     }
   ];

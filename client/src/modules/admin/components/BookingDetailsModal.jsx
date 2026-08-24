@@ -102,9 +102,24 @@ const BookingDetailsModal = ({ booking, onClose }) => {
                 <span>Subtotal</span>
                 <span>₹{booking.totalAmount}</span>
               </div>
-              <div className="flex justify-between font-body-sm text-[14px] text-success">
-                <span>Discount</span>
-                <span>- ₹{booking.discountAmount}</span>
+              
+              {booking.discountAmount > 0 && (
+                <div className="flex justify-between font-body-sm text-[14px] text-success">
+                  <span>Discount</span>
+                  <span>- ₹{booking.discountAmount}</span>
+                </div>
+              )}
+              
+              {(booking.pricing?.packageDiscount > 0 || booking.packageSnapshot?.discount > 0) && (
+                <div className="flex justify-between font-body-sm text-[14px] text-on-surface font-medium">
+                  <span>Package Offer</span>
+                  <span>₹{booking.packageSnapshot?.offerPrice || (booking.totalAmount - (booking.pricing?.packageDiscount || booking.packageSnapshot?.discount))}</span>
+                </div>
+              )}
+
+              <div className="flex justify-between font-body-sm text-[14px] text-primary">
+                <span>Platform Fee</span>
+                <span>+ ₹{booking.platformFee || 0}</span>
               </div>
               
               <div className="h-px bg-border my-2" />
@@ -116,13 +131,9 @@ const BookingDetailsModal = ({ booking, onClose }) => {
 
               <div className="h-px bg-border my-2" />
 
-              <div className="flex justify-between font-body-sm text-[13px] text-muted-text pt-2">
+              <div className="flex justify-between font-body-sm text-[13px] text-muted-text">
                 <span>Platform Commission</span>
                 <span className="text-danger">- ₹{booking.commission || 0}</span>
-              </div>
-              <div className="flex justify-between font-body-sm text-[13px] text-muted-text">
-                <span>Platform Fee</span>
-                <span className="text-danger">- ₹{booking.platformFee || 0}</span>
               </div>
               <div className="flex justify-between font-headline-sm text-[15px] text-primary mt-2">
                 <span>Vendor Payout</span>

@@ -37,6 +37,9 @@ coverage/
 *.test.js
 *.spec.js
 test-*.js
+check-*.js
+mock-*.js
+migrateChats.js
 scratch/
 
 # Markdown Files

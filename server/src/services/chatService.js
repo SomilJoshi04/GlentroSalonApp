@@ -81,6 +81,13 @@ const { getIO } = require('../config/socket');
  * Send a message in a chat
  */
 const sendMessage = async (chatId, senderId, senderRole, content, messageType = 'text') => {
+  const existingChat = await Chat.findById(chatId);
+  if (!existingChat) throw new Error('Chat not found');
+
+  if (senderRole !== 'admin' && !existingChat.participants.some(p => p.userId.toString() === senderId.toString())) {
+    throw new Error('Not authorized to send messages to this chat');
+  }
+
   const message = {
     sender: senderId,
     senderRole,
@@ -161,9 +168,13 @@ const getChats = async (userId, role) => {
 /**
  * Get messages for a chat with pagination
  */
-const getMessages = async (chatId, page = 1, limit = 50) => {
+const getMessages = async (chatId, userId, role, page = 1, limit = 50) => {
   const chat = await Chat.findById(chatId);
   if (!chat) throw new Error('Chat not found');
+
+  if (role !== 'admin' && !chat.participants.some(p => p.userId.toString() === userId.toString())) {
+    throw new Error('Not authorized to view this chat');
+  }
 
   const populatedChat = await populateChatDetails(chat);
 
@@ -183,7 +194,14 @@ const getMessages = async (chatId, page = 1, limit = 50) => {
 /**
  * Mark messages as read
  */
-const markMessagesAsRead = async (chatId, userId) => {
+const markMessagesAsRead = async (chatId, userId, role) => {
+  const chat = await Chat.findById(chatId);
+  if (!chat) return;
+
+  if (role !== 'admin' && !chat.participants.some(p => p.userId.toString() === userId.toString())) {
+    throw new Error('Not authorized for this chat');
+  }
+
   await Chat.updateMany(
     { _id: chatId },
     {

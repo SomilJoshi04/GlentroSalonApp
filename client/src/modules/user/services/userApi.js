@@ -31,6 +31,7 @@ export const getCategories = () => api.get('/categories');
 export const getSubcategories = (params) => api.get('/subcategories', { params });
 
 // Bookings
+export const previewBookingTotal = (data) => api.post('/bookings/calculate-total', data);
 export const createBooking = (data) => api.post('/bookings', data);
 export const getMyBookings = (params) => api.get('/bookings/my', { params });
 export const getBookingById = (id) => api.get(`/bookings/${id}`);

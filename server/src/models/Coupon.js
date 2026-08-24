@@ -19,11 +19,22 @@ const couponSchema = new mongoose.Schema(
       required: [true, 'Discount value is required'],
       min: [0, 'Discount value cannot be negative'],
     },
+    discountValuePaise: {
+      type: Number,
+    },
     minOrderAmount: {
       type: Number,
       default: 0,
     },
+    minOrderAmountPaise: {
+      type: Number,
+      default: 0,
+    },
     maxDiscount: {
+      type: Number,
+      default: null, // null means no cap
+    },
+    maxDiscountPaise: {
       type: Number,
       default: null, // null means no cap
     },
@@ -36,6 +47,10 @@ const couponSchema = new mongoose.Schema(
       required: [true, 'Valid to date is required'],
     },
     usageLimit: {
+      type: Number,
+      default: null, // null means unlimited
+    },
+    perUserLimit: {
       type: Number,
       default: null, // null means unlimited
     },

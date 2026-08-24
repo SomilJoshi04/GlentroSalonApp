@@ -29,7 +29,7 @@ const getChats = async (req, res, next) => {
 const getMessages = async (req, res, next) => {
   try {
     const { page = 1, limit = 50 } = req.query;
-    const result = await chatService.getMessages(req.params.chatId, parseInt(page), parseInt(limit));
+    const result = await chatService.getMessages(req.params.chatId, req.user.id, req.user.role, parseInt(page), parseInt(limit));
     res.json({ success: true, data: result });
   } catch (error) { next(error); }
 };
@@ -44,7 +44,7 @@ const sendMessage = async (req, res, next) => {
 
 const markAsRead = async (req, res, next) => {
   try {
-    await chatService.markMessagesAsRead(req.params.chatId, req.user.id);
+    await chatService.markMessagesAsRead(req.params.chatId, req.user.id, req.user.role);
     res.json({ success: true, message: 'Messages marked as read' });
   } catch (error) { next(error); }
 };

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getVendorSalons, getSalonStaff, addStaff, updateStaff, deleteStaff, updateSchedule, toggleStaffStatus } from '../services/vendorApi';
+import { getSalonStaff, getVendorStaff, addStaff, updateStaff, deleteStaff, updateSchedule, toggleStaffStatus } from '../services/vendorApi';
+import { useBranch } from '../../../context/BranchContext';
 import Modal from '../../../components/common/Modal';
 import Pagination from '../../../components/common/Pagination';
 import VendorPageLayout from '../../../components/vendor/layout/VendorPageLayout';
@@ -11,10 +12,8 @@ import VendorPagination from '../../../components/vendor/layout/VendorPagination
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 const StaffManagePage = () => {
-  const [salons, setSalons] = useState([]);
-  const [selectedSalon, setSelectedSalon] = useState('');
+  const { selectedSalon, loadingBranches } = useBranch();
   const [staff, setStaff] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [pagination, setPagination] = useState({ page: 1, limit: 12, total: 0, totalPages: 1 });
@@ -32,26 +31,7 @@ const StaffManagePage = () => {
   const [availabilityForm, setAvailabilityForm] = useState([]);
   const [selectedStaffForAvailability, setSelectedStaffForAvailability] = useState(null);
 
-  useEffect(() => { loadSalons(); }, []);
-  useEffect(() => { if (selectedSalon) loadStaff(1); }, [selectedSalon, filters]);
-
-  const loadSalons = async () => { 
-    try { 
-      const r = await getVendorSalons(); 
-      const loadedSalons = r.data.data.salons || r.data.data;
-      setSalons(loadedSalons); 
-      if (loadedSalons.length > 0) {
-        const savedSalonId = localStorage.getItem('vendor_selected_salon');
-        if (savedSalonId && loadedSalons.some(salon => salon._id === savedSalonId)) {
-          setSelectedSalon(savedSalonId);
-        } else {
-          setSelectedSalon(loadedSalons[0]._id);
-          localStorage.setItem('vendor_selected_salon', loadedSalons[0]._id);
-        }
-      }
-    } catch (e) {} 
-    setLoading(false); 
-  };
+  useEffect(() => { loadStaff(1); }, [selectedSalon, filters]);
 
   const loadStaff = async (page = pagination.page) => { 
     setIsFetching(true);
@@ -60,7 +40,13 @@ const StaffManagePage = () => {
       if (filters.search) queryParams.search = filters.search;
       if (filters.isActive !== 'all') queryParams.isActive = filters.isActive;
       
-      const r = await getSalonStaff(selectedSalon, queryParams); 
+      let r;
+      if (selectedSalon) {
+        r = await getSalonStaff(selectedSalon._id, queryParams);
+      } else {
+        r = await getVendorStaff(queryParams);
+      }
+      
       if (r.data.data.staff) {
         setStaff(r.data.data.staff);
         setPagination(prev => ({ ...prev, page: r.data.data.page, total: r.data.data.total, totalPages: r.data.data.totalPages }));
@@ -73,11 +59,15 @@ const StaffManagePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault(); 
+    if (!selectedSalon) {
+      alert("Please select a specific branch to add or edit staff.");
+      return;
+    }
     setSaving(true);
     try {
       const payload = { 
         ...form, 
-        salon: selectedSalon, 
+        salon: selectedSalon._id, 
         specializations: form.specializations.split(',').map(s => s.trim()).filter(Boolean) 
       };
 
@@ -154,7 +144,7 @@ const StaffManagePage = () => {
     setAvailabilityForm(newForm);
   };
 
-  if (loading) {
+  if (loadingBranches) {
     return (
       <VendorPageLayout>
         <div className="flex flex-col gap-6">
@@ -188,17 +178,15 @@ const StaffManagePage = () => {
       />
 
       <VendorListToolbar>
-        <select value={selectedSalon} onChange={e => { setSelectedSalon(e.target.value); localStorage.setItem('vendor_selected_salon', e.target.value); }}
-          className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm bg-surface text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm">
-          {salons.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
-        </select>
-        <input 
-          type="text" 
-          placeholder="Search by name..." 
-          value={filters.search}
-          onChange={e => setFilters({...filters, search: e.target.value})}
-          className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm bg-surface text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" 
-        />
+        <div className="flex-1">
+          <input 
+            type="text" 
+            placeholder="Search by name..." 
+            value={filters.search}
+            onChange={e => setFilters({...filters, search: e.target.value})}
+            className="w-full px-4 py-2.5 rounded-xl border border-border text-sm bg-surface text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" 
+          />
+        </div>
         <select 
           value={filters.isActive}
           onChange={e => setFilters({...filters, isActive: e.target.value})}
@@ -245,7 +233,7 @@ const StaffManagePage = () => {
             Array.from({ length: 3 }).map((_, i) => (
                <div key={i} className="h-44 bg-surface rounded-2xl animate-pulse border border-border shadow-sm"></div>
             ))
-          ) : staff.length === 0 && !loading ? (
+          ) : staff.length === 0 && !isFetching ? (
             <div className="col-span-full py-16 text-center text-muted-text bg-surface rounded-2xl border border-border flex flex-col items-center">
               <span className="material-symbols-outlined text-4xl text-muted-text/30 mb-2">group</span>
               <p className="font-medium text-on-surface text-lg">No staff members found.</p>

@@ -25,6 +25,21 @@ const salonSchema = new mongoose.Schema(
       required: [true, 'City is required'],
       trim: true,
     },
+    state: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    pincode: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    country: {
+      type: String,
+      default: 'India',
+      trim: true,
+    },
     zone: {
       type: String,
       default: '',
@@ -46,6 +61,10 @@ const salonSchema = new mongoose.Schema(
       required: [true, 'Phone number is required'],
     },
     email: {
+      type: String,
+      default: '',
+    },
+    logo: {
       type: String,
       default: '',
     },
@@ -77,6 +96,16 @@ const salonSchema = new mongoose.Schema(
       default: true,
     },
     isApproved: {
+      type: Boolean,
+      default: false,
+    },
+    // Granular status — synced with isActive + isApproved for backward compat
+    status: {
+      type: String,
+      enum: ['pending_approval', 'active', 'inactive', 'suspended'],
+      default: 'pending_approval',
+    },
+    suspendedByCashLimit: {
       type: Boolean,
       default: false,
     },
