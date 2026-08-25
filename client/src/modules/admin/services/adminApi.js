@@ -81,11 +81,16 @@ export const rejectPackage = (id, data) => api.patch(`/packages/${id}/reject`, d
 export const updatePackageAdmin = (id, data) => api.patch(`/packages/${id}/admin`, data);
 export const deletePackageAdmin = (id) => api.delete(`/packages/${id}/admin`);
 
-// Subscriptions
-export const getSubscriptionPlans = (params) => api.get('/admin/subscriptions/plans', { params });
-export const createSubscriptionPlan = (data) => api.post('/admin/subscriptions/plans', data);
-export const updateSubscriptionPlan = (id, data) => api.put(`/admin/subscriptions/plans/${id}`, data);
-export const assignSubscription = (vendorId, planId) => api.post(`/admin/subscriptions/assign`, { vendorId, planId });
+// Subscriptions & Settings
+export const getSubscriptionSettings = () => api.get('/admin/subscription-settings');
+export const updateSubscriptionSettings = (data) => api.put('/admin/subscription-settings', data);
+
+export const getSubscriptionPlans = (params) => api.get('/subscriptions', { params });
+export const createSubscriptionPlan = (data) => api.post('/subscriptions', data);
+export const updateSubscriptionPlan = (id, data) => api.put(`/subscriptions/${id}`, data);
+export const deleteSubscriptionPlan = (id) => api.delete(`/subscriptions/${id}`);
+export const getVendorSubscriptionHistory = (vendorId) => api.get(`/subscriptions/vendor/${vendorId}/history`);
+export const cancelVendorSubscription = (vendorId, cancelReason) => api.patch(`/subscriptions/vendor/${vendorId}/cancel`, { cancelReason });
 
 // Banners
 export const getBanners = () => api.get('/banners');

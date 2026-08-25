@@ -256,7 +256,7 @@ exports.getAdminFinancialSummary = async (req, res) => {
     const matchStage = { status: 'PAID' };
     if (Object.keys(dateFilter).length) matchStage.createdAt = dateFilter;
 
-    const [txnSummary, refundSummary, settlementSummary] = await Promise.all([
+    const [txnSummary, refundSummary, settlementSummary, withdrawalSummary, cashSettlementSummary] = await Promise.all([
       PaymentTransaction.aggregate([
         { $match: matchStage },
         {
@@ -290,6 +290,26 @@ exports.getAdminFinancialSummary = async (req, res) => {
           },
         },
       ]),
+      // New System: Admin -> Vendor (Withdrawals)
+      mongoose.model('WithdrawalRequest').aggregate([
+        { $match: { status: 'PAID' } },
+        {
+          $group: {
+            _id: null,
+            totalAmountPaise: { $sum: '$amountPaise' },
+          },
+        },
+      ]),
+      // New System: Vendor -> Admin (Cash Settlements)
+      mongoose.model('CashSettlement').aggregate([
+        { $match: { status: 'PAID' } },
+        {
+          $group: {
+            _id: null,
+            totalAmountPaise: { $sum: '$amountPaise' },
+          },
+        },
+      ]),
     ]);
 
     const online = txnSummary.find((t) => t._id === 'ONLINE') || {};
@@ -297,9 +317,12 @@ exports.getAdminFinancialSummary = async (req, res) => {
     const refunded = refundSummary.find((r) => r._id === 'REFUNDED')?.totalRefunded || 0;
     const refundPending = refundSummary.find((r) => r._id === 'REFUND_PENDING')?.totalRefunded || 0;
     const settledToVendor =
-      settlementSummary.find((s) => s._id === 'ADMIN_TO_VENDOR')?.totalAmount || 0;
+      (settlementSummary.find((s) => s._id === 'ADMIN_TO_VENDOR')?.totalAmount || 0) + 
+      ((withdrawalSummary[0]?.totalAmountPaise || 0) / 100);
+      
     const settledToAdmin =
-      settlementSummary.find((s) => s._id === 'VENDOR_TO_ADMIN')?.totalAmount || 0;
+      (settlementSummary.find((s) => s._id === 'VENDOR_TO_ADMIN')?.totalAmount || 0) + 
+      ((cashSettlementSummary[0]?.totalAmountPaise || 0) / 100);
 
     res.json({
       success: true,

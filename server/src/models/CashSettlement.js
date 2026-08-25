@@ -17,9 +17,14 @@ const cashSettlementSchema = new mongoose.Schema(
       required: true,
       min: 1,
     },
+    vendorWalletCreditPaise: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     status: {
       type: String,
-      enum: ['PENDING', 'PAID', 'FAILED', 'CANCELLED'],
+      enum: ['CREATED', 'PENDING', 'PROCESSING', 'PAID', 'FAILED', 'CANCELLED'],
       default: 'PENDING',
     },
     razorpayOrderId: {
@@ -32,6 +37,18 @@ const cashSettlementSchema = new mongoose.Schema(
       sparse: true,
       unique: true,
     },
+    idempotencyKey: {
+      type: String,
+      sparse: true,
+      unique: true,
+    },
+    allocatedCashLedgers: [
+      {
+        cashLedgerId: { type: mongoose.Schema.Types.ObjectId, ref: 'VendorCashLedger' },
+        amountPaise: { type: Number, required: true },
+        vendorSharePaise: { type: Number, required: true },
+      }
+    ],
     paidAt: { type: Date },
     verifiedAt: { type: Date },
     metadata: { type: mongoose.Schema.Types.Mixed },

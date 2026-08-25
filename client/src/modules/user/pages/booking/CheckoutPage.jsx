@@ -135,7 +135,7 @@ const CheckoutPage = () => {
       if (paymentMethod === 'CASH') {
         sessionStorage.removeItem('pendingBooking');
         setSuccess(true);
-        setTimeout(() => navigate(`/booking/${booking._id}`), 1500);
+        setTimeout(() => navigate(`/booking/${booking._id}`, { state: { fromCheckout: true }, replace: true }), 1500);
       } else if (paymentMethod === 'ONLINE') {
         // Create Razorpay Order
         const orderRes = await createPaymentOrder({ bookingId: booking._id });
@@ -161,7 +161,7 @@ const CheckoutPage = () => {
               if (verifyRes.data.success) {
                 sessionStorage.removeItem('pendingBooking');
                 setSuccess(true);
-                setTimeout(() => navigate(`/booking/${booking._id}`), 1500);
+                setTimeout(() => navigate(`/booking/${booking._id}`, { state: { fromCheckout: true }, replace: true }), 1500);
               }
             } catch (err) {
               setPaymentError(err.response?.data?.message || 'Payment verification failed. Please check your booking status.');

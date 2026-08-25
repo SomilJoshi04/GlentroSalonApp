@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { getBookingById, cancelBooking } from '../../services/userApi';
 import { goBack } from '../../../../utils/navigation';
 import Button from '../../../../components/common/Button';
@@ -29,6 +29,16 @@ const paymentStatusConfig = {
 const BookingDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromCheckout = location.state?.fromCheckout;
+
+  const handleBack = () => {
+    if (fromCheckout) {
+      navigate('/', { replace: true });
+    } else {
+      goBack(navigate, '/bookings');
+    }
+  };
   const [booking, setBooking] = useState(null);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -180,9 +190,9 @@ const BookingDetailPage = () => {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in w-full">
-      <PageHeader title="Booking Details" fallbackPath="/bookings" />
-      <button onClick={() => goBack(navigate, '/bookings')} className="hidden md:flex items-center gap-2 text-text-secondary hover:text-primary-600 text-sm">
-        ← Back to bookings
+      <PageHeader title="Booking Details" fallbackPath="/bookings" onBack={handleBack} />
+      <button onClick={handleBack} className="hidden md:flex items-center gap-2 text-text-secondary hover:text-primary-600 text-sm">
+        ← {fromCheckout ? 'Back to Home' : 'Back to bookings'}
       </button>
 
       {/* Status Header */}

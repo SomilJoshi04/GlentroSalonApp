@@ -73,6 +73,11 @@ const { getAdminContentByType, updateContent } = require('../controllers/content
 router.get('/content/:type', getAdminContentByType);
 router.put('/content/:type', updateContent);
 
+// Subscription Settings
+const { getSettings, updateSettings } = require('../controllers/subscriptionSettingController');
+router.get('/subscription-settings', getSettings);
+router.put('/subscription-settings', updateSettings);
+
 // ── Admin Vendor Withdrawals ───────────────────────────────────────────────────
 const multer = require('multer');
 const proofUpload = multer({

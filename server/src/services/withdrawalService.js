@@ -140,6 +140,94 @@ const creditWalletFromPayment = async ({
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// creditWalletFromSettlement
+// Safely credits the vendor's wallet from a physical cash settlement
+// ─────────────────────────────────────────────────────────────────────────────
+const creditWalletFromSettlement = async ({
+  vendorId,
+  settlementId,
+  amountPaise,
+  description,
+  session,
+}) => {
+  if (amountPaise <= 0) return;
+
+  const wallet = await VendorWallet.getOrCreate(vendorId);
+  const balanceBefore = wallet.availableBalance;
+
+  // Handle recovery Outstanding first if any
+  let addToAvailable = amountPaise;
+  let recoverAmount = 0;
+
+  if (wallet.recoveryOutstanding > 0) {
+    recoverAmount = Math.min(amountPaise, wallet.recoveryOutstanding);
+    addToAvailable = amountPaise - recoverAmount;
+    
+    await VendorWallet.findOneAndUpdate(
+      { vendor: vendorId },
+      {
+        $inc: {
+          recoveryOutstanding: -recoverAmount,
+          version: 1,
+        },
+      },
+      { session, new: true }
+    );
+    
+    // Ledger entry for recovery application
+    await VendorLedger.create(
+      [
+        {
+          vendor: vendorId,
+          settlement: settlementId,
+          entryType: 'RECOVERY_APPLIED',
+          amount: paiseToRupees(recoverAmount),
+          amountPaise: recoverAmount,
+          direction: 'CREDIT',
+          paymentMethod: 'ONLINE',
+          description: `Recovery applied from Cash Settlement #${settlementId}`,
+        },
+      ],
+      { session }
+    );
+  }
+
+  if (addToAvailable > 0) {
+    const updatedWallet = await VendorWallet.findOneAndUpdate(
+      { vendor: vendorId },
+      {
+        $inc: {
+          availableBalance: addToAvailable,
+          totalEarned: addToAvailable,
+          version: 1,
+        },
+      },
+      { session, new: true }
+    );
+
+    const balanceAfter = updatedWallet.availableBalance;
+
+    await VendorLedger.create(
+      [
+        {
+          vendor: vendorId,
+          settlement: settlementId,
+          entryType: 'WALLET_CREDIT',
+          amount: paiseToRupees(addToAvailable),
+          amountPaise: addToAvailable,
+          direction: 'CREDIT',
+          paymentMethod: 'ONLINE',
+          balanceBeforePaise: balanceBefore,
+          balanceAfterPaise: balanceAfter,
+          description: description || `Wallet credit from Cash Settlement #${settlementId}`,
+        },
+      ],
+      { session }
+    );
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // debitWalletForRefund — Called inside paymentService refund session
 // Safely deducts from wallet; excess goes to recoveryOutstanding
 // ─────────────────────────────────────────────────────────────────────────────
@@ -707,6 +795,7 @@ module.exports = {
   paiseToRupees,
   getWallet,
   creditWalletFromPayment,
+  creditWalletFromSettlement,
   debitWalletForRefund,
   requestWithdrawal,
   processWithdrawal,

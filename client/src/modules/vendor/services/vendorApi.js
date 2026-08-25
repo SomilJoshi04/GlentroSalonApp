@@ -68,6 +68,9 @@ export const toggleOfferStatus = (id) => api.patch(`/offers/${id}/toggle-status`
 // Subscription
 export const checkSubscription = () => api.get('/subscriptions/check');
 export const getSubscriptionPlans = () => api.get('/subscriptions');
+export const startFreeTrial = () => api.post('/subscriptions/trial');
+export const createSubscriptionOrder = (planId) => api.post('/subscriptions/order', { planId });
+export const verifySubscriptionPayment = (data) => api.post('/subscriptions/verify', data);
 
 // Chat
 export const initiateChat = (data) => api.post('/chat/initiate', data);

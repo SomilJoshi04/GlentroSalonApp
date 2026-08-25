@@ -237,9 +237,9 @@ const AdminPaymentsPage = () => {
       />
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         {loadingSummary ? (
-          Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)
+          Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)
         ) : summary && (
           <>
             <div className="bg-primary/5 rounded-2xl p-5 border border-primary/20">
@@ -256,6 +256,11 @@ const AdminPaymentsPage = () => {
               <p className="text-sm font-medium text-text-secondary">Total Settled to Vendors</p>
               <h3 className="text-2xl font-bold text-green-600 mt-1">{formatPaise(summary.settlements?.totalSettledToVendorsPaise, summary.settlements?.totalSettledToVendors)}</h3>
               <p className="text-xs text-text-muted mt-2">Admin → Vendor transfers</p>
+            </div>
+            <div className="bg-white rounded-2xl p-5 border border-border shadow-sm">
+              <p className="text-sm font-medium text-text-secondary">Total Received from Vendors</p>
+              <h3 className="text-2xl font-bold text-orange-600 mt-1">{formatPaise(summary.settlements?.totalReceivedFromVendorsPaise, summary.settlements?.totalReceivedFromVendors)}</h3>
+              <p className="text-xs text-text-muted mt-2">Vendor → Admin transfers</p>
             </div>
             <div className="bg-white rounded-2xl p-5 border border-border shadow-sm">
               <p className="text-sm font-medium text-text-secondary">Total Processed Refunds</p>
@@ -316,6 +321,42 @@ const AdminPaymentsPage = () => {
                 <div className="flex gap-2">
                   <button disabled={txnFilters.page === 1} onClick={() => setTxnFilters(prev => ({ ...prev, page: prev.page - 1 }))} className="px-3 py-1 border border-border rounded text-sm disabled:opacity-50">Prev</button>
                   <button disabled={txnFilters.page === txnPagination.totalPages} onClick={() => setTxnFilters(prev => ({ ...prev, page: prev.page + 1 }))} className="px-3 py-1 border border-border rounded text-sm disabled:opacity-50">Next</button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeTab === 'settlements' && (
+            <>
+              <div className="flex justify-between items-center mb-4 gap-4">
+                <select 
+                  className="bg-background border border-border rounded-xl px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-primary"
+                  value={settleFilters.direction}
+                  onChange={(e) => setSettleFilters(prev => ({ ...prev, direction: e.target.value, page: 1 }))}
+                >
+                  <option value="">All Directions</option>
+                  <option value="ADMIN_TO_VENDOR">Paid to Vendor</option>
+                  <option value="VENDOR_TO_ADMIN">Received from Vendor</option>
+                </select>
+                <button 
+                  onClick={() => setShowModal(true)}
+                  className="bg-primary text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-primary/90 flex items-center gap-2 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[18px]">add</span>
+                  Record Settlement
+                </button>
+              </div>
+              <DataTable 
+                columns={settleColumns} 
+                data={settlements} 
+                loading={loadingSettlements}
+                emptyMessage="No settlements recorded yet."
+              />
+              <div className="flex justify-between items-center mt-4 pt-4 border-t border-border">
+                <span className="text-sm text-text-muted">Page {settleFilters.page} of {settlePagination.totalPages}</span>
+                <div className="flex gap-2">
+                  <button disabled={settleFilters.page === 1} onClick={() => setSettleFilters(prev => ({ ...prev, page: prev.page - 1 }))} className="px-3 py-1 border border-border rounded text-sm disabled:opacity-50 hover:bg-gray-50 transition-colors">Prev</button>
+                  <button disabled={settleFilters.page === settlePagination.totalPages || settlePagination.totalPages === 0} onClick={() => setSettleFilters(prev => ({ ...prev, page: prev.page + 1 }))} className="px-3 py-1 border border-border rounded text-sm disabled:opacity-50 hover:bg-gray-50 transition-colors">Next</button>
                 </div>
               </div>
             </>

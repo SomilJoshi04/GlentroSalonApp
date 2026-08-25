@@ -40,6 +40,11 @@ test-*.js
 check-*.js
 mock-*.js
 migrateChats.js
+backfill-*.js
+get-historical-*.js
+reconcile-*.js
+fix-*.js
+reconciliation_report.json
 scratch/
 
 # Markdown Files

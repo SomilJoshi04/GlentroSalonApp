@@ -13,8 +13,9 @@ router.get('/cities/:city/zones', getZones);
 router.get('/detail/:id', getSalonById);
 
 // Vendor routes
-router.post('/', protect, authorize('vendor'), upload.single('image'), createSalon);
-router.put('/:id', protect, authorize('vendor', 'admin'), upload.single('image'), updateSalon);
+const { requireSubscriptionAccess } = require('../middleware/subscriptionMiddleware');
+router.post('/', protect, authorize('vendor'), requireSubscriptionAccess, upload.single('image'), createSalon);
+router.put('/:id', protect, authorize('vendor', 'admin'), requireSubscriptionAccess, upload.single('image'), updateSalon);
 router.get('/vendor/my-salons', protect, authorize('vendor'), getVendorSalons);
 
 // Admin routes

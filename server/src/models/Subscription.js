@@ -16,9 +16,22 @@ const subscriptionSchema = new mongoose.Schema(
       type: Number,
     },
     duration: {
-      type: Number, // in months
+      type: Number, // value
       required: [true, 'Duration is required'],
       min: 1,
+    },
+    durationUnit: {
+      type: String,
+      enum: ['DAYS', 'MONTHS', 'YEARS'],
+      default: 'MONTHS',
+    },
+    currency: {
+      type: String,
+      default: 'INR',
+    },
+    displayOrder: {
+      type: Number,
+      default: 0,
     },
     features: [
       {

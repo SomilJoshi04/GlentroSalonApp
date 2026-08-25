@@ -19,8 +19,9 @@ const mongoose = require('mongoose');
 const crypto = require('crypto');
 const Booking = require('../models/Booking');
 const PaymentTransaction = require('../models/PaymentTransaction');
-const RefundTransaction = require('../models/RefundTransaction');
 const VendorLedger = require('../models/VendorLedger');
+const VendorCashLedger = require('../models/VendorCashLedger');
+const RefundTransaction = require('../models/RefundTransaction');
 const Salon = require('../models/Salon');
 const razorpay = require('../utils/razorpay');
 const { calculateCancellationFee } = require('../utils/calculateFees');
@@ -324,6 +325,29 @@ const recordCashPayment = async (bookingId, vendorId) => {
       );
     }
 
+    // Ledger entry: New VendorCashLedger to track physical cash holding
+    const grossAmountPaise = booking.finalAmountPaise !== undefined ? booking.finalAmountPaise : Math.round((booking.finalAmount || 0) * 100);
+    const adminSharePaise = Math.round(adminReceivable * 100);
+    const vendorNetSharePaise = Math.max(0, grossAmountPaise - adminSharePaise);
+
+    await VendorCashLedger.create(
+      [
+        {
+          vendor: salon.vendor,
+          salon: salon._id,
+          booking: booking._id,
+          grossAmountPaise,
+          adminSharePaise,
+          vendorNetSharePaise,
+          cashStatus: 'UNSETTLED',
+          settledAmountPaise: 0,
+          remainingUnsettledAmountPaise: grossAmountPaise,
+          remainingVendorNetSharePaise: vendorNetSharePaise,
+        }
+      ],
+      { session }
+    );
+
     // Update booking payment status
     await Booking.findByIdAndUpdate(
       bookingId,
@@ -363,12 +387,7 @@ const initiateRefund = async ({ bookingId, userId, userRole, reason }) => {
   if (booking.paymentStatus !== 'PAID') {
     throw new Error('Cannot refund a booking that has not been paid');
   }
-  if (booking.paymentMethod !== 'ONLINE') {
-    throw new Error(
-      'Refunds are only available for online payments. For cash payments, please contact admin.'
-    );
-  }
-  if (!booking.razorpayPaymentId) {
+  if (booking.paymentMethod === 'ONLINE' && !booking.razorpayPaymentId) {
     throw new Error('No Razorpay payment ID found for this booking');
   }
 
@@ -418,7 +437,7 @@ const initiateRefund = async ({ bookingId, userId, userRole, reason }) => {
       { session }
     );
 
-    // Reverse vendor ledger impact (legacy ledger entry)
+    // Reverse vendor ledger impact
     const vendorNetAmount = booking.vendorPayout || 0;
     if (vendorNetAmount > 0) {
       await VendorLedger.create(
@@ -431,24 +450,47 @@ const initiateRefund = async ({ bookingId, userId, userRole, reason }) => {
             entryType: 'REFUND_REVERSAL',
             amount: vendorNetAmount,
             direction: 'DEBIT',
-            paymentMethod: 'ONLINE',
+            paymentMethod: booking.paymentMethod,
             description: `Refund reversal: Booking #${booking._id} cancelled`,
           },
         ],
         { session }
       );
 
-      // Debit vendor wallet safely — never goes negative (excess → recoveryOutstanding)
       const vendorNetPaise = booking.vendorPayoutPaise !== undefined ? booking.vendorPayoutPaise : Math.round(vendorNetAmount * 100);
-      await walletSvc().debitWalletForRefund({
-        vendorId: booking.salon.vendor,
-        salonId: booking.salon._id,
-        bookingId: booking._id,
-        refundTransactionId: refundTxn._id,
-        amountPaise: vendorNetPaise,
-        description: `Wallet debit for refund: Booking #${booking._id}`,
-        session,
-      });
+      let walletDebitAmountPaise = vendorNetPaise;
+
+      // Handle CASH refund states
+      if (booking.paymentMethod === 'CASH') {
+        const VendorCashLedger = require('../models/VendorCashLedger');
+        const cashLedger = await VendorCashLedger.findOne({ booking: booking._id }).session(session);
+        if (cashLedger) {
+          // Calculate how much Vendor Net Share was actually settled (and thus credited to the wallet)
+          const settledVendorShare = cashLedger.vendorNetSharePaise - cashLedger.remainingVendorNetSharePaise;
+          walletDebitAmountPaise = settledVendorShare;
+
+          // Zero out the remaining unsettled exposure
+          cashLedger.cashStatus = 'REVERSED';
+          cashLedger.remainingUnsettledAmountPaise = 0;
+          cashLedger.remainingVendorNetSharePaise = 0;
+          await cashLedger.save({ session });
+        } else {
+          walletDebitAmountPaise = 0;
+        }
+      }
+
+      // Debit vendor wallet safely for the portion that was already credited (or full if ONLINE)
+      if (walletDebitAmountPaise > 0) {
+        await walletSvc().debitWalletForRefund({
+          vendorId: booking.salon.vendor,
+          salonId: booking.salon._id,
+          bookingId: booking._id,
+          refundTransactionId: refundTxn._id,
+          amountPaise: walletDebitAmountPaise,
+          description: `Wallet debit for refund: Booking #${booking._id}`,
+          session,
+        });
+      }
     }
 
     // Update booking
@@ -468,7 +510,7 @@ const initiateRefund = async ({ bookingId, userId, userRole, reason }) => {
     session.endSession();
 
     // Call Razorpay refund API (outside session — not rollback-critical)
-    if (refundAmountPaise > 0 && razorpay) {
+    if (refundAmountPaise > 0 && razorpay && booking.paymentMethod === 'ONLINE') {
       try {
         const rzpRefund = await razorpay.payments.refund(booking.razorpayPaymentId, {
           amount: refundAmountPaise,
@@ -530,6 +572,14 @@ const handleWebhook = async (payload, signature) => {
   // ── payment.captured ─────────────────────────────────────────────────────
   if (event === 'payment.captured') {
     const payment = payload.payload.payment.entity;
+    
+    // Route subscription payments
+    if (payment.notes && payment.notes.type === 'VENDOR_SUBSCRIPTION') {
+      const subscriptionService = require('./subscriptionService');
+      await subscriptionService.handleSubscriptionWebhook(payload);
+      return;
+    }
+
     const orderId = payment.order_id;
 
     // Find booking by Razorpay order ID
@@ -542,26 +592,8 @@ const handleWebhook = async (payload, signature) => {
       if (settlement) {
         if (settlement.status === 'PAID') return; // Already processed
         if (payment.status === 'captured' && payment.amount === settlement.amountPaise) {
-          settlement.status = 'PAID';
-          settlement.razorpayPaymentId = payment.id;
-          settlement.paidAt = new Date();
-          settlement.verifiedAt = new Date();
-          await settlement.save();
-          
-          await VendorLedger.create({
-            vendor: settlement.vendor,
-            entryType: 'CASH_SETTLEMENT_PAID',
-            amount: settlement.amountPaise / 100, // Legacy fallback
-            amountPaise: settlement.amountPaise,
-            direction: 'DEBIT',
-            paymentMethod: 'ONLINE',
-            description: `[Webhook] Cash Limit Settlement`,
-            metadata: { settlementId: settlement._id },
-          });
-          
-          // Re-calculate and sync suspension
-          const { syncVendorCashSuspension } = require('./vendorCashService');
-          await syncVendorCashSuspension(settlement.vendor);
+          const { processCashSettlementAllocation } = require('./cashSettlementService');
+          await processCashSettlementAllocation(settlement._id, payment.id);
         }
         return;
       }

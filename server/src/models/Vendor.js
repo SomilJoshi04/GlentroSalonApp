@@ -98,7 +98,11 @@ const vendorSchema = new mongoose.Schema(
       default: [],
     },
 
-    // ─── Subscription / Commission ──────────────────────────────────────
+    // ==========================================
+    // DEPRECATED: Old Subscription Field
+    // Retained temporarily for backward compatibility / migration.
+    // Use VendorSubscription model instead.
+    // ==========================================
     subscriptionPlan: {
       plan: {
         type: mongoose.Schema.Types.ObjectId,
@@ -110,6 +114,20 @@ const vendorSchema = new mongoose.Schema(
         type: Boolean,
         default: false,
       },
+    },
+
+    // ==========================================
+    // NEW SUBSCRIPTION / TRIAL FIELDS
+    // ==========================================
+    trialUsed: {
+      type: Boolean,
+      default: false,
+    },
+    trialStartedAt: {
+      type: Date,
+    },
+    trialEndsAt: {
+      type: Date,
     },
     commissionRate: {
       type: Number,

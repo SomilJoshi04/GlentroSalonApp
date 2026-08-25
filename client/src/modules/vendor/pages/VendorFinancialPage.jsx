@@ -132,7 +132,12 @@ const VendorFinancialPage = () => {
 
   const [wallet, setWallet] = useState(null);
   const [summary, setSummary] = useState(null);
-  const [ledger, setLedger] = useState([]);
+  const [selectedLedger, setSelectedLedger] = useState(null);
+
+  // Cash Settlement Modal State
+  const [showSettleModal, setShowSettleModal] = useState(false);
+  const [customSettleAmount, setCustomSettleAmount] = useState('');
+  const [settleAmountError, setSettleAmountError] = useState('');
   const [withdrawals, setWithdrawals] = useState([]);
   const [activeTab, setActiveTab] = useState('wallet');
 
@@ -238,17 +243,17 @@ const VendorFinancialPage = () => {
     setProofLoading((p) => ({ ...p, [withdrawalId]: false }));
   };
 
-  const handleCashSettlement = async () => {
+  const handleCashSettlement = async (amountPaise) => {
     try {
       setSettlingCash(true);
-      const res = await api.post('/vendor/cash-settlement/create');
+      const res = await api.post('/vendor/cash-settlement/create', { amountPaise });
       if (!res.data?.success) throw new Error(res.data?.message || 'Failed to create settlement');
 
-      const { settlementId, razorpayOrderId, amountPaise, currency, keyId } = res.data.data;
+      const { settlementId, razorpayOrderId, amountPaise: finalAmountPaise, currency, keyId } = res.data.data;
 
       const options = {
         key: keyId,
-        amount: amountPaise,
+        amount: finalAmountPaise,
         currency: currency,
         name: 'SalonBook',
         description: 'Vendor Cash Settlement',
@@ -264,7 +269,6 @@ const VendorFinancialPage = () => {
               alert('Cash Settlement Successful!');
               loadCashStatus();
               loadLedger(1);
-              // if suspended, we might want to reload vendor profile
               window.location.reload(); 
             } else {
               alert('Payment verification failed.');
@@ -349,13 +353,17 @@ const VendorFinancialPage = () => {
               )}
             </div>
             
-            {cashStatus.excessCashPaise > 0 && (
+            {cashStatus.cashHeldPaise > 0 && (
               <button
-                onClick={handleCashSettlement}
+                onClick={() => {
+                  setCustomSettleAmount(cashStatus.excessCashPaise > 0 ? (cashStatus.excessCashPaise / 100).toString() : (cashStatus.cashHeldPaise / 100).toString());
+                  setSettleAmountError('');
+                  setShowSettleModal(true);
+                }}
                 disabled={settlingCash}
                 className={`whitespace-nowrap px-6 py-2.5 text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50 ${cashStatus.cashLimitExceeded ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-800 hover:bg-gray-900'}`}
               >
-                {settlingCash ? 'Processing...' : `Settle ${fmtPaise(cashStatus.excessCashPaise)} Now`}
+                {settlingCash ? 'Processing...' : `Settle Cash`}
               </button>
             )}
           </div>
@@ -418,6 +426,13 @@ const VendorFinancialPage = () => {
             <p className="text-xs font-medium text-blue-700">Total Withdrawn</p>
             <h3 className="text-xl font-bold text-blue-900 mt-1">{fmt(wallet.totalWithdrawn)}</h3>
             <p className="text-xs text-blue-600 mt-2">All time</p>
+          </div>
+
+          {/* Total Settled to Admin */}
+          <div className="bg-orange-50 rounded-2xl p-5 border border-orange-100 shadow-sm">
+            <p className="text-xs font-medium text-orange-700">Total Settled to Admin</p>
+            <h3 className="text-xl font-bold text-orange-900 mt-1">{fmt(summary?.settledToAdmin || 0)}</h3>
+            <p className="text-xs text-orange-600 mt-2">Cash deposited</p>
           </div>
 
           {/* Recovery Outstanding */}
@@ -651,6 +666,92 @@ const VendorFinancialPage = () => {
           onClose={() => setShowWithdrawalModal(false)}
           onSuccess={handleWithdrawalSuccess}
         />
+      )}
+
+      {/* Cash Settlement Modal */}
+      {showSettleModal && cashStatus && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <h2 className="text-xl font-bold text-gray-900">Settle Cash Dues</h2>
+              <button 
+                onClick={() => setShowSettleModal(false)}
+                className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+            
+            <div className="p-5">
+              <div className="bg-violet-50 rounded-xl p-4 mb-5 text-sm text-violet-900">
+                You currently hold <strong>{fmtPaise(cashStatus.cashHeldPaise)}</strong> in physical cash.
+                {cashStatus.excessCashPaise > 0 && (
+                  <span className="block mt-1 text-red-700">
+                    Your limit is exceeded. You must pay at least <strong>{fmtPaise(cashStatus.excessCashPaise)}</strong> to reactivate your account.
+                  </span>
+                )}
+                <span className="block mt-1 text-gray-500">
+                  You can choose to pay more to clear your total cash balance completely.
+                </span>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Amount to Settle (₹)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                  <input
+                    type="number"
+                    value={customSettleAmount}
+                    onChange={(e) => {
+                      setCustomSettleAmount(e.target.value);
+                      setSettleAmountError('');
+                    }}
+                    className={`w-full pl-8 pr-4 py-3 rounded-xl border ${settleAmountError ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 focus:border-violet-500 focus:ring-1 focus:ring-violet-500'} outline-none bg-white transition-all`}
+                    placeholder="Enter amount"
+                  />
+                </div>
+                {settleAmountError && <p className="text-red-500 text-xs mt-1">{settleAmountError}</p>}
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowSettleModal(false)}
+                  className="flex-1 py-3 px-4 rounded-xl font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    const amount = parseFloat(customSettleAmount);
+                    if (isNaN(amount) || amount <= 0) {
+                      setSettleAmountError('Please enter a valid amount');
+                      return;
+                    }
+                    const amountPaise = Math.round(amount * 100);
+                    const minRequired = cashStatus.excessCashPaise > 0 ? cashStatus.excessCashPaise : 0;
+                    
+                    if (amountPaise < minRequired) {
+                      setSettleAmountError(`Minimum amount is ₹${(minRequired / 100).toFixed(2)}`);
+                      return;
+                    }
+                    if (amountPaise > cashStatus.cashHeldPaise) {
+                      setSettleAmountError(`Cannot exceed total cash held (₹${(cashStatus.cashHeldPaise / 100).toFixed(2)})`);
+                      return;
+                    }
+
+                    setShowSettleModal(false);
+                    handleCashSettlement(amountPaise);
+                  }}
+                  className="flex-1 py-3 px-4 rounded-xl font-medium text-white bg-violet-600 hover:bg-violet-700 transition-colors shadow-sm"
+                >
+                  Pay Now
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </VendorPageLayout>
   );

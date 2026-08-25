@@ -44,11 +44,36 @@ const createSettlement = async (req, res) => {
 
     const financials = await getVendorFinancials(vendorId);
 
-    if (financials.settlementRemainingPaise <= 0) {
-      return res.status(400).json({ success: false, message: 'No outstanding cash settlement required' });
+    let amountPaise = financials.settlementRemainingPaise;
+
+    if (req.body && req.body.amountPaise) {
+      const requestedPaise = parseInt(req.body.amountPaise, 10);
+      if (isNaN(requestedPaise) || requestedPaise <= 0) {
+        return res.status(400).json({ success: false, message: 'Invalid settlement amount' });
+      }
+
+      // Minimum allowed is the required excess cash (to lift suspension)
+      if (requestedPaise < financials.settlementRemainingPaise) {
+        return res.status(400).json({ 
+          success: false, 
+          message: `Amount must be at least ₹${(financials.settlementRemainingPaise / 100).toFixed(2)} to clear the limit.` 
+        });
+      }
+
+      // Maximum allowed is the total physical cash they actually hold
+      if (requestedPaise > financials.cashHeldPaise) {
+        return res.status(400).json({ 
+          success: false, 
+          message: `Amount cannot exceed your total cash held (₹${(financials.cashHeldPaise / 100).toFixed(2)}).` 
+        });
+      }
+
+      amountPaise = requestedPaise;
     }
 
-    const amountPaise = financials.settlementRemainingPaise;
+    if (amountPaise <= 0) {
+      return res.status(400).json({ success: false, message: 'No outstanding cash settlement required' });
+    }
 
     // Create Razorpay Order
     const options = {
@@ -91,15 +116,11 @@ const createSettlement = async (req, res) => {
  * Verify Razorpay payment and mark settlement as PAID
  */
 const verifySettlement = async (req, res) => {
-  const session = await CashSettlement.startSession();
-  session.startTransaction();
-
   try {
     const vendorId = req.user.id;
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      await session.abortTransaction();
       return res.status(400).json({ success: false, message: 'Missing payment details' });
     }
 
@@ -111,7 +132,6 @@ const verifySettlement = async (req, res) => {
       .digest('hex');
 
     if (expectedSignature !== razorpay_signature) {
-      await session.abortTransaction();
       return res.status(400).json({ success: false, message: 'Invalid payment signature' });
     }
 
@@ -119,63 +139,36 @@ const verifySettlement = async (req, res) => {
     const settlement = await CashSettlement.findOne({
       razorpayOrderId: razorpay_order_id,
       vendor: vendorId,
-    }).session(session);
+    });
 
     if (!settlement) {
-      await session.abortTransaction();
       return res.status(404).json({ success: false, message: 'Settlement not found or does not belong to you' });
     }
 
     // Idempotency check
     if (settlement.status === 'PAID') {
-      await session.abortTransaction();
       return res.json({ success: true, message: 'Settlement already marked as paid' });
     }
 
     // Verify payment from Razorpay API
     const payment = await razorpay.payments.fetch(razorpay_payment_id);
     if (!payment || payment.status !== 'captured' || payment.amount !== settlement.amountPaise) {
-      await session.abortTransaction();
       return res.status(400).json({ success: false, message: 'Payment not captured or amount mismatch' });
     }
 
-    // Update settlement
-    settlement.status = 'PAID';
-    settlement.razorpayPaymentId = razorpay_payment_id;
-    settlement.paidAt = new Date();
-    settlement.verifiedAt = new Date();
-    await settlement.save({ session });
+    // Call the unified allocation service (handles FIFO and Wallet Credit)
+    const { processCashSettlementAllocation } = require('../services/cashSettlementService');
+    const result = await processCashSettlementAllocation(settlement._id, razorpay_payment_id);
 
-    // Record in VendorLedger
-    await VendorLedger.create(
-      [
-        {
-          vendor: vendorId,
-          entryType: 'CASH_SETTLEMENT_PAID',
-          amount: settlement.amountPaise / 100, // Legacy fallback
-          amountPaise: settlement.amountPaise,
-          direction: 'DEBIT', // From vendor's perspective (reducing cash held)
-          paymentMethod: 'ONLINE',
-          description: 'Cash Limit Settlement',
-          metadata: { settlementId: settlement._id },
-        },
-      ],
-      { session }
-    );
-
-    await session.commitTransaction();
-    session.endSession();
-
-    // Out of transaction: re-calculate and sync suspension
-    await syncVendorCashSuspension(vendorId);
+    if (result.alreadyProcessed) {
+      return res.json({ success: true, message: 'Settlement already marked as paid' });
+    }
 
     res.json({
       success: true,
       message: 'Settlement successful',
     });
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
     console.error('Error verifying cash settlement:', error);
     res.status(500).json({ success: false, message: 'Server error verifying settlement' });
   }

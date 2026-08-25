@@ -1,15 +1,36 @@
 const router = require('express').Router();
-const { getPlans, createPlan, updatePlan, deletePlan, assignPlan, checkSubscription, cancelSubscription } = require('../controllers/subscriptionController');
+const { 
+  getPlans, 
+  createPlan, 
+  updatePlan, 
+  deletePlan, 
+  checkSubscription, 
+  startTrial, 
+  createOrder, 
+  verifyPayment, 
+  cancelSubscription,
+  getSubscriptionHistory
+} = require('../controllers/subscriptionController');
 const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 
+// Public/Common Plan reading
 router.get('/', protect, getPlans);
+
+// Admin Plan Management
 router.post('/', protect, authorize('admin'), createPlan);
 router.put('/:id', protect, authorize('admin'), updatePlan);
 router.delete('/:id', protect, authorize('admin'), deletePlan);
-router.post('/assign', protect, authorize('admin'), assignPlan);
+
+// Vendor Actions
 router.get('/check', protect, authorize('vendor'), checkSubscription);
-router.get('/check/:vendorId', protect, authorize('admin'), checkSubscription);
-router.patch('/cancel/:vendorId', protect, authorize('admin'), cancelSubscription);
+router.post('/trial', protect, authorize('vendor'), startTrial);
+router.post('/order', protect, authorize('vendor'), createOrder);
+router.post('/verify', protect, authorize('vendor'), verifyPayment);
+
+// Admin Vendor Management
+router.get('/vendor/:vendorId/check', protect, authorize('admin'), checkSubscription);
+router.get('/vendor/:vendorId/history', protect, authorize('admin'), getSubscriptionHistory);
+router.patch('/vendor/:vendorId/cancel', protect, authorize('admin'), cancelSubscription);
 
 module.exports = router;
