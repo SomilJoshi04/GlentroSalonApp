@@ -10,10 +10,12 @@ import { FavoriteProvider } from './context/FavoriteContext';
 import UserRoutes from './modules/user/routes';
 import VendorRoutes from './modules/vendor/routes';
 import AdminRoutes from './modules/admin/routes';
+import ScrollToTop from './components/common/ScrollToTop';
 
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Toaster position="top-center" toastOptions={{ duration: 4000 }} />
       <AuthProvider>
         <SocketProvider>

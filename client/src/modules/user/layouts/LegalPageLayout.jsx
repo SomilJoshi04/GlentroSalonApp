@@ -7,6 +7,12 @@ const GuestLegalLayout = ({ children }) => {
   const location = useLocation();
 
   const handleBack = () => {
+    // Explicit source-aware navigation for security and exact routing
+    if (location.state?.from === '/login' || location.state?.from === '/register') {
+      navigate(location.state.from);
+      return;
+    }
+    
     if (location.key !== 'default') {
       navigate(-1);
     } else {
@@ -17,8 +23,8 @@ const GuestLegalLayout = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-surface-bright font-inter flex flex-col">
-      {/* Simple Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+      {/* Desktop Header (Hidden on Mobile since PageHeader handles it) */}
+      <header className="hidden md:flex bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center">
           <button 
             onClick={handleBack}
@@ -31,7 +37,7 @@ const GuestLegalLayout = ({ children }) => {
       </header>
       
       {/* Clean Content Area */}
-      <main className="w-full flex-grow">
+      <main className="w-full px-4 md:px-margin-desktop max-w-container-max mx-auto box-border flex-grow">
         {children || <Outlet />}
       </main>
     </div>

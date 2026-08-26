@@ -132,6 +132,7 @@ const VendorFinancialPage = () => {
 
   const [wallet, setWallet] = useState(null);
   const [summary, setSummary] = useState(null);
+  const [ledger, setLedger] = useState([]);
   const [selectedLedger, setSelectedLedger] = useState(null);
 
   // Cash Settlement Modal State
@@ -180,7 +181,7 @@ const VendorFinancialPage = () => {
   const loadLedger = useCallback(async (pageNum = 1) => {
     setLoadingLedger(true);
     try {
-      const params = { page: pageNum };
+      const params = { page: pageNum, limit: 10 };
       if (selectedSalon) params.salon = selectedSalon._id;
       const res = await api.get('/payments/vendor-ledger', { params });
       if (res.data?.success) {

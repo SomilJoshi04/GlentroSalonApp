@@ -3,7 +3,9 @@ const fs = require('fs');
 const crypto = require('crypto');
 
 // Ensure uploads/promotional-videos directory exists
-const baseUploadsDir = path.resolve(__dirname, '../../uploads');
+const baseUploadsDir = process.env.UPLOAD_PATH 
+  ? require('path').resolve(process.env.UPLOAD_PATH)
+  : path.resolve(__dirname, '../../uploads');
 const videoUploadsDir = path.join(baseUploadsDir, 'promotional-videos');
 
 if (!fs.existsSync(videoUploadsDir)) {

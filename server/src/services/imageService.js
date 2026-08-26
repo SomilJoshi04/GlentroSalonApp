@@ -3,8 +3,10 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 
-// Ensure uploads dir exists
-const uploadsDir = path.join(__dirname, '../../uploads');
+// Ensure uploads dir exists (Uses environment variable or defaults to local dir)
+const uploadsDir = process.env.UPLOAD_PATH 
+  ? path.resolve(process.env.UPLOAD_PATH)
+  : path.join(__dirname, '../../uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }

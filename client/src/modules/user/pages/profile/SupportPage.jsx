@@ -4,6 +4,7 @@ import PageHeader from '../../../../components/common/PageHeader';
 import { getActiveFAQs } from '../../services/userApi';
 import { useSettings } from '../../../../context/SettingContext';
 import { getImageUrl } from '../../../../utils/imageUtils';
+import { useAuth } from '../../../../context/AuthContext';
 
 const SupportPage = () => {
   const [faqs, setFaqs] = useState([]);
@@ -14,6 +15,7 @@ const SupportPage = () => {
   const location = useLocation();
   const fromProfile = location.state?.fromProfile;
   const { settings } = useSettings();
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchFaqs = async () => {
@@ -44,7 +46,7 @@ const SupportPage = () => {
       </div>
 
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-surface-container-lowest border-b border-border mb-8 py-8 md:py-16">
+      <div className="relative overflow-hidden bg-surface-container-lowest border-b border-border mb-4 md:mb-8 py-6 md:py-16">
         <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none"></div>
         <div className="w-full max-w-2xl md:max-w-4xl lg:max-w-5xl mx-auto px-4 sm:px-6 relative z-10">
 
@@ -52,7 +54,7 @@ const SupportPage = () => {
             {fromProfile && (
               <button
                 onClick={() => navigate(-1)}
-                className="p-2 -ml-2 text-on-surface-variant hover:bg-surface-variant rounded-full transition-colors flex items-center justify-center"
+                className="hidden md:flex p-2 -ml-2 text-on-surface-variant hover:bg-surface-variant rounded-full transition-colors items-center justify-center"
                 aria-label="Go back"
               >
                 <span className="material-symbols-outlined">arrow_back</span>
@@ -60,7 +62,7 @@ const SupportPage = () => {
             )}
           </div>
 
-          <div className="flex items-center gap-4 mb-4">
+          <div className="hidden md:flex items-center gap-4 mb-4">
             {settings?.appLogo && (
               <img src={getImageUrl(settings.appLogo)} alt="App Logo" className="w-12 h-12 object-contain rounded-xl bg-white shadow-sm" />
             )}
@@ -69,7 +71,7 @@ const SupportPage = () => {
             </h1>
           </div>
 
-          <p className="text-muted-text max-w-2xl text-lg mt-2">
+          <p className="text-muted-text max-w-2xl text-lg mt-0 md:mt-2">
             {settings?.supportDescription || 'Our support team is here to help you with any questions, concerns, or difficulties you may experience.'}
           </p>
         </div>

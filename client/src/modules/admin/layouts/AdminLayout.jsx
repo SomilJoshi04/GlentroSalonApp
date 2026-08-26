@@ -55,7 +55,7 @@ const AdminLayout = () => {
     { to: '/admin/salons', label: 'Salons', icon: 'store' },
     { to: '/admin/categories', label: 'Categories', icon: 'category' },
     { to: '/admin/services', label: 'Services', icon: 'cut' },
-    { to: '/admin/bookings', label: 'Bookings', icon: 'calendar_today', count: pendingCounts.bookings },
+    { to: '/admin/bookings', label: 'Bookings', icon: 'calendar_today' },
     { to: '/admin/packages', label: 'Offers & Packages', icon: 'inventory_2', count: pendingCounts.packages },
     { to: '/admin/subscriptions', label: 'Subscriptions', icon: 'workspace_premium' },
     { to: '/admin/reviews', label: 'Reviews', icon: 'star_rate' },

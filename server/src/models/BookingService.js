@@ -37,6 +37,17 @@ const bookingServiceSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    resource: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'SalonResource',
+      default: null,
+    },
+    resourceType: {
+      type: String,
+    },
+    resourceSnapshot: {
+      name: String,
+    },
   },
   {
     timestamps: true,

@@ -49,9 +49,11 @@ export const deleteReview = (id) => api.delete(`/reviews/${id}`);
 // Categories
 export const getCategories = (params) => api.get('/categories', { params });
 export const createCategory = (data) => api.post('/categories', data, { headers: { 'Content-Type': data instanceof FormData ? 'multipart/form-data' : 'application/json' } });
+export const updateCategory = (id, data) => api.put(`/categories/${id}`, data, { headers: { 'Content-Type': data instanceof FormData ? 'multipart/form-data' : 'application/json' } });
 export const deleteCategory = (id) => api.delete(`/categories/${id}`);
 export const getSubcategories = (params) => api.get('/subcategories', { params });
 export const createSubcategory = (data) => api.post('/subcategories', data);
+export const updateSubcategory = (id, data) => api.put(`/subcategories/${id}`, data);
 export const deleteSubcategory = (id) => api.delete(`/subcategories/${id}`);
 
 // Services

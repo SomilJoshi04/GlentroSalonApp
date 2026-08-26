@@ -34,6 +34,7 @@ const contentRoutes = require('./routes/contentRoutes');
 const accountRecoveryRoutes = require('./routes/accountRecoveryRoutes');
 const faqRoutes = require('./routes/faqRoutes');
 const bookingIssueRoutes = require('./routes/bookingIssueRoutes');
+const resourceRoutes = require('./routes/resourceRoutes');
 const app = express();
 
 // Security middleware
@@ -81,8 +82,11 @@ if (NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// Static files - serve uploads
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+// Static files -// Serve uploads folder statically (Uses environment variable or defaults to local dir)
+const uploadsDir = process.env.UPLOAD_PATH 
+  ? require('path').resolve(process.env.UPLOAD_PATH)
+  : path.join(__dirname, '..', 'uploads');
+app.use('/uploads', express.static(uploadsDir));
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -112,6 +116,7 @@ app.use('/api/content', contentRoutes);
 app.use('/api/account-recovery', accountRecoveryRoutes);
 app.use('/api/faqs', faqRoutes);
 app.use('/api/booking-issues', bookingIssueRoutes);
+app.use('/api/vendor', resourceRoutes);
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'Salon Booking API is running', timestamp: new Date().toISOString() });

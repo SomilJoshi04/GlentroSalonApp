@@ -387,7 +387,7 @@ const PackageManagePage = () => {
               const isExpired = new Date(p.validTo) < today;
 
               return (
-            <div key={p._id} className={`bg-surface rounded-2xl border ${isExpired ? 'border-error/30 opacity-80' : 'border-border'} shadow-sm hover:shadow-md transition-all flex flex-col justify-between overflow-hidden relative w-full max-w-[400px]`}>
+            <div key={p._id} className={`bg-surface rounded-2xl border ${isExpired ? 'border-error/30 opacity-80' : 'border-border'} shadow-sm hover:shadow-md transition-all flex flex-col justify-between overflow-hidden relative w-full max-w-[340px] mx-auto sm:max-w-[400px] sm:mx-0`}>
               {p.status === 'ACTIVE' && !isExpired && <div className="absolute top-0 left-0 w-1.5 h-[128px] bg-success z-10"></div>}
               {(p.status === 'REJECTED' || isExpired) && <div className="absolute top-0 left-0 w-1.5 h-[128px] bg-error z-10"></div>}
               {p.status === 'PENDING' && !isExpired && <div className="absolute top-0 left-0 w-1.5 h-[128px] bg-warning z-10"></div>}
@@ -401,11 +401,11 @@ const PackageManagePage = () => {
                 />
               </div>
 
-              <div className="p-6 flex-1 flex flex-col justify-between">
+              <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
                 <div className="flex justify-between items-start mb-3 gap-4">
                   <div>
-                    <h4 className="font-bold text-on-surface text-[17px]">{p.name}</h4>
-                    <p className="text-xs text-muted-text mt-0.5 flex items-center gap-1">
+                    <h4 className="font-bold text-on-surface text-base sm:text-[17px] leading-tight">{p.name}</h4>
+                    <p className="text-[11px] sm:text-xs text-muted-text mt-1 flex items-center gap-1">
                       <span className="material-symbols-outlined text-[14px]">store</span>
                       {p.salon?.name}
                     </p>
@@ -428,35 +428,35 @@ const PackageManagePage = () => {
                   </div>
                 </div>
                 
-                <div className="flex items-baseline gap-2 mb-4">
-                  <span className="text-[26px] font-bold text-primary">{formatPaise(p.discountedPricePaise, p.discountedPrice)}</span>
-                  <span className="text-sm text-muted-text line-through font-medium">{formatPaise(p.totalPricePaise, p.totalPrice)}</span>
-                  <span className="text-xs font-semibold text-success bg-success/10 px-2 py-0.5 rounded-lg ml-auto">
+                <div className="flex items-baseline gap-2 mb-3">
+                  <span className="text-xl sm:text-[24px] font-bold text-primary">{formatPaise(p.discountedPricePaise, p.discountedPrice)}</span>
+                  <span className="text-xs sm:text-sm text-muted-text line-through font-medium">{formatPaise(p.totalPricePaise, p.totalPrice)}</span>
+                  <span className="text-[10px] sm:text-xs font-semibold text-success bg-success/10 px-2 py-0.5 rounded-lg ml-auto">
                     Save {Math.round((((p.totalPricePaise ? getRupeesFromPaise(p.totalPricePaise) : p.totalPrice) - (p.discountedPricePaise ? getRupeesFromPaise(p.discountedPricePaise) : p.discountedPrice)) / (p.totalPricePaise ? getRupeesFromPaise(p.totalPricePaise) : p.totalPrice)) * 100)}%
                   </span>
                 </div>
 
                 {p.status === 'REJECTED' && p.adminNote && (
-                  <div className="mb-4 p-3 bg-error/5 border border-error/15 rounded-xl">
+                  <div className="mb-3 p-3 bg-error/5 border border-error/15 rounded-xl">
                     <span className="text-[10px] font-bold text-error uppercase tracking-wider block mb-0.5">Rejection Reason</span>
-                    <p className="text-xs text-error">{p.adminNote}</p>
+                    <p className="text-[11px] sm:text-xs text-error">{p.adminNote}</p>
                   </div>
                 )}
 
                 {p.validFrom && p.validTo && (
-                  <div className="mb-4 flex items-center gap-2 text-xs text-muted-text bg-surface-variant p-2 rounded-lg border border-border">
-                    <span className="material-symbols-outlined text-[16px]">calendar_today</span>
+                  <div className="mb-3 flex items-center gap-2 text-[11px] sm:text-xs text-muted-text bg-surface-variant p-2 rounded-lg border border-border">
+                    <span className="material-symbols-outlined text-[14px] sm:text-[16px]">calendar_today</span>
                     <span>{new Date(p.validFrom).toLocaleDateString()} - {new Date(p.validTo).toLocaleDateString()}</span>
                   </div>
                 )}
 
-                {p.description && <p className="text-sm text-muted-text mb-4 line-clamp-2 leading-relaxed">{p.description}</p>}
+                {p.description && <p className="text-[13px] sm:text-sm text-muted-text mb-4 line-clamp-2 leading-relaxed">{p.description}</p>}
                 
-                <div className="space-y-1.5 mb-6">
-                  <p className="text-[11px] font-bold text-muted-text uppercase tracking-wider">Included Services ({p.services?.length || 0})</p>
+                <div className="space-y-1.5 mb-2">
+                  <p className="text-[10px] sm:text-[11px] font-bold text-muted-text uppercase tracking-wider">Included Services ({p.services?.length || 0})</p>
                   <div className="flex flex-wrap gap-1.5">
                     {p.services?.map(s => (
-                       <span key={s._id} className="text-[11px] px-2.5 py-1 bg-surface-variant text-on-surface border border-border rounded-lg truncate max-w-full">
+                       <span key={s._id} className="text-[10px] sm:text-[11px] px-2 py-0.5 sm:px-2.5 sm:py-1 bg-surface-variant text-on-surface border border-border rounded-lg truncate max-w-full">
                          {s.name}
                        </span>
                     ))}
@@ -464,7 +464,7 @@ const PackageManagePage = () => {
                 </div>
               </div>
 
-              <div className="mt-auto pt-4 border-t border-border flex gap-2">
+              <div className="p-4 sm:p-5 pt-0 sm:pt-0 mt-auto flex gap-2">
                 <button onClick={() => openEditForm(p)} className="flex-1 text-xs py-2.5 font-medium text-on-surface bg-surface-variant hover:bg-surface-variant-hover border border-border rounded-xl transition-all flex items-center justify-center gap-1">
                   <span className="material-symbols-outlined text-[16px]">edit</span>
                   Edit

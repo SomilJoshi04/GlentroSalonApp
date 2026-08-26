@@ -5,6 +5,7 @@ export const getNearbySalons = (params) => api.get('/salons/nearby', { params })
 export const getSalonsByCity = (city, params) => api.get(`/salons/city/${city}`, { params });
 export const getSalons = (params) => api.get('/salons/public', { params });
 export const getSalonById = (id) => api.get(`/salons/detail/${id}`);
+export const getSalonResources = (id) => api.get(`/salons/${id}/resources`);
 export const getCities = () => api.get('/salons/cities');
 export const getZones = (city) => api.get(`/salons/cities/${city}/zones`);
 export const getBanners = () => api.get('/banners/public');

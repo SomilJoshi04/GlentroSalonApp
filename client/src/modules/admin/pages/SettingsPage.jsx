@@ -12,9 +12,11 @@ export default function SettingsPage() {
   const [registerImageLoading, setRegisterImageLoading] = useState(false);
   const [appName, setAppName] = useState('');
   const [searchRadius, setSearchRadius] = useState('');
+  const [jacuzziEnabled, setJacuzziEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
   const [nameLoading, setNameLoading] = useState(false);
   const [radiusLoading, setRadiusLoading] = useState(false);
+  const [jacuzziLoading, setJacuzziLoading] = useState(false);
   const [supportLoading, setSupportLoading] = useState(false);
   const [supportSettings, setSupportSettings] = useState({
     supportEmail: '',
@@ -35,6 +37,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (settings?.appName) setAppName(settings.appName);
     if (settings?.salonSearchRadius) setSearchRadius(settings.salonSearchRadius);
+    if (settings?.jacuzziGlobalEnabled !== undefined) setJacuzziEnabled(settings.jacuzziGlobalEnabled === 'true' || settings.jacuzziGlobalEnabled === true);
     if (settings) {
       setSupportSettings({
         supportEmail: settings.supportEmail || '',
@@ -152,6 +155,27 @@ export default function SettingsPage() {
       setMessage({ type: 'error', text: 'Failed to update search radius' });
     } finally {
       setRadiusLoading(false);
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+    }
+  };
+
+  const handleToggleJacuzzi = async (e) => {
+    const newValue = e.target.checked;
+    setJacuzziEnabled(newValue);
+    setJacuzziLoading(true);
+    setMessage({ type: '', text: '' });
+    try {
+      const res = await updateBulkSettings({ jacuzziGlobalEnabled: newValue.toString() });
+      if (res.data?.success) {
+        setMessage({ type: 'success', text: 'Global Jacuzzi feature updated' });
+        await fetchSettings();
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage({ type: 'error', text: 'Failed to update Jacuzzi setting' });
+      setJacuzziEnabled(!newValue); // revert on failure
+    } finally {
+      setJacuzziLoading(false);
       setTimeout(() => setMessage({ type: '', text: '' }), 5000);
     }
   };
@@ -387,6 +411,26 @@ export default function SettingsPage() {
             </div>
           </div>
           
+          <div className="w-32 hidden sm:block shrink-0"></div>
+        </div>
+
+        <hr className="my-8 border-border" />
+
+        <div className="flex flex-col sm:flex-row gap-6 items-start">
+          <div className="flex-1 space-y-2">
+            <h3 className="text-sm font-medium text-on-surface">Global Jacuzzi Feature</h3>
+            <p className="text-xs text-muted-text max-w-md">
+              Enable or disable Jacuzzi services platform-wide. If disabled, Jacuzzi services will not be bookable by users, regardless of vendor settings.
+            </p>
+            
+            <div className="pt-4 flex items-center gap-3">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={jacuzziEnabled} onChange={handleToggleJacuzzi} disabled={jacuzziLoading} className="sr-only peer" />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
+              {jacuzziLoading && <span className="text-xs text-muted-text">Saving...</span>}
+            </div>
+          </div>
           <div className="w-32 hidden sm:block shrink-0"></div>
         </div>
       </div>

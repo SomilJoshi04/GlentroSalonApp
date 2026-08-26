@@ -48,7 +48,6 @@ export default function UserRoutes() {
         <Route path="/salon/:id" element={<SuspenseWrapper><SalonDetailPage /></SuspenseWrapper>} />
         <Route path="/salon/:id/book" element={<SuspenseWrapper><BookingPage /></SuspenseWrapper>} />
         <Route path="/salon/:id/checkout" element={<SuspenseWrapper><CheckoutPage /></SuspenseWrapper>} />
-        <Route path="/support" element={<SuspenseWrapper><SupportPage /></SuspenseWrapper>} />
         <Route path="/booking-issues" element={<SuspenseWrapper><BookingIssuesPage /></SuspenseWrapper>} />
       </Route>
 
@@ -67,6 +66,8 @@ export default function UserRoutes() {
       <Route element={<LegalPageLayout />}>
         <Route path="/privacy-policy" element={<SuspenseWrapper><ContentPage type="privacy_policy" titleFallback="Privacy Policy" /></SuspenseWrapper>} />
         <Route path="/terms-and-conditions" element={<SuspenseWrapper><ContentPage type="terms_conditions" titleFallback="Terms & Conditions" /></SuspenseWrapper>} />
+        <Route path="/help-support" element={<SuspenseWrapper><SupportPage /></SuspenseWrapper>} />
+        <Route path="/support" element={<SuspenseWrapper><SupportPage /></SuspenseWrapper>} />
       </Route>
     </Routes>
   );

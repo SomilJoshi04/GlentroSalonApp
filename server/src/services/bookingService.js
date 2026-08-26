@@ -6,7 +6,7 @@ const Salon = require('../models/Salon');
 const Vendor = require('../models/Vendor');
 const Coupon = require('../models/Coupon');
 const PlatformFee = require('../models/PlatformFee');
-const { checkSlotAvailability, autoAssignStaff } = require('./availabilityService');
+const { checkSlotAvailability, autoAssignStaff, autoAssignResource } = require('./availabilityService');
 const { calculateBookingTotal, calculateCancellationFee, calculateFinancialBreakdown } = require('../utils/calculateFees');
 const { calculateEndTime } = require('../utils/calculateAvailability');
 const couponService = require('./couponService');
@@ -96,32 +96,64 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
 
       let assignedStaff = null;
       let staffAutoAssigned = false;
+      let assignedResource = null;
+      let resourceSnapshot = null;
 
-      if (item.staff) {
-        // User selected specific staff - check availability
-        const available = await checkSlotAvailability(
-          item.staff,
-          bookingDate,
-          currentTime,
-          service.duration
-        );
-        if (!available) {
-          throw new Error(`Staff is not available for ${service.name} at ${currentTime}`);
+      const requiresStaff = service.requiresStaff !== false;
+      const requiresResource = service.requiresResource === true;
+
+      // --- Staff Assignment ---
+      if (requiresStaff) {
+        if (item.staff) {
+          // User selected specific staff - check availability
+          const available = await checkSlotAvailability(
+            item.staff,
+            bookingDate,
+            currentTime,
+            service.duration
+          );
+          if (!available) {
+            throw new Error(`Staff is not available for ${service.name} at ${currentTime}`);
+          }
+          assignedStaff = item.staff;
+        } else {
+          // Auto-assign staff
+          const autoStaff = await autoAssignStaff(
+            salonId,
+            bookingDate,
+            currentTime,
+            service.duration
+          );
+          if (!autoStaff) {
+            throw new Error(`No staff available for ${service.name} at ${currentTime}`);
+          }
+          assignedStaff = autoStaff._id;
+          staffAutoAssigned = true;
         }
-        assignedStaff = item.staff;
-      } else {
-        // Auto-assign staff
-        const autoStaff = await autoAssignStaff(
+      }
+
+      // --- Resource Assignment ---
+      if (requiresResource && service.resourceType) {
+        // We assume global admin toggle is checked at the UI or earlier.
+        // For Jacuzzi, if jacuzziEnabled is false on salon, we should fail, but this was verified earlier or can be checked here.
+        if (service.resourceType === 'JACUZZI' && !salon.jacuzziEnabled) {
+          throw new Error('Jacuzzi services are currently disabled for this salon');
+        }
+
+        const autoResource = await autoAssignResource(
           salonId,
+          service.resourceType,
           bookingDate,
           currentTime,
           service.duration
         );
-        if (!autoStaff) {
-          throw new Error(`No staff available for ${service.name} at ${currentTime}`);
+
+        if (!autoResource) {
+          throw new Error(`No ${service.resourceType} resource available for ${service.name} at ${currentTime}`);
         }
-        assignedStaff = autoStaff._id;
-        staffAutoAssigned = true;
+        
+        assignedResource = autoResource._id;
+        resourceSnapshot = { name: autoResource.name };
       }
 
       const endTime = calculateEndTime(currentTime, service.duration);
@@ -129,6 +161,9 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
       bookingServices.push({
         service: service._id,
         staff: assignedStaff,
+        resource: assignedResource,
+        resourceType: service.resourceType,
+        resourceSnapshot,
         startTime: currentTime,
         endTime,
         price: service.price,

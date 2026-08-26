@@ -7,7 +7,7 @@ const getSettings = async (req, res, next) => {
     const PUBLIC_KEYS = [
       'appName', 'appLogo', 'salonSearchRadius', 
       'supportEmail', 'supportPhone', 'supportWhatsApp', 'supportHours', 'supportDescription',
-      'loginPageImage', 'registerPageImage'
+      'loginPageImage', 'registerPageImage', 'jacuzziGlobalEnabled'
     ];
     
     const settings = await AppSetting.find({ key: { $in: PUBLIC_KEYS } });

@@ -57,6 +57,18 @@ const serviceSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    requiresStaff: {
+      type: Boolean,
+      default: true,
+    },
+    requiresResource: {
+      type: Boolean,
+      default: false,
+    },
+    resourceType: {
+      type: String,
+      enum: ['JACUZZI'],
+    },
   },
   {
     timestamps: true,

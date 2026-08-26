@@ -2,6 +2,7 @@ import { useState, useEffect, Fragment } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getContent } from '../../services/userApi';
 import PageHeader from '../../../../components/common/PageHeader';
+import { useAuth } from '../../../../context/AuthContext';
 
 const parseContentSections = (text) => {
   if (!text) return [];
@@ -98,6 +99,7 @@ export default function ContentPage({ type, titleFallback }) {
   const [error, setError] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const fromProfile = location.state?.fromProfile;
 
   useEffect(() => {
@@ -151,8 +153,12 @@ export default function ContentPage({ type, titleFallback }) {
 
   return (
     <div className="w-full min-h-screen bg-surface-bright pb-16">
+      <div className="md:hidden">
+        <PageHeader title={title} fallbackPath="/profile" />
+      </div>
+
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-surface-container-lowest border-b border-border mb-8 py-8 md:py-16">
+      <div className="relative overflow-hidden bg-surface-container-lowest border-b border-border mb-4 md:mb-8 py-6 md:py-16">
         <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none"></div>
         <div className="w-full max-w-2xl md:max-w-4xl lg:max-w-5xl mx-auto px-4 sm:px-6 relative z-10">
 
@@ -160,7 +166,7 @@ export default function ContentPage({ type, titleFallback }) {
             {fromProfile && (
               <button
                 onClick={() => navigate(-1)}
-                className="p-2 -ml-2 text-on-surface-variant hover:bg-surface-variant rounded-full transition-colors flex items-center justify-center"
+                className="hidden md:flex p-2 -ml-2 text-on-surface-variant hover:bg-surface-variant rounded-full transition-colors items-center justify-center"
                 aria-label="Go back"
               >
                 <span className="material-symbols-outlined">arrow_back</span>
@@ -168,10 +174,10 @@ export default function ContentPage({ type, titleFallback }) {
             )}
           </div>
 
-          <h1 className="font-headline-lg md:font-headline-xl text-3xl md:text-4xl lg:text-[40px] font-bold text-on-surface tracking-tight mb-4">
+          <h1 className="hidden md:block font-headline-lg md:font-headline-xl text-3xl md:text-4xl lg:text-[40px] font-bold text-on-surface tracking-tight mb-4">
             {title}
           </h1>
-          <p className="text-on-surface-variant text-base md:text-lg max-w-2xl">
+          <p className="text-on-surface-variant text-base md:text-lg max-w-2xl mt-0 md:mt-2">
             {getSubtitle()}
           </p>
         </div>

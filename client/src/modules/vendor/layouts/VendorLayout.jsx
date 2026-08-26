@@ -24,6 +24,7 @@ const VendorLayout = () => {
     { to: '/vendor/chats', label: 'Chats', icon: 'chat' },
     { to: '/vendor/staff', label: 'Staff', icon: 'group' },
     { to: '/vendor/services', label: 'Services', icon: 'cut' },
+    { to: '/vendor/resources', label: 'Facilities', icon: 'hot_tub' },
     { to: '/vendor/packages', label: 'Offers & Packages', icon: 'redeem' },
     { to: '/vendor/financials', label: 'Financials', icon: 'account_balance_wallet' },
     { to: '/vendor/subscription', label: 'Subscription', icon: 'workspace_premium' },

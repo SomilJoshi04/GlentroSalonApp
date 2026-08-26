@@ -12,7 +12,7 @@ const LoginPage = () => {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  
+
   // Account Recovery State (from original implementation)
   const [showRecoveryForm, setShowRecoveryForm] = useState(false);
   const [recoveryReason, setRecoveryReason] = useState('');
@@ -36,7 +36,7 @@ const LoginPage = () => {
     try {
       const res = await loginUser(formData);
       setAuth('user', res.data.data.user, res.data.data.token);
-      
+
       const pendingBookingStr = sessionStorage.getItem('pendingBooking');
       if (pendingBookingStr) {
         try {
@@ -47,7 +47,7 @@ const LoginPage = () => {
           console.error('Failed to parse pending booking', e);
         }
       }
-      
+
       if (state?.from) {
         navigate(state.from, { state: state.bookingState, replace: true });
       } else {
@@ -96,10 +96,10 @@ const LoginPage = () => {
   const loginImage = settings?.loginPageImage ? getImageUrl(settings.loginPageImage) : 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?q=80&w=2070&auto=format&fit=crop';
 
   return (
-    <div className="min-h-screen flex w-full relative overflow-hidden font-inter">
-      
+    <div className="min-h-screen flex w-full relative overflow-x-hidden font-inter">
+
       {/* Background with Split Effect */}
-      <div 
+      <div
         className="absolute inset-0 z-0"
         style={{
           backgroundImage: `url(${loginImage})`,
@@ -112,12 +112,12 @@ const LoginPage = () => {
 
       {/* LEFT SIDE: Visuals (Hidden on Mobile) */}
       <div className="hidden lg:flex w-1/2 relative items-center justify-center p-12 z-10">
-        
+
         {/* Main Image Container */}
         <div className="relative w-full max-w-[400px] aspect-[1/1.2] rounded-[32px] shadow-2xl z-10 bg-surface overflow-hidden">
-          <img 
-            src={loginImage} 
-            alt="Premium Salon Interior" 
+          <img
+            src={loginImage}
+            alt="Premium Salon Interior"
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
@@ -140,36 +140,48 @@ const LoginPage = () => {
 
       {/* RIGHT SIDE: Login Card */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 z-20">
-        
+
         <div className="w-full max-w-[480px] bg-white/80 backdrop-blur-xl rounded-[32px] p-8 sm:p-10 shadow-[0_8px_32px_0_rgba(31,38,135,0.37)] border border-white/60 relative">
-          
+
           {/* Back Button */}
-          <button 
+          <button
             onClick={handleBack}
-            className="absolute top-8 left-8 text-gray-400 hover:text-[#2D0B5A] transition-colors p-1 rounded-full hover:bg-white/50"
+            className="absolute top-8 left-8 text-gray-400 hover:text-[#2D0B5A] transition-colors p-1 rounded-full hover:bg-white/50 z-10"
           >
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
 
-          {/* Logo Heading area */}
-          <div className="mb-8 text-center flex flex-col items-center">
+          {/* Top Right Actions */}
+          <div className="absolute top-8 right-8 flex items-center gap-4">
+            <Link to="/" className="text-sm font-medium text-gray-500 hover:text-[#2D0B5A] transition-colors flex items-center gap-1">
+              <span className="material-symbols-outlined text-[18px]">home</span>
+              <span className="hidden sm:inline">Home</span>
+            </Link>
+          </div>
+
+          {/* Heading */}
+          <div className="mb-8 mt-2 pr-24">
             {/* Logo */}
-            <div className="flex items-center justify-center gap-2 mb-6">
+            <div className="flex items-center gap-2 mb-6">
               {settings?.appLogo ? (
-                <img src={getImageUrl(settings.appLogo)} alt={`${settings?.appName || 'GlentroSalon'} Logo`} className="h-10 md:h-12 object-contain" />
+                <img src={getImageUrl(settings.appLogo)} alt={`${settings?.appName || 'GlentroSalon'} Logo`} className="h-8 md:h-10 object-contain" />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#31105D] to-[#8854C0] flex items-center justify-center text-white font-bold text-xl shadow-md">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#31105D] to-[#8854C0] flex items-center justify-center text-white font-bold text-lg shadow-md">
                   {(settings?.appName || 'GlentroSalon').charAt(0)}
                 </div>
               )}
-              <span className="font-headline-md text-2xl font-bold text-[#2D0B5A]">
+              <span className="font-headline-md text-xl font-bold text-[#2D0B5A]">
                 {settings?.appName || 'GlentroSalon'}
               </span>
             </div>
 
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              {showRecoveryForm ? 'Account Recovery' : 'Welcome Back'}
+            </h1>
             <p className="text-gray-600 text-sm leading-relaxed">
-              Sign in to continue your beauty journey.
+              {showRecoveryForm
+                ? 'Please provide a reason to recover your deleted account.'
+                : 'Sign in to continue your beauty journey.'}
             </p>
           </div>
 
@@ -198,18 +210,18 @@ const LoginPage = () => {
           {/* Form */}
           {!showRecoveryForm ? (
             <form onSubmit={handleSubmit} className="space-y-5">
-              
+
               {/* Email Input Group */}
               <div>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">mail</span>
-                  <input 
-                    type="email" 
-                    name="email" 
-                    value={formData.email} 
-                    onChange={handleChange} 
-                    placeholder="Email / Mobile Number" 
-                    required 
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="Email / Mobile Number"
+                    required
                     className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A1578]/20 focus:border-[#4A1578] transition-all shadow-sm"
                   />
                 </div>
@@ -225,16 +237,16 @@ const LoginPage = () => {
                 </div>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">lock</span>
-                  <input 
-                    type={showPassword ? "text" : "password"} 
-                    name="password" 
-                    value={formData.password} 
-                    onChange={handleChange} 
-                    placeholder="Password" 
-                    required 
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="Password"
+                    required
                     className="w-full pl-12 pr-12 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A1578]/20 focus:border-[#4A1578] transition-all shadow-sm"
                   />
-                  <button 
+                  <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
@@ -245,8 +257,8 @@ const LoginPage = () => {
               </div>
 
               {/* Submit Button */}
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={loading}
                 className="w-full py-3.5 mt-2 rounded-xl bg-gradient-to-r from-[#31105D] to-[#8854C0] text-white font-semibold text-[15px] shadow-lg shadow-purple-900/20 hover:shadow-purple-900/40 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-70 disabled:pointer-events-none flex items-center justify-center gap-2"
               >
@@ -260,7 +272,7 @@ const LoginPage = () => {
           ) : (
             <form onSubmit={handleRecoverySubmit} className="space-y-5 animate-fade-in">
               <p className="text-sm text-gray-600 leading-relaxed mb-2 text-center">
-                If you deleted your account by mistake, you can request an admin to restore it. 
+                If you deleted your account by mistake, you can request an admin to restore it.
                 Please provide a reason below.
               </p>
               <div>
@@ -274,8 +286,8 @@ const LoginPage = () => {
                 />
               </div>
               <div className="flex gap-3 pt-2">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => {
                     setShowRecoveryForm(false);
                     setError('');
@@ -285,8 +297,8 @@ const LoginPage = () => {
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={recoveryLoading}
                   className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-[#31105D] to-[#8854C0] text-white font-semibold text-[15px] shadow-lg shadow-purple-900/20 hover:shadow-purple-900/40 transition-all duration-200 disabled:opacity-70 flex items-center justify-center"
                 >
@@ -298,12 +310,21 @@ const LoginPage = () => {
 
           {/* Footer Link */}
           <div className="mt-8 text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 mb-4">
               Don't have an account?{' '}
               <Link to="/register" className="font-bold text-[#2D0B5A] hover:text-[#60209c] transition-colors underline decoration-[#2D0B5A]/30 hover:decoration-[#60209c]">
                 Create Account
               </Link>
             </p>
+
+            {/* Legal & Support Links */}
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-gray-500 mt-6 pt-4 border-t border-gray-100">
+              <Link to="/privacy-policy?guest=true" state={{ from: '/login' }} className="hover:text-[#4A1578] hover:underline transition-colors">Privacy Policy</Link>
+              <span className="text-gray-300">•</span>
+              <Link to="/terms-and-conditions?guest=true" state={{ from: '/login' }} className="hover:text-[#4A1578] hover:underline transition-colors">Terms & Conditions</Link>
+              <span className="text-gray-300">•</span>
+              <Link to="/help-support?guest=true" state={{ from: '/login' }} className="hover:text-[#4A1578] hover:underline transition-colors">Help & Support</Link>
+            </div>
           </div>
 
         </div>

@@ -109,6 +109,10 @@ const salonSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    jacuzziEnabled: {
+      type: Boolean,
+      default: false,
+    },
     ratings: {
       average: {
         type: Number,

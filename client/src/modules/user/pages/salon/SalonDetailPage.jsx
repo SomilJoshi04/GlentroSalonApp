@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   getSalonById, 
   getSalonReviews,
-  getPackages
+  getPackages,
+  getSalonResources
 } from '../../services/userApi';
 import { useAuth } from '../../../../context/AuthContext';
 import { goBack } from '../../../../utils/navigation';
@@ -25,9 +26,11 @@ const SalonDetailPage = () => {
   const [services, setServices] = useState([]);
   const [packages, setPackages] = useState([]);
   const [staff, setStaff] = useState([]);
+  const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('services');
   const [selectedServices, setSelectedServices] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Favorites State
   const { isFavorite, toggleFavoriteStatus } = useFavorites();
@@ -58,6 +61,12 @@ const SalonDetailPage = () => {
       // Load packages (offers)
       const pkgsRes = await getPackages({ salon: id, status: 'ACTIVE', isActive: true, checkValidity: true });
       setPackages(pkgsRes.data.data.packages);
+
+      // Load resources
+      const resRes = await getSalonResources(id);
+      if (resRes.data.success && resRes.data.data.length > 0) {
+        setResources(resRes.data.data);
+      }
     } catch (e) { 
       console.error(e); 
     }
@@ -92,6 +101,11 @@ const SalonDetailPage = () => {
 
   const totalPricePaise = selectedServices.reduce((sum, s) => sum + (s.pricePaise ?? Math.round((s.price || 0) * 100)), 0);
   const totalPriceLegacy = selectedServices.reduce((sum, s) => sum + (s.price || 0), 0);
+
+  const filteredServices = services.filter(service => 
+    service.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (service.category?.name || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   if (loading) return <SalonDetailSkeleton />;
   if (!salon) return <div className="text-center py-20 bg-background min-h-screen pt-32"><h2 className="text-[20px] font-semibold text-on-surface">Salon not found</h2></div>;
@@ -162,7 +176,7 @@ const SalonDetailPage = () => {
           {/* Navigation Tabs */}
           <nav className="w-full border-b border-border">
             <div className="flex overflow-x-auto hide-scrollbar gap-6 pb-4">
-              {['services', 'about', 'staff', 'reviews'].map(tab => (
+              {['services', 'about', 'staff', 'reviews', ...(resources.length > 0 ? ['facilities'] : [])].map(tab => (
                 <button 
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -240,9 +254,30 @@ const SalonDetailPage = () => {
               )}
 
               <div className="space-y-4 pt-2">
-                <h3 className="font-headline-sm text-[20px] font-bold text-on-surface">All Services</h3>
-                {services.length === 0 ? <p className="text-center text-muted-text py-8">No services available</p> : 
-                services.map(service => {
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                  <h3 className="font-headline-sm text-[20px] font-bold text-on-surface">All Services</h3>
+                  <div className="relative w-full sm:w-64">
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted-text text-[20px]">search</span>
+                    <input 
+                      type="text" 
+                      placeholder="Search services..." 
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 bg-surface-variant text-on-surface rounded-xl border border-border focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-[14px]"
+                    />
+                  </div>
+                </div>
+
+                {services.length === 0 ? (
+                  <p className="text-center text-muted-text py-8 bg-surface-variant rounded-xl border border-dashed border-border">No services available</p>
+                ) : filteredServices.length === 0 ? (
+                  <div className="text-center py-8 bg-surface-variant rounded-xl border border-dashed border-border flex flex-col items-center">
+                    <span className="material-symbols-outlined text-4xl text-muted-text mb-2">search_off</span>
+                    <p className="text-on-surface font-semibold">No matches found</p>
+                    <p className="text-muted-text text-sm mt-1">We couldn't find any service matching "{searchQuery}". Please try another term.</p>
+                  </div>
+                ) : 
+                filteredServices.map(service => {
                   const isSelected = selectedServices.some(s => s._id === service._id);
                   return (
                     <div key={service._id} className="flex justify-between items-center p-4 rounded-xl bg-surface border border-border shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => toggleService(service)}>
@@ -319,6 +354,32 @@ const SalonDetailPage = () => {
                     </div>
                     <span className="font-label-md text-[14px] font-bold text-on-surface">{s.name}</span>
                     <span className="font-body-sm text-[12px] text-muted-text mt-1">{s.specializations?.[0] || 'Specialist'}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Tab Content: Facilities */}
+          {activeTab === 'facilities' && resources.length > 0 && (
+            <section className="animate-fade-in">
+              <h3 className="font-headline-sm text-[20px] font-semibold text-on-surface mb-4">Facilities & Resources</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {resources.map(r => (
+                  <div key={r._id} className="bg-surface rounded-2xl overflow-hidden border border-border shadow-sm flex flex-col">
+                    {r.image ? (
+                      <div className="w-full h-40 bg-surface-variant">
+                        <img src={getImageUrl(r.image)} alt={r.name} className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="w-full h-40 bg-surface-variant flex items-center justify-center">
+                        <span className="material-symbols-outlined text-4xl text-muted-text">hot_tub</span>
+                      </div>
+                    )}
+                    <div className="p-4">
+                      <h4 className="font-label-lg text-[16px] font-bold text-on-surface mb-1">{r.name}</h4>
+                      <p className="font-body-sm text-[12px] text-muted-text capitalize">{r.type.toLowerCase()}</p>
+                    </div>
                   </div>
                 ))}
               </div>

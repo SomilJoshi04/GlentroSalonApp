@@ -23,7 +23,10 @@ const VendorLedger = require('../models/VendorLedger');
 const Vendor = require('../models/Vendor');
 
 // Payment proof storage directory — NOT publicly served
-const PROOF_DIR = path.join(__dirname, '../../uploads/payout-proofs');
+const baseUploadsDir = process.env.UPLOAD_PATH 
+  ? require('path').resolve(process.env.UPLOAD_PATH)
+  : path.join(__dirname, '../../uploads');
+const PROOF_DIR = path.join(baseUploadsDir, 'payout-proofs');
 if (!fs.existsSync(PROOF_DIR)) {
   fs.mkdirSync(PROOF_DIR, { recursive: true });
 }

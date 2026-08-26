@@ -113,7 +113,7 @@ const BookingIssuesPage = () => {
         <PageHeader title="Booking Issues" fallbackPath="/profile" />
       </div>
 
-      <div className="relative overflow-hidden bg-surface-container-lowest border-b border-border mb-8 py-8 md:py-16">
+      <div className="relative overflow-hidden bg-surface-container-lowest border-b border-border mb-4 md:mb-8 py-6 md:py-16">
         <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none"></div>
         <div className="w-full max-w-2xl md:max-w-4xl lg:max-w-5xl mx-auto px-4 sm:px-6 relative z-10">
           <div className="flex items-center justify-between mb-4">
@@ -121,12 +121,12 @@ const BookingIssuesPage = () => {
               {fromProfile && (
                 <button
                   onClick={() => navigate(-1)}
-                  className="p-2 -ml-2 text-on-surface-variant hover:bg-surface-variant rounded-full transition-colors"
+                  className="hidden md:flex p-2 -ml-2 text-on-surface-variant hover:bg-surface-variant rounded-full transition-colors"
                 >
                   <span className="material-symbols-outlined">arrow_back</span>
                 </button>
               )}
-              <h1 className="font-headline-lg md:font-headline-xl text-3xl md:text-4xl font-bold text-on-surface tracking-tight">
+              <h1 className="hidden md:block font-headline-lg md:font-headline-xl text-3xl md:text-4xl font-bold text-on-surface tracking-tight">
                 Booking Issues
               </h1>
             </div>

@@ -4,6 +4,7 @@ const Staff = require('../models/Staff');
 const Package = require('../models/Package');
 const Category = require('../models/Category');
 const AppSetting = require('../models/AppSetting');
+const SalonResource = require('../models/SalonResource');
 
 const { processAndStoreImage, deleteImageSafe } = require('../services/imageService');
 
@@ -318,4 +319,48 @@ const getZones = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-module.exports = { createSalon, getSalons, getNearbySalons, getSalonsByCity, getSalonById, updateSalon, getVendorSalons, getAllSalons, getCities, getZones };
+// @desc    Toggle Jacuzzi status for a salon
+// @route   PUT /api/salons/:id/jacuzzi-toggle
+// @access  Private (Vendor)
+const toggleJacuzzi = async (req, res, next) => {
+  try {
+    const salon = await Salon.findOneAndUpdate(
+      { _id: req.params.id, vendor: req.user.id },
+      { jacuzziEnabled: req.body.jacuzziEnabled },
+      { new: true }
+    );
+
+    if (!salon) {
+      return res.status(404).json({ success: false, message: 'Salon not found or unauthorized' });
+    }
+
+    res.json({ success: true, data: salon });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get resources for a salon (Public)
+// @route   GET /api/salons/:id/resources
+// @access  Public
+const getSalonResources = async (req, res, next) => {
+  try {
+    const salon = await Salon.findById(req.params.id);
+    if (!salon) return res.status(404).json({ success: false, message: 'Salon not found' });
+    
+    const jacuzziSetting = await AppSetting.findOne({ key: 'jacuzziGlobalEnabled' });
+    const isJacuzziGloballyEnabled = jacuzziSetting ? jacuzziSetting.value === 'true' : true;
+
+    // Only return resources if feature is enabled globally and at branch level
+    if (!isJacuzziGloballyEnabled || !salon.jacuzziEnabled) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const resources = await SalonResource.find({ salon: req.params.id, status: 'ACTIVE' }).select('name type image');
+    res.json({ success: true, data: resources });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { createSalon, getSalons, getNearbySalons, getSalonsByCity, getSalonById, updateSalon, getVendorSalons, getAllSalons, getCities, getZones, toggleJacuzzi, getSalonResources };

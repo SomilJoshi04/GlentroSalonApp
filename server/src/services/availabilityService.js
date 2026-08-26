@@ -1,6 +1,7 @@
 const Staff = require('../models/Staff');
 const BookingService = require('../models/BookingService');
 const Booking = require('../models/Booking');
+const SalonResource = require('../models/SalonResource');
 const { generateAvailableSlots, isSlotAvailable, calculateEndTime } = require('../utils/calculateAvailability');
 
 /**
@@ -32,6 +33,34 @@ const getStaffBookingsForDate = async (staffId, date) => {
   });
 
   // Filter out bookings where the populated booking is null (doesn't match date/status)
+  return bookings
+    .filter((bs) => bs.booking !== null)
+    .map((bs) => ({
+      startTime: bs.startTime,
+      endTime: bs.endTime,
+      bookingId: bs.booking._id,
+    }));
+};
+
+/**
+ * Get existing bookings for a resource on a specific date
+ */
+const getResourceBookingsForDate = async (resourceId, date) => {
+  const startOfDay = new Date(date);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(date);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  const bookings = await BookingService.find({
+    resource: resourceId,
+  }).populate({
+    path: 'booking',
+    match: {
+      bookingDate: { $gte: startOfDay, $lte: endOfDay },
+      status: { $in: ['PENDING', 'CONFIRMED'] },
+    },
+  });
+
   return bookings
     .filter((bs) => bs.booking !== null)
     .map((bs) => ({
@@ -123,6 +152,31 @@ const autoAssignStaff = async (salonId, date, startTime, duration) => {
 };
 
 /**
+ * Auto-assign an available resource for a service at a given time
+ */
+const autoAssignResource = async (salonId, resourceType, date, startTime, duration) => {
+  const resourceList = await SalonResource.find({ salon: salonId, type: resourceType, status: 'ACTIVE' });
+
+  for (const resource of resourceList) {
+    const existingBookings = await getResourceBookingsForDate(resource._id, date);
+
+    const available = isSlotAvailable({
+      startTime,
+      duration,
+      workStart: '00:00',
+      workEnd: '23:59',
+      existingBookings,
+    });
+
+    if (available) {
+      return resource;
+    }
+  }
+
+  return null; // No resource available
+};
+
+/**
  * Get available slots for a salon on a date, considering all staff
  */
 const getSalonAvailability = async (salonId, date, serviceDuration) => {
@@ -158,6 +212,7 @@ const getSalonAvailability = async (salonId, date, serviceDuration) => {
  */
 const getComplexAvailability = async (salonId, date, services) => {
   const staffList = await Staff.find({ salon: salonId, isActive: true });
+  const resourceList = await SalonResource.find({ salon: salonId, status: 'ACTIVE' });
   
   const staffData = {};
   for (const staff of staffList) {
@@ -171,24 +226,34 @@ const getComplexAvailability = async (salonId, date, services) => {
     }
   }
 
+  const resourceData = {};
+  for (const resource of resourceList) {
+    if (!resourceData[resource.type]) {
+      resourceData[resource.type] = [];
+    }
+    const existingBookings = await getResourceBookingsForDate(resource._id, date);
+    resourceData[resource.type].push({
+      _id: resource._id,
+      existingBookings,
+      schedule: { startTime: '00:00', endTime: '23:59' }
+    });
+  }
+
   const allPossibleSlots = [];
   const requestedDateStr = new Date(date).toISOString().split('T')[0];
   const todayStr = new Date().toISOString().split('T')[0];
   const isToday = requestedDateStr === todayStr;
   
-  // Create current date using local time or standard if configured
   const now = new Date();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
   for (let i = 0; i < 24; i++) {
     const h = i.toString().padStart(2, '0');
     
-    // Check 00 minute slot
     if (!isToday || (i * 60) > currentMinutes) {
       allPossibleSlots.push(`${h}:00`);
     }
     
-    // Check 30 minute slot
     if (!isToday || (i * 60 + 30) > currentMinutes) {
       allPossibleSlots.push(`${h}:30`);
     }
@@ -203,31 +268,66 @@ const getComplexAvailability = async (salonId, date, services) => {
     for (const service of services) {
       const duration = service.duration;
       let serviceAssigned = false;
+      
+      const requiresStaff = service.requiresStaff !== false; // Default true
+      const requiresResource = service.requiresResource === true; // Default false
+      const resourceType = service.resourceType;
+      
+      let staffAvailable = false;
+      let resourceAvailable = false;
 
-      if (service.staffId) {
-        const sData = staffData[service.staffId];
-        if (sData && isSlotAvailable({
-          startTime: currentSlot,
-          duration,
-          workStart: sData.schedule.startTime,
-          workEnd: sData.schedule.endTime,
-          existingBookings: sData.existingBookings
-        })) {
-          serviceAssigned = true;
-        }
-      } else {
-        for (const [sId, sData] of Object.entries(staffData)) {
-          if (isSlotAvailable({
+      // Check Staff
+      if (requiresStaff) {
+        if (service.staffId) {
+          const sData = staffData[service.staffId];
+          if (sData && isSlotAvailable({
             startTime: currentSlot,
             duration,
             workStart: sData.schedule.startTime,
             workEnd: sData.schedule.endTime,
             existingBookings: sData.existingBookings
           })) {
-            serviceAssigned = true;
+            staffAvailable = true;
+          }
+        } else {
+          for (const [sId, sData] of Object.entries(staffData)) {
+            if (isSlotAvailable({
+              startTime: currentSlot,
+              duration,
+              workStart: sData.schedule.startTime,
+              workEnd: sData.schedule.endTime,
+              existingBookings: sData.existingBookings
+            })) {
+              staffAvailable = true;
+              break;
+            }
+          }
+        }
+      } else {
+        staffAvailable = true; // Not required
+      }
+
+      // Check Resource
+      if (requiresResource && resourceType) {
+        const units = resourceData[resourceType] || [];
+        for (const unit of units) {
+          if (isSlotAvailable({
+            startTime: currentSlot,
+            duration,
+            workStart: unit.schedule.startTime,
+            workEnd: unit.schedule.endTime,
+            existingBookings: unit.existingBookings
+          })) {
+            resourceAvailable = true;
             break;
           }
         }
+      } else {
+        resourceAvailable = true; // Not required
+      }
+
+      if (staffAvailable && resourceAvailable) {
+        serviceAssigned = true;
       }
 
       if (!serviceAssigned) {
@@ -247,7 +347,9 @@ module.exports = {
   getStaffAvailability,
   checkSlotAvailability,
   autoAssignStaff,
+  autoAssignResource,
   getSalonAvailability,
   getComplexAvailability,
   getStaffBookingsForDate,
+  getResourceBookingsForDate,
 };

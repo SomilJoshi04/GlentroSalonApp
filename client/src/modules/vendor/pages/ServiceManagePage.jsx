@@ -25,7 +25,7 @@ const ServiceManagePage = () => {
   // Form
   const [showForm, setShowForm] = useState(false);
   const [editingService, setEditingService] = useState(null);
-  const [form, setForm] = useState({ name: '', category: '', subcategory: '', gender: 'unisex', price: '', duration: '', description: '' });
+  const [form, setForm] = useState({ name: '', category: '', subcategory: '', gender: 'unisex', price: '', duration: '', description: '', requiresStaff: true, requiresResource: false, resourceType: '' });
 
   useEffect(() => { loadInit(); }, []);
   useEffect(() => { loadServices(1); }, [selectedSalon, filters]);
@@ -90,7 +90,7 @@ const ServiceManagePage = () => {
 
       setShowForm(false); 
       setEditingService(null);
-      setForm({ name: '', category: '', subcategory: '', gender: 'unisex', price: '', duration: '', description: '' });
+      setForm({ name: '', category: '', subcategory: '', gender: 'unisex', price: '', duration: '', description: '', requiresStaff: true, requiresResource: false, resourceType: '' });
       loadServices(); 
     } catch (e) { 
       alert(e.response?.data?.message || 'Failed to save service'); 
@@ -126,7 +126,10 @@ const ServiceManagePage = () => {
       gender: s.gender || 'unisex', 
       price: s.pricePaise ? getRupeesFromPaise(s.pricePaise) : s.price, 
       duration: s.duration, 
-      description: s.description || '' 
+      description: s.description || '',
+      requiresStaff: s.requiresStaff !== false,
+      requiresResource: s.requiresResource === true,
+      resourceType: s.resourceType || ''
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -151,8 +154,12 @@ const ServiceManagePage = () => {
         description="Configure and manage your salon service catalog."
         actions={
           <button onClick={() => {
+            if (!selectedSalon) {
+              alert("Please select a specific branch to create a service.");
+              return;
+            }
             setEditingService(null);
-            setForm({ name: '', category: '', subcategory: '', gender: 'unisex', price: '', duration: '', description: '' });
+            setForm({ name: '', category: '', subcategory: '', gender: 'unisex', price: '', duration: '', description: '', requiresStaff: true, requiresResource: false, resourceType: '' });
             setShowForm(!showForm);
           }} className={`w-full sm:w-auto shrink-0 justify-center whitespace-nowrap px-4 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm flex items-center gap-1.5 border ${showForm ? 'bg-surface border-border text-on-surface hover:bg-surface-variant' : 'bg-primary text-white hover:bg-primary-dark border-transparent'}`}>
             <span className="material-symbols-outlined text-[18px]">{showForm ? 'close' : 'add'}</span>
@@ -235,6 +242,33 @@ const ServiceManagePage = () => {
             <label className="text-sm font-medium text-muted-text mb-1 block">Description</label>
             <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} rows={2} className="w-full px-3 py-2.5 bg-surface text-on-surface rounded-xl border border-border text-sm resize-none focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" />
           </div>
+
+          <div className="border-t border-border pt-4 mt-2">
+            <h3 className="text-sm font-semibold text-on-surface mb-3">Advanced Requirements</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <label className="flex items-center gap-2 text-sm text-on-surface cursor-pointer">
+                <input type="checkbox" checked={form.requiresStaff} onChange={e => setForm({...form, requiresStaff: e.target.checked})} className="rounded border-border text-primary focus:ring-primary" />
+                Requires Staff Assignment
+              </label>
+              
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm text-on-surface cursor-pointer">
+                  <input type="checkbox" checked={form.requiresResource} onChange={e => setForm({...form, requiresResource: e.target.checked})} className="rounded border-border text-primary focus:ring-primary" />
+                  Requires Physical Resource / Facility
+                </label>
+                
+                {form.requiresResource && (
+                  <div>
+                    <select value={form.resourceType} onChange={e => setForm({...form, resourceType: e.target.value})} required className="w-full px-3 py-2 bg-surface text-on-surface rounded-xl border border-border text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm">
+                      <option value="">Select Resource Type</option>
+                      <option value="JACUZZI">Jacuzzi</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="flex gap-3 justify-end pt-2">
             <button type="button" onClick={() => setShowForm(false)} className="px-5 py-2.5 text-muted-text hover:bg-surface-variant rounded-xl text-sm font-medium">Cancel</button>
             <button type="submit" disabled={saving} className="px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-medium disabled:opacity-50 transition-colors shadow-sm flex items-center gap-1.5">
