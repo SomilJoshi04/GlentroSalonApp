@@ -16,28 +16,34 @@ const VendorDetailsModal = ({ vendor, onClose }) => {
       <div className="relative bg-surface w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-slide-up-fade border border-border">
         
         {/* Header */}
-        <div className="px-6 py-5 border-b border-border bg-background-alt/50 flex justify-between items-center sticky top-0 z-10 backdrop-blur-md">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20 overflow-hidden">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-border bg-background-alt/50 flex justify-between items-center sticky top-0 z-10 backdrop-blur-md">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+            <button 
+              onClick={onClose}
+              className="sm:hidden p-2 -ml-2 rounded-full text-muted-text hover:text-on-surface hover:bg-surface-variant transition-colors shrink-0"
+            >
+              <span className="material-symbols-outlined">arrow_back</span>
+            </button>
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20 overflow-hidden">
               {vendor.avatar ? (
                 <img src={getImageUrl(vendor.avatar)} alt={vendor.businessName} className="w-full h-full object-cover" />
               ) : (
-                <span className="material-symbols-outlined text-[24px]">storefront</span>
+                <span className="material-symbols-outlined text-[20px] sm:text-[24px]">storefront</span>
               )}
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-on-surface">{vendor.businessName || vendor.name}</h2>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs font-medium text-muted-text">{vendor.email}</span>
-                <span className="w-1 h-1 rounded-full bg-border"></span>
-                <span className="text-xs font-medium text-muted-text">{vendor.phone}</span>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg sm:text-xl font-bold text-on-surface truncate">{vendor.businessName || vendor.name}</h2>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2 mt-0.5 sm:mt-1">
+                <span className="text-xs font-medium text-muted-text truncate block">{vendor.email}</span>
+                <span className="hidden sm:block w-1 h-1 rounded-full bg-border shrink-0"></span>
+                <span className="text-xs font-medium text-muted-text truncate block">{vendor.phone}</span>
               </div>
             </div>
           </div>
           
           <button 
             onClick={onClose}
-            className="p-2 rounded-full text-muted-text hover:text-on-surface hover:bg-surface-variant transition-colors"
+            className="hidden sm:flex p-2 rounded-full text-muted-text hover:text-on-surface hover:bg-surface-variant transition-colors shrink-0 ml-4"
           >
             <span className="material-symbols-outlined">close</span>
           </button>

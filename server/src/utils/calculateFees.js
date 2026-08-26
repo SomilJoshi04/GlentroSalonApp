@@ -140,11 +140,11 @@ const calculateFinancialBreakdown = async (vendor, subtotalAfterDiscountsPaise, 
   const subscriptionService = require('../services/subscriptionService');
   const subStatus = await subscriptionService.getVendorSubscriptionStatus(vendor._id);
 
-  if (['TRIAL_ACTIVE', 'PAID_ACTIVE'].includes(subStatus.status)) {
+  if (subStatus.status === 'PAID_ACTIVE') {
     commissionPaise = 0;
     vendorPlanType = 'SUBSCRIPTION';
   } else {
-    // Note: GRACE_PERIOD and EXPIRED both fall into COMMISSION model
+    // Note: TRIAL_ACTIVE, GRACE_PERIOD and EXPIRED all fall into COMMISSION model
     appliedCommissionRate = (vendor.commissionRate !== undefined && vendor.commissionRate > 0) ? vendor.commissionRate : globalAdminCommission;
     commissionPaise = calculatePercentagePaise(subtotalAfterDiscountsPaise, appliedCommissionRate);
   }

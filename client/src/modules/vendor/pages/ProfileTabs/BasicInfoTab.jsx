@@ -55,7 +55,7 @@ const BasicInfoTab = ({ onProfileUpdate }) => {
 
   return (
     <form onSubmit={handleSave} className="space-y-6">
-      <div className="flex items-center gap-6 pb-6 border-b border-border">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 pb-6 border-b border-border">
         <div className="flex-shrink-0">
           <h4 className="text-sm font-medium text-on-surface mb-3">Profile Avatar</h4>
           <ImageUpload 

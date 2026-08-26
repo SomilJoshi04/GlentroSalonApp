@@ -341,7 +341,7 @@ const CheckoutPage = () => {
               )}
               {previewData.platformFeePercentage > 0 && (
                 <div className="flex justify-between items-center">
-                  <span className="font-body-md text-[16px] text-muted-text">Platform Fee ({previewData.platformFeePercentage}%)</span>
+                  <span className="font-body-md text-[16px] text-muted-text">Platform Fee</span>
                   <span className="font-body-md text-[16px] text-on-surface">{formatPaise(previewData.platformFeeAmountPaise)}</span>
                 </div>
               )}

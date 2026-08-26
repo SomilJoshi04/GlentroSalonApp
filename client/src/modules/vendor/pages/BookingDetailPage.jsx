@@ -212,7 +212,7 @@ const BookingDetailPage = () => {
             )}
 
             <div className="flex justify-between text-primary mt-1">
-              <span>Platform Fee ({booking.platformFeePercentage ? `${booking.platformFeePercentage}%` : ''})</span>
+              <span>Platform Fee</span>
               <span className="font-semibold">+₹{booking.platformFee || 0}</span>
             </div>
 
@@ -230,7 +230,7 @@ const BookingDetailPage = () => {
           </h3>
           <div className="space-y-2 text-sm text-on-surface pt-3">
             <div className="flex justify-between"><span className="text-muted-text">Customer Paid</span><span className="font-medium">₹{booking.finalAmount}</span></div>
-            <div className="flex justify-between text-error"><span className="text-muted-text">Platform Fee ({booking.platformFeePercentage ? `${booking.platformFeePercentage}%` : ''})</span><span className="font-semibold">-₹{booking.platformFee || 0}</span></div>
+            <div className="flex justify-between text-error"><span className="text-muted-text">Platform Fee</span><span className="font-semibold">-₹{booking.platformFee || 0}</span></div>
             {booking.vendorPlanType === 'SUBSCRIPTION' ? (
                <div className="flex justify-between text-success"><span className="text-muted-text">Admin Commission (Subscription)</span><span className="font-semibold">-₹0</span></div>
             ) : (

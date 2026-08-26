@@ -67,10 +67,10 @@ const VendorSubscriptionPage = () => {
       }
 
       const orderRes = await createSubscriptionOrder(plan._id);
-      const { orderId, amountPaise, currency } = orderRes.data?.data;
+      const { orderId, amountPaise, currency, keyId } = orderRes.data?.data;
 
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID, // Use Razorpay Key ID from env
+        key: keyId, // Use Razorpay Key ID from backend
         amount: amountPaise,
         currency,
         name: 'Salon Booking Platform',
@@ -114,7 +114,7 @@ const VendorSubscriptionPage = () => {
 
   if (loading) return <div className="p-8 text-center text-text-secondary">Loading your subscription details...</div>;
 
-  const isCommissionFree = ['TRIAL_ACTIVE', 'PAID_ACTIVE'].includes(status?.status);
+  const isCommissionFree = status?.status === 'PAID_ACTIVE';
   const isGrace = status?.status === 'GRACE_PERIOD';
   const isExpired = status?.status === 'EXPIRED';
   const isNone = status?.status === 'NO_SUBSCRIPTION';

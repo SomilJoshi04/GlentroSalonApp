@@ -176,13 +176,13 @@ const VendorsPage = () => {
               className="w-full bg-background-alt border border-border focus:border-primary focus:ring-1 focus:ring-primary rounded-xl py-2 pl-10 pr-4 text-[14px] outline-none transition-all"
             />
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 mr-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <span className="font-label-md text-[14px] text-muted-text whitespace-nowrap">Status:</span>
               <select 
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="bg-background-alt border border-border rounded-xl px-3 py-2 text-[14px] outline-none focus:border-primary min-w-[120px]"
+                className="bg-background-alt border border-border rounded-xl px-3 py-2 text-[14px] outline-none focus:border-primary flex-1 sm:flex-none min-w-[120px]"
               >
                 <option value="">All Vendors</option>
                 <option value="active">Active</option>
@@ -192,7 +192,7 @@ const VendorsPage = () => {
             </div>
             <button 
               onClick={() => setIsCreateModalOpen(true)}
-              className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-dark transition-colors flex items-center gap-2 shadow-sm whitespace-nowrap"
+              className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-dark transition-colors flex justify-center items-center gap-2 shadow-sm whitespace-nowrap w-full sm:w-auto"
             >
               <span className="material-symbols-outlined text-[18px]">add</span>
               Add Vendor

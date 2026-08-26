@@ -259,7 +259,7 @@ const BookingDetailPage = () => {
           {booking.discountAmount > 0 && <div className="flex justify-between text-green-600"><span>Discount</span><span>-{formatPaise(booking.discountAmountPaise, booking.discountAmount)}</span></div>}
           {booking.platformFee > 0 && (
             <div className="flex justify-between text-text-secondary">
-              <span>Platform Fee{booking.platformFeePercentage ? ` (${booking.platformFeePercentage}%)` : ''}</span>
+              <span>Platform Fee</span>
               <span>{formatPaise(booking.platformFeeAmountPaise, booking.platformFee)}</span>
             </div>
           )}
