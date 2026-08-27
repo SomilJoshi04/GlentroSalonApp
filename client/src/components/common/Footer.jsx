@@ -47,7 +47,7 @@ const Footer = () => {
 
   return (
     <footer className="bg-[#1b0639] text-white pt-12 pb-[calc(2rem+env(safe-area-inset-bottom))] md:pb-8 mt-12 w-full border-t border-white/10">
-      <div className="max-w-container-max mx-auto px-4 md:px-margin-desktop">
+      <div className="max-w-container-max mx-auto px-6 md:px-margin-desktop">
         <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
           
           {/* Brand Section */}
