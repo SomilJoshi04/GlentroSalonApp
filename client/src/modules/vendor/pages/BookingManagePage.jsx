@@ -153,8 +153,12 @@ const BookingManagePage = () => {
                       <span className="material-symbols-outlined text-[16px] text-muted-text/75 mr-1.5">calendar_today</span>
                       <span>{new Date(b.bookingDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} • {b.startTime}-{b.endTime}</span>
                     </div>
-                    <p className="text-xs text-muted-text mt-1.5 truncate">✉️ {b.user?.email}</p>
-                    <p className="text-xs text-muted-text truncate">📞 {b.user?.phone}</p>
+                    <p className="text-xs text-muted-text mt-1.5 truncate flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">mail</span> {b.user?.email}
+                    </p>
+                    <p className="text-xs text-muted-text truncate flex items-center gap-1 mt-0.5">
+                      <span className="material-symbols-outlined text-[14px]">call</span> {b.user?.phone}
+                    </p>
                   </div>
                   <div className="text-right shrink-0">
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${statusColors[b.status]}`}>{b.status}</span>

@@ -23,6 +23,49 @@ const platformFeeSchema = new mongoose.Schema(
       min: 0,
       max: 100,
     },
+
+    // ─── Call Policy ───────────────────────────────────────────────────────────
+    // Admin controls whether in-app calling is enabled at all
+    callEnabled: {
+      type: Boolean,
+      default: true,
+    },
+    // How many minutes before the appointment can a call be made.
+    // 0 = no restriction (available anytime on booking day).
+    // e.g. 60 = can only call until 60 mins before appointment.
+    callWindowMinutes: {
+      type: Number,
+      default: 60,
+      min: 0,
+    },
+
+    // ─── Cancellation Policy ───────────────────────────────────────────────────
+    // Whether a cancellation fee is charged at all
+    cancellationChargeEnabled: {
+      type: Boolean,
+      default: true,
+    },
+    // How many minutes before the appointment is cancellation free.
+    // e.g. 60 = cancel more than 60 mins before → no charge
+    freeCancellationWindowMinutes: {
+      type: Number,
+      default: 60,
+      min: 0,
+    },
+    // 'PERCENTAGE' uses cancellationFeePercentage field above
+    // 'FIXED' uses cancellationFixedAmount field below
+    cancellationChargeType: {
+      type: String,
+      enum: ['PERCENTAGE', 'FIXED'],
+      default: 'PERCENTAGE',
+    },
+    // Used only when cancellationChargeType = 'FIXED' (in INR)
+    cancellationFixedAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
     isActive: {
       type: Boolean,
       default: true,

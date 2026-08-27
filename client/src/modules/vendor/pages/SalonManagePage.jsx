@@ -214,7 +214,9 @@ const SalonManagePage = () => {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <h3 className="font-semibold text-on-surface text-[16px]">{s.name}</h3>
-                    <p className="text-xs text-muted-text mt-1 line-clamp-1">📍 {s.address}</p>
+                    <p className="text-xs text-muted-text mt-1 line-clamp-1 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">location_on</span> {s.address}
+                    </p>
                     <div className="flex gap-2 mt-2.5">
                       <span className="px-2 py-0.5 rounded text-[10px] font-semibold border border-primary/10 bg-soft-primary text-primary capitalize">{s.gender}</span>
                       <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${s.isApproved ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'}`}>

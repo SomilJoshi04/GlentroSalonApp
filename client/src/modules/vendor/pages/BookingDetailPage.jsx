@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getBookingById, acceptBooking, rejectBooking, completeBooking } from '../services/vendorApi';
 import { goBack } from '../../../utils/navigation';
 import api from '../../../services/api/axiosInstance';
+import { useCall } from '../../../context/CallContext';
+import { checkCallAvailability } from '../../../services/callService';
 
 const BookingDetailPage = () => {
   const { id } = useParams();
@@ -12,6 +14,14 @@ const BookingDetailPage = () => {
   const [loading, setLoading] = useState(true);
 
   const [error, setError] = useState(null);
+  const [callAvailability, setCallAvailability] = useState({ canCall: false });
+  const { startCall, callError, clearError } = useCall();
+
+  useEffect(() => {
+    if (booking?.status === 'CONFIRMED') {
+      checkCallAvailability(booking._id).then(avail => setCallAvailability(avail)).catch(() => {});
+    }
+  }, [booking]);
 
   useEffect(() => { load(); }, [id]);
   const load = async () => { 
@@ -243,12 +253,31 @@ const BookingDetailPage = () => {
           </div>
         </div>
 
-        <div className="flex gap-3">
-          <button onClick={handleChat} className="flex-1 py-3 bg-surface border border-border text-on-surface rounded-xl font-semibold hover:bg-surface-variant transition-colors shadow-sm flex items-center justify-center gap-1.5">
-            <span className="material-symbols-outlined text-[18px]">chat</span>
-            Chat with Customer
-          </button>
-        </div>
+        {booking.status === 'CONFIRMED' && (
+          <div className="flex flex-col gap-3">
+            {callError && (
+              <div className="bg-error/10 text-error p-3 rounded-lg text-sm flex justify-between items-center">
+                <span>{callError}</span>
+                <button onClick={clearError} className="material-symbols-outlined text-[18px] opacity-70 hover:opacity-100">close</button>
+              </div>
+            )}
+            <div className="flex gap-3">
+            <button onClick={handleChat} className="flex-1 py-3 bg-surface border border-border text-on-surface rounded-xl font-semibold hover:bg-surface-variant transition-colors shadow-sm flex items-center justify-center gap-1.5">
+              <span className="material-symbols-outlined text-[18px]">chat</span>
+              Chat with Customer
+            </button>
+            {callAvailability.canCall && (
+              <button
+                onClick={() => startCall(booking._id, booking.user?._id, 'user', booking.user?.name, null)}
+                className="flex-1 py-3 bg-emerald-500/10 border border-emerald-400/30 text-emerald-600 rounded-xl font-semibold hover:bg-emerald-500 hover:text-white transition-all shadow-sm flex items-center justify-center gap-1.5"
+              >
+                <span className="material-symbols-outlined text-[18px]">call</span>
+                Call Customer
+              </button>
+            )}
+          </div>
+          </div>
+        )}
 
         {booking.status === 'PENDING' && (
           <div className="flex gap-3">

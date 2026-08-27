@@ -136,7 +136,9 @@ const SalonListPage = () => {
           </div>
         ) : salons.length === 0 ? (
           <div className="text-center py-16 bg-surface rounded-2xl border border-border shadow-sm">
-            <div className="text-5xl mb-4">💈</div>
+            <div className="text-5xl mb-4 text-primary">
+              <span className="material-symbols-outlined text-[48px]">storefront</span>
+            </div>
             <h3 className="font-headline-sm text-[20px] text-on-surface mb-1">No salons found</h3>
             <p className="font-body-sm text-[14px] text-muted-text">Try a different category or search term</p>
           </div>
@@ -156,7 +158,9 @@ const SalonListPage = () => {
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-4xl opacity-30">✂️</div>
+                    <div className="w-full h-full flex items-center justify-center text-primary/30">
+                      <span className="material-symbols-outlined text-[36px]">content_cut</span>
+                    </div>
                   )}
                   {/* Rating Badge */}
                   {salon.ratings?.average > 0 && (

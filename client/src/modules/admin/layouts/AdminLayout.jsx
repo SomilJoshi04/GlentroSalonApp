@@ -39,10 +39,16 @@ const AdminLayout = () => {
     return () => clearInterval(interval);
   }, [fetchPendingCounts]);
 
-  // Refresh pending counts instantly when a new real-time notification arrives
+  // Refresh pending counts and play sound when a new real-time notification arrives
   useEffect(() => {
     if (latestNotification) {
       fetchPendingCounts();
+      
+      // Play notification ringtone
+      const audio = new Audio('/adminRing.mp3');
+      audio.play().catch(error => {
+        console.log("Notification sound blocked by browser:", error);
+      });
     }
   }, [latestNotification, fetchPendingCounts]);
 

@@ -80,7 +80,9 @@ const FavoritesPage = () => {
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-4xl opacity-30">✂️</div>
+                    <div className="w-full h-full flex items-center justify-center text-primary/30">
+                      <span className="material-symbols-outlined text-[36px]">content_cut</span>
+                    </div>
                   )}
                   {/* Top Right Actions */}
                   <div className="absolute top-3 right-3 flex items-center gap-2">

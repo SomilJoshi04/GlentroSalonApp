@@ -41,7 +41,15 @@ const populateChatDetails = async (chat) => {
 /**
  * Get or create a chat between two participants
  */
-const getOrCreateChat = async (participant1, participant2, chatType, salonId) => {
+const getOrCreateChat = async (participant1, participant2, chatType, salonId, bookingId = null) => {
+  if (bookingId) {
+    const Booking = require('../models/Booking');
+    const booking = await Booking.findById(bookingId);
+    if (!booking) throw new Error('Booking not found');
+    if (booking.status !== 'CONFIRMED') {
+      throw new Error(`Chat is not available for booking status: ${booking.status}`);
+    }
+  }
   // Check if chat already exists between these participants
   const query = {
     chatType,
@@ -53,6 +61,10 @@ const getOrCreateChat = async (participant1, participant2, chatType, salonId) =>
     query.conversationType = 'salon';
   } else {
     query.conversationType = 'general';
+  }
+
+  if (bookingId) {
+    query.booking = bookingId;
   }
 
   let chat = await Chat.findOne(query);
@@ -68,6 +80,9 @@ const getOrCreateChat = async (participant1, participant2, chatType, salonId) =>
     };
     if (salonId) {
       chatData.salon = salonId;
+    }
+    if (bookingId) {
+      chatData.booking = bookingId;
     }
     chat = await Chat.create(chatData);
   }
@@ -86,6 +101,14 @@ const sendMessage = async (chatId, senderId, senderRole, content, messageType = 
 
   if (senderRole !== 'admin' && !existingChat.participants.some(p => p.userId.toString() === senderId.toString())) {
     throw new Error('Not authorized to send messages to this chat');
+  }
+
+  if (existingChat.booking) {
+    const Booking = require('../models/Booking');
+    const booking = await Booking.findById(existingChat.booking);
+    if (!booking || booking.status !== 'CONFIRMED') {
+      throw new Error(`Chat is not available. Booking is currently ${booking ? booking.status : 'missing'}.`);
+    }
   }
 
   const message = {
@@ -120,10 +143,10 @@ const sendMessage = async (chatId, senderId, senderRole, content, messageType = 
       chatId,
       ...savedMessage.toObject()
     };
-    
+
     // Emit to active chat viewers
     io.to(`chat:${chatId}`).emit('chat:message', payload);
-    
+
     // Emit to participants' global inboxes
     chat.participants.forEach(p => {
       io.to(`${p.role}:${p.userId}`).emit('chat:message', payload);
@@ -146,7 +169,7 @@ const sendMessage = async (chatId, senderId, senderRole, content, messageType = 
  */
 const getChats = async (userId, role) => {
   let query = { isActive: true };
-  
+
   if (role === 'admin') {
     query.$or = [
       { chatType: 'user-admin' },
@@ -155,7 +178,7 @@ const getChats = async (userId, role) => {
   } else {
     query['participants.userId'] = userId;
   }
-  
+
   const chats = await Chat.find(query).sort({ updatedAt: -1 });
 
   const populatedChats = [];
@@ -174,6 +197,14 @@ const getMessages = async (chatId, userId, role, page = 1, limit = 50) => {
 
   if (role !== 'admin' && !chat.participants.some(p => p.userId.toString() === userId.toString())) {
     throw new Error('Not authorized to view this chat');
+  }
+
+  if (chat.booking) {
+    const Booking = require('../models/Booking');
+    const booking = await Booking.findById(chat.booking);
+    if (!booking || booking.status !== 'CONFIRMED') {
+      throw new Error(`Chat is not available. Booking is currently ${booking ? booking.status : 'missing'}.`);
+    }
   }
 
   const populatedChat = await populateChatDetails(chat);

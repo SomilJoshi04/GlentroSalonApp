@@ -13,9 +13,15 @@ export const updateFcmToken = (data) => api.put('/vendors/fcm-token', data);
 
 // Salons
 export const getVendorSalons = (params) => api.get('/salons/vendor/my-salons', { params });
+export const withdrawFunds = (data) => api.post('/wallet/withdraw', data);
+export const verifyWalletOwnership = (data) => api.post('/wallet/verify-ownership', data);
+export const setDefaultWithdrawalMethod = (id) => api.put(`/wallet/methods/${id}/default`);
 export const createSalon = (data) => api.post('/salons', data);
 export const updateSalon = (id, data) => api.put(`/salons/${id}`, data);
 export const getSalonById = (id) => api.get(`/salons/detail/${id}`);
+
+// Calls
+export const getCallHistory = () => api.get('/call/history');
 
 // Staff
 export const getSalonStaff = (salonId, params) => api.get(`/staff/salon/${salonId}`, { params });

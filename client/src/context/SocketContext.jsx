@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
+import { useLocation } from 'react-router-dom';
 
 const SocketContext = createContext(null);
 
@@ -13,10 +14,25 @@ export const useSocket = () => {
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-  const { token, isAuthenticated } = useAuth();
+  const { userToken, vendorToken, adminToken, user, vendor, admin } = useAuth();
+  const location = useLocation();
+
+  let activeToken = null;
+  let activeAuth = false;
+
+  if (location.pathname.startsWith('/admin')) {
+    activeToken = adminToken;
+    activeAuth = !!admin;
+  } else if (location.pathname.startsWith('/vendor')) {
+    activeToken = vendorToken;
+    activeAuth = !!vendor;
+  } else {
+    activeToken = userToken;
+    activeAuth = !!user;
+  }
 
   useEffect(() => {
-    if (!isAuthenticated || !token) {
+    if (!activeAuth || !activeToken) {
       if (socket) {
         socket.disconnect();
         setSocket(null);
@@ -29,7 +45,7 @@ export const SocketProvider = ({ children }) => {
     const derivedSocketUrl = apiUrl ? apiUrl.replace(/\/api$/, '') : '';
     const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || derivedSocketUrl || 'http://localhost:5000';
     const newSocket = io(SOCKET_URL, {
-      auth: { token },
+      auth: { token: activeToken },
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 1000,
@@ -55,7 +71,7 @@ export const SocketProvider = ({ children }) => {
     return () => {
       newSocket.disconnect();
     };
-  }, [isAuthenticated, token]);
+  }, [activeAuth, activeToken]);
 
   const emit = useCallback((event, data) => {
     if (socket?.connected) socket.emit(event, data);

@@ -249,7 +249,9 @@ const SearchPage = () => {
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-3xl opacity-30">✂️</div>
+                        <div className="w-full h-full flex items-center justify-center text-primary/30">
+                          <span className="material-symbols-outlined text-[30px]">content_cut</span>
+                        </div>
                       )}
                       {salon.ratings?.average > 0 && (
                         <div className="absolute top-2 right-2 bg-surface/90 backdrop-blur-sm rounded-lg px-2 py-1 shadow-sm flex items-center gap-1">
@@ -283,13 +285,17 @@ const SearchPage = () => {
             </div>
           ) : error ? (
             <div className="text-center py-12 bg-surface rounded-2xl border border-border">
-               <div className="text-4xl mb-4 text-error">⚠️</div>
+               <div className="text-4xl mb-4 text-error">
+                 <span className="material-symbols-outlined text-[40px]">error</span>
+               </div>
                <h3 className="font-headline-sm text-[18px] mb-2">{error}</h3>
                <button onClick={() => handleSearch(q)} className="text-primary font-label-md hover:underline">Try Again</button>
             </div>
           ) : results.length === 0 ? (
             <div className="text-center py-16 bg-surface rounded-2xl border border-border shadow-sm">
-              <div className="text-5xl mb-4">💈</div>
+              <div className="text-5xl mb-4 text-primary">
+                <span className="material-symbols-outlined text-[48px]">storefront</span>
+              </div>
               <h3 className="font-headline-sm text-[20px] text-on-surface mb-1">No salons found</h3>
               <p className="font-body-sm text-[14px] text-muted-text mb-4">Sorry, we couldn't find salons offering "{q}".</p>
               <div className="flex gap-3 justify-center">
@@ -313,7 +319,9 @@ const SearchPage = () => {
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-4xl opacity-30">✂️</div>
+                      <div className="w-full h-full flex items-center justify-center text-primary/30">
+                        <span className="material-symbols-outlined text-[36px]">content_cut</span>
+                      </div>
                     )}
                     {salon.ratings?.average > 0 && (
                       <div className="absolute top-3 right-3 bg-surface/90 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">

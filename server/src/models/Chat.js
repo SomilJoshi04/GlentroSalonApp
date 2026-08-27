@@ -71,6 +71,10 @@ const chatSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Salon',
     },
+    booking: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Booking',
+    },
     messages: [messageSchema],
     lastMessage: {
       content: String,

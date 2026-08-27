@@ -33,7 +33,9 @@ const LoginPage = () => {
               <img src={getImageUrl(settings.appLogo)} alt="App Logo" className="w-16 h-16 rounded-2xl object-contain" />
             </div>
           ) : (
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl shadow-lg mb-4"><span className="text-3xl">⚡</span></div>
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl shadow-lg mb-4">
+              <span className="material-symbols-outlined text-white text-[32px]">bolt</span>
+            </div>
           )}
           <h1 className="text-2xl font-bold text-text-primary">{settings?.appName || 'Admin Panel'}</h1>
           <p className="text-text-secondary text-sm mt-1">Management Portal</p>

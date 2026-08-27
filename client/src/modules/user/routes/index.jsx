@@ -25,6 +25,7 @@ const ProfilePage = lazy(() => import('../pages/profile/ProfilePage'));
 const FavoritesPage = lazy(() => import('../pages/profile/FavoritesPage'));
 const SupportPage = lazy(() => import('../pages/profile/SupportPage'));
 const BookingIssuesPage = lazy(() => import('../pages/profile/BookingIssuesPage'));
+const CallHistoryPage = lazy(() => import('../pages/profile/CallHistoryPage'));
 import OffersPage from '../pages/home/OffersPage';
 
 const SuspenseWrapper = ({ children }) => (
@@ -60,6 +61,7 @@ export default function UserRoutes() {
         <Route path="/notifications" element={<SuspenseWrapper><NotificationsPage /></SuspenseWrapper>} />
         <Route path="/profile" element={<SuspenseWrapper><ProfilePage /></SuspenseWrapper>} />
         <Route path="/favorites" element={<SuspenseWrapper><FavoritesPage /></SuspenseWrapper>} />
+        <Route path="/call-history" element={<SuspenseWrapper><CallHistoryPage /></SuspenseWrapper>} />
       </Route>
 
       {/* Guest/Public Legal Pages */}

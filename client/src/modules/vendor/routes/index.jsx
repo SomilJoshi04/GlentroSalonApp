@@ -27,6 +27,7 @@ const ReviewsPage = lazy(() => import('../pages/ReviewsPage'));
 const NotificationsPage = lazy(() => import('../pages/NotificationsPage'));
 const VendorFinancialPage = lazy(() => import('../pages/VendorFinancialPage'));
 const VendorSubscriptionPage = lazy(() => import('../pages/VendorSubscriptionPage'));
+const CallHistoryPage = lazy(() => import('../pages/CallHistoryPage'));
 
 const SuspenseWrapper = ({ children }) => (
   <Suspense fallback={<Loader text="Loading..." />}>
@@ -55,6 +56,8 @@ export default function VendorRoutes() {
           <Route path="chats" element={<SuspenseWrapper><ChatListPage /></SuspenseWrapper>} />
           <Route path="chat/:chatId" element={<SuspenseWrapper><ChatPage /></SuspenseWrapper>} />
           <Route path="packages" element={<SuspenseWrapper><PackageManagePage /></SuspenseWrapper>} />
+          
+          <Route path="call-history" element={<SuspenseWrapper><CallHistoryPage /></SuspenseWrapper>} />
 
           <Route path="profile" element={<SuspenseWrapper><ProfilePage /></SuspenseWrapper>} />
           <Route path="reviews" element={<SuspenseWrapper><ReviewsPage /></SuspenseWrapper>} />

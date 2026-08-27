@@ -6,13 +6,27 @@ import AdminPageHeader from '../components/layout/AdminPageHeader';
 import DataTable from '../components/DataTable';
 const CommissionsPage = () => {
   const [commissions, setCommissions] = useState([]);
-  const [platformFee, setPlatformFee] = useState({ percentage: 0 });
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [feeForm, setFeeForm] = useState('');
   const [adminCommForm, setAdminCommForm] = useState('');
   const [commForm, setCommForm] = useState({ vendor: '', percentage: '' });
   const [saving, setSaving] = useState(false);
+
+  // Call Policy state
+  const [callPolicy, setCallPolicy] = useState({
+    callEnabled: true,
+    callWindowMinutes: 60,
+  });
+
+  // Cancellation Policy state
+  const [cancelPolicy, setCancelPolicy] = useState({
+    cancellationChargeEnabled: true,
+    freeCancellationWindowMinutes: 60,
+    cancellationChargeType: 'PERCENTAGE',
+    cancellationFeePercentage: 25,
+    cancellationFixedAmount: 0,
+  });
 
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -52,9 +66,22 @@ const CommissionsPage = () => {
       }
 
       if (p.data.data) { 
-        setPlatformFee(p.data.data); 
-        setFeeForm(p.data.data.feePercentage !== undefined ? p.data.data.feePercentage : p.data.data.percentage); 
-        setAdminCommForm(p.data.data.adminCommissionPercentage || 0);
+        const fee = p.data.data;
+        setFeeForm(fee.feePercentage !== undefined ? fee.feePercentage : fee.percentage); 
+        setAdminCommForm(fee.adminCommissionPercentage || 0);
+        // Load call policy
+        setCallPolicy({
+          callEnabled: fee.callEnabled !== undefined ? fee.callEnabled : true,
+          callWindowMinutes: fee.callWindowMinutes || 60,
+        });
+        // Load cancellation policy
+        setCancelPolicy({
+          cancellationChargeEnabled: fee.cancellationChargeEnabled !== undefined ? fee.cancellationChargeEnabled : true,
+          freeCancellationWindowMinutes: fee.freeCancellationWindowMinutes || 60,
+          cancellationChargeType: fee.cancellationChargeType || 'PERCENTAGE',
+          cancellationFeePercentage: fee.cancellationFeePercentage || 25,
+          cancellationFixedAmount: fee.cancellationFixedAmount || 0,
+        });
       }
       
       const vendorData = v.data?.data;
@@ -70,11 +97,23 @@ const CommissionsPage = () => {
     e.preventDefault(); 
     setSaving(true);
     try { 
-      await updatePlatformFee({ feePercentage: Number(feeForm), adminCommissionPercentage: Number(adminCommForm) }); 
+      await updatePlatformFee({
+        feePercentage: Number(feeForm),
+        adminCommissionPercentage: Number(adminCommForm),
+        // Call policy
+        callEnabled: callPolicy.callEnabled,
+        callWindowMinutes: Number(callPolicy.callWindowMinutes),
+        // Cancellation policy
+        cancellationChargeEnabled: cancelPolicy.cancellationChargeEnabled,
+        freeCancellationWindowMinutes: Number(cancelPolicy.freeCancellationWindowMinutes),
+        cancellationChargeType: cancelPolicy.cancellationChargeType,
+        cancellationFeePercentage: Number(cancelPolicy.cancellationFeePercentage),
+        cancellationFixedAmount: Number(cancelPolicy.cancellationFixedAmount),
+      }); 
       load(pagination.currentPage); 
       alert('Updated successfully'); 
     } catch (e) { 
-      alert('Failed'); 
+      alert('Failed to save settings'); 
     } 
     setSaving(false);
   };
@@ -199,7 +238,147 @@ const CommissionsPage = () => {
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-text font-bold">%</span>
               </div>
             </div>
-            
+
+            {/* ── Call Policy ──────────────────────────────────────────────── */}
+            <div className="pt-4 border-t border-border">
+              <h4 className="font-semibold text-on-surface mb-4 flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-primary">call</span>
+                In-App Call Policy
+              </h4>
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-on-surface text-sm">Enable In-App Calling</p>
+                    <p className="text-xs text-muted-text mt-0.5">Allow Users and Vendors to call each other</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCallPolicy(p => ({ ...p, callEnabled: !p.callEnabled }))}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${
+                      callPolicy.callEnabled ? 'bg-primary' : 'bg-border'
+                    }`}
+                  >
+                    <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                      callPolicy.callEnabled ? 'left-7' : 'left-1'
+                    }`} />
+                  </button>
+                </div>
+
+                {callPolicy.callEnabled && (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-on-surface text-sm">Call Window (minutes before appointment)</p>
+                      <p className="text-xs text-muted-text mt-0.5">Call is disabled this many minutes before appointment. 0 = no restriction.</p>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        value={callPolicy.callWindowMinutes}
+                        onChange={e => setCallPolicy(p => ({ ...p, callWindowMinutes: e.target.value }))}
+                        className="w-24 pl-3 pr-10 py-2 rounded-xl bg-surface-elevated border border-border text-on-surface text-center font-bold focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+                      />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-text text-xs font-semibold">min</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ── Cancellation Policy ─────────────────────────────────────── */}
+            <div className="pt-4 border-t border-border">
+              <h4 className="font-semibold text-on-surface mb-4 flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-error">cancel</span>
+                Cancellation Policy
+              </h4>
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-on-surface text-sm">Enable Cancellation Charge</p>
+                    <p className="text-xs text-muted-text mt-0.5">Charge users for late cancellations</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCancelPolicy(p => ({ ...p, cancellationChargeEnabled: !p.cancellationChargeEnabled }))}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${
+                      cancelPolicy.cancellationChargeEnabled ? 'bg-primary' : 'bg-border'
+                    }`}
+                  >
+                    <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                      cancelPolicy.cancellationChargeEnabled ? 'left-7' : 'left-1'
+                    }`} />
+                  </button>
+                </div>
+
+                {cancelPolicy.cancellationChargeEnabled && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-on-surface text-sm">Free Cancellation Window (minutes)</p>
+                        <p className="text-xs text-muted-text mt-0.5">Cancel before this many minutes = no charge. 0 = always charged.</p>
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          value={cancelPolicy.freeCancellationWindowMinutes}
+                          onChange={e => setCancelPolicy(p => ({ ...p, freeCancellationWindowMinutes: e.target.value }))}
+                          className="w-24 pl-3 pr-10 py-2 rounded-xl bg-surface-elevated border border-border text-on-surface text-center font-bold focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+                        />
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-text text-xs font-semibold">min</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-on-surface text-sm">Charge Type</p>
+                        <p className="text-xs text-muted-text mt-0.5">How to calculate the cancellation charge</p>
+                      </div>
+                      <select
+                        value={cancelPolicy.cancellationChargeType}
+                        onChange={e => setCancelPolicy(p => ({ ...p, cancellationChargeType: e.target.value }))}
+                        className="px-3 py-2 rounded-xl bg-surface-elevated border border-border text-on-surface text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+                      >
+                        <option value="PERCENTAGE">Percentage of booking amount</option>
+                        <option value="FIXED">Fixed Amount (₹)</option>
+                      </select>
+                    </div>
+
+                    {cancelPolicy.cancellationChargeType === 'PERCENTAGE' ? (
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium text-on-surface text-sm">Cancellation Fee (%)</p>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={cancelPolicy.cancellationFeePercentage}
+                            onChange={e => setCancelPolicy(p => ({ ...p, cancellationFeePercentage: e.target.value }))}
+                            className="w-24 pl-3 pr-8 py-2 rounded-xl bg-surface-elevated border border-border text-on-surface text-center font-bold focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-text font-bold">%</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium text-on-surface text-sm">Fixed Cancellation Amount (₹)</p>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-text font-bold">₹</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={cancelPolicy.cancellationFixedAmount}
+                            onChange={e => setCancelPolicy(p => ({ ...p, cancellationFixedAmount: e.target.value }))}
+                            className="w-28 pl-7 pr-3 py-2 rounded-xl bg-surface-elevated border border-border text-on-surface font-bold focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+
             <div className="flex justify-end pt-2 border-t border-border">
               <button 
                 type="submit" 

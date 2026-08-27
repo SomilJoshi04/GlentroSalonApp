@@ -57,6 +57,7 @@ const initializeSocket = (httpServer) => {
     // Join personal room based on role
     const roomPrefix = socket.userRole;
     socket.join(`${roomPrefix}:${socket.userId}`);
+    console.log(`[SOCKET JOIN] ${socket.userId} joined room ${roomPrefix}:${socket.userId}`);
 
     // Admin joins admin room
     if (socket.userRole === 'admin') {

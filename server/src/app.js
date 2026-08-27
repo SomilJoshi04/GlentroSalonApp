@@ -35,6 +35,7 @@ const accountRecoveryRoutes = require('./routes/accountRecoveryRoutes');
 const faqRoutes = require('./routes/faqRoutes');
 const bookingIssueRoutes = require('./routes/bookingIssueRoutes');
 const resourceRoutes = require('./routes/resourceRoutes');
+const callRoutes = require('./routes/callRoutes');
 const app = express();
 
 // Security middleware
@@ -117,6 +118,7 @@ app.use('/api/account-recovery', accountRecoveryRoutes);
 app.use('/api/faqs', faqRoutes);
 app.use('/api/booking-issues', bookingIssueRoutes);
 app.use('/api/vendor', resourceRoutes);
+app.use('/api/call', callRoutes);
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'Salon Booking API is running', timestamp: new Date().toISOString() });

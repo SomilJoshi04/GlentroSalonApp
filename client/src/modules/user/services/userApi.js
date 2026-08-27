@@ -81,3 +81,6 @@ export const getUnreadCount = () => api.get('/notifications/unread-count');
 // Account Settings
 export const deleteUserAccount = (data) => api.delete('/users/account', { data });
 export const requestAccountRecovery = (data) => api.post('/account-recovery/request', data);
+
+// Calls
+export const getCallHistory = () => api.get('/call/history');

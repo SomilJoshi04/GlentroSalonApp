@@ -8,6 +8,8 @@ import { Skeleton, SkeletonText } from '../../../../components/common/Skeleton';
 import Modal from '../../../../components/common/Modal';
 import PageHeader from '../../../../components/common/PageHeader';
 import { formatPaise } from '../../../../utils/money';
+import { useCall } from '../../../../context/CallContext';
+import { checkCallAvailability } from '../../../../services/callService';
 
 const statusColors = {
   PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -50,8 +52,26 @@ const BookingDetailPage = () => {
   const [review, setReview] = useState(null);
   const [reviewForm, setReviewForm] = useState({ rating: 0, comment: '' });
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [callAvailability, setCallAvailability] = useState({ canCall: false });
+
+  // Calling feature
+  const {
+    startCall, clearError, callError
+  } = useCall();
 
   useEffect(() => { loadBooking(); }, [id]);
+
+  // Poll call availability every 60 seconds for CONFIRMED bookings
+  useEffect(() => {
+    if (booking?.status !== 'CONFIRMED') return;
+    const check = async () => {
+      const avail = await checkCallAvailability(booking._id);
+      setCallAvailability(avail);
+    };
+    check();
+    const interval = setInterval(check, 60000);
+    return () => clearInterval(interval);
+  }, [booking?._id, booking?.status]);
 
   const loadBooking = async () => {
     try {
@@ -153,7 +173,8 @@ const BookingDetailPage = () => {
         recipientId: booking.salon.vendor,
         recipientRole: 'vendor',
         chatType: 'user-vendor',
-        salonId: booking.salon._id
+        salonId: booking.salon._id,
+        bookingId: booking._id
       });
       if (res.data.success && res.data.data._id) {
         navigate(`/chat/${res.data.data._id}`);
@@ -205,8 +226,12 @@ const BookingDetailPage = () => {
       {/* Salon Info */}
       <div className="bg-white rounded-2xl p-5 border border-gray-100">
         <h3 className="font-semibold">{booking.salon?.name}</h3>
-        <p className="text-sm text-text-secondary mt-1">📍 {booking.salon?.address}</p>
-        <p className="text-sm text-text-secondary">📞 {booking.salon?.phone}</p>
+        <p className="text-sm text-text-secondary mt-1 flex items-center gap-1">
+          <span className="material-symbols-outlined text-[16px]">location_on</span> {booking.salon?.address}
+        </p>
+        <p className="text-sm text-text-secondary flex items-center gap-1 mt-0.5">
+          <span className="material-symbols-outlined text-[16px]">call</span> {booking.salon?.phone}
+        </p>
       </div>
 
       {/* Date & Time */}
@@ -231,7 +256,12 @@ const BookingDetailPage = () => {
             <div>
               <p className="text-sm font-medium">{bs.service?.name}</p>
               <p className="text-xs text-text-muted">
-                {bs.staff?.name && `👤 ${bs.staff.name} • `}{bs.startTime}-{bs.endTime} • {bs.duration} min
+                {bs.staff?.name && (
+                  <span className="flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">person</span> {bs.staff.name} • 
+                  </span>
+                )}
+                {bs.startTime}-{bs.endTime} • {bs.duration} min
               </p>
             </div>
             <span className="font-medium text-sm">{formatPaise(bs.pricePaise, bs.price)}</span>
@@ -280,7 +310,12 @@ const BookingDetailPage = () => {
           <div className="mt-3 pt-3 border-t border-primary-200">
             <p className="text-xs font-semibold text-blue-700">
               {booking.paymentStatus === 'REFUNDED'
-                ? `✓ Refund of ${formatPaise(booking.finalAmountPaise - (booking.cancellationFeePaise || 0), booking.finalAmount - (booking.cancellationFee || 0))} has been processed to your original payment method.`
+                ? (
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[16px] text-green-600">check_circle</span>
+                      Refund of {formatPaise(booking.finalAmountPaise - (booking.cancellationFeePaise || 0), booking.finalAmount - (booking.cancellationFee || 0))} has been processed to your original payment method.
+                    </span>
+                  )
                 : `⏳ Refund of ${formatPaise(booking.finalAmountPaise - (booking.cancellationFeePaise || 0), booking.finalAmount - (booking.cancellationFee || 0))} is being processed (typically 5–7 business days).`}
             </p>
           </div>
@@ -340,8 +375,42 @@ const BookingDetailPage = () => {
           <Button onClick={handlePayment} className="flex-1 bg-gradient-to-r from-primary-600 to-primary-500 text-white">Pay {formatPaise(booking.finalAmountPaise, booking.finalAmount)}</Button>
         )}
         {canCancel && <Button variant="danger" onClick={() => setCancelModal(true)} className="flex-1">Cancel Booking</Button>}
-        <Button variant="secondary" onClick={handleChat} className="flex-1">Chat</Button>
+        {booking.status === 'CONFIRMED' && (
+          <Button variant="secondary" onClick={handleChat} className="flex-1">Chat</Button>
+        )}
+        {booking.status === 'CONFIRMED' && callAvailability.canCall && (
+          <Button
+            variant="primary"
+            onClick={() => startCall(booking._id, booking.salon?.vendor, 'vendor', booking.salon?.name, null)}
+            className="flex-1 flex items-center gap-1.5 justify-center"
+          >
+            <span className="material-symbols-outlined text-[18px]">call</span>
+            Call
+          </Button>
+        )}
       </div>
+
+      {/* Call not available info */}
+      {booking.status === 'CONFIRMED' && !callAvailability.canCall && callAvailability.reason && callAvailability.reason !== 'APPOINTMENT_PASSED' && (
+        <p className="text-xs text-center text-text-muted mt-1 flex items-center justify-center gap-1">
+          {callAvailability.reason === 'CALL_DISABLED_BY_ADMIN'
+            ? (
+                <>
+                  <span className="material-symbols-outlined text-[14px] text-red-500">phonelink_erase</span>
+                  Calling is currently disabled.
+                </>
+              )
+            : null}
+        </p>
+      )}
+
+      {/* Call Error Toast */}
+      {callError && (
+        <div className="fixed bottom-24 left-4 right-4 z-50 bg-red-600 text-white text-sm px-4 py-3 rounded-xl shadow-lg flex items-center justify-between">
+          <span>{callError}</span>
+          <button onClick={clearError} className="ml-3 font-bold">✕</button>
+        </div>
+      )}
 
       {/* Cancel Modal */}
       <Modal isOpen={cancelModal} onClose={() => setCancelModal(false)} title="Cancel Booking">

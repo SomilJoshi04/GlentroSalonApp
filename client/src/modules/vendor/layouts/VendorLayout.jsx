@@ -28,6 +28,7 @@ const VendorLayout = () => {
     { to: '/vendor/packages', label: 'Offers & Packages', icon: 'redeem' },
     { to: '/vendor/financials', label: 'Financials', icon: 'account_balance_wallet' },
     { to: '/vendor/subscription', label: 'Subscription', icon: 'workspace_premium' },
+    { to: '/vendor/call-history', label: 'Call Logs', icon: 'phone_in_talk' },
     { to: '/vendor/reviews', label: 'Reviews', icon: 'star_rate' },
     { to: '/vendor/notifications', label: 'Notifications', icon: 'notifications', count: unreadCount },
     { to: '/vendor/profile', label: 'Profile', icon: 'person' },

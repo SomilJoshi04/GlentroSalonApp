@@ -75,19 +75,47 @@ const getPublicPlatformFee = async (req, res, next) => {
     if (!fee) {
       fee = await PlatformFee.create({ feePercentage: 5, cancellationFeePercentage: 25, adminCommissionPercentage: 10 });
     }
-    // Only expose public fields
-    res.json({ success: true, data: { feePercentage: fee.feePercentage } });
+    // Only expose public-safe fields (no internal financials)
+    res.json({
+      success: true,
+      data: {
+        feePercentage: fee.feePercentage,
+        callEnabled: fee.callEnabled,
+        callWindowMinutes: fee.callWindowMinutes,
+        cancellationChargeEnabled: fee.cancellationChargeEnabled,
+        freeCancellationWindowMinutes: fee.freeCancellationWindowMinutes,
+        cancellationChargeType: fee.cancellationChargeType,
+        cancellationFixedAmount: fee.cancellationFixedAmount,
+        cancellationFeePercentage: fee.cancellationFeePercentage,
+      }
+    });
   } catch (error) { next(error); }
 };
 
 const updatePlatformFee = async (req, res, next) => {
   try {
-    const { feePercentage, cancellationFeePercentage, adminCommissionPercentage } = req.body;
+    const {
+      feePercentage, cancellationFeePercentage, adminCommissionPercentage,
+      // New call policy fields
+      callEnabled, callWindowMinutes,
+      // New cancellation policy fields
+      cancellationChargeEnabled, freeCancellationWindowMinutes,
+      cancellationChargeType, cancellationFixedAmount,
+    } = req.body;
+
     let fee = await PlatformFee.findOne({ isActive: true });
     if (fee) {
       if (feePercentage !== undefined) fee.feePercentage = feePercentage;
       if (cancellationFeePercentage !== undefined) fee.cancellationFeePercentage = cancellationFeePercentage;
       if (adminCommissionPercentage !== undefined) fee.adminCommissionPercentage = adminCommissionPercentage;
+      // Call policy
+      if (callEnabled !== undefined) fee.callEnabled = callEnabled;
+      if (callWindowMinutes !== undefined) fee.callWindowMinutes = callWindowMinutes;
+      // Cancellation policy
+      if (cancellationChargeEnabled !== undefined) fee.cancellationChargeEnabled = cancellationChargeEnabled;
+      if (freeCancellationWindowMinutes !== undefined) fee.freeCancellationWindowMinutes = freeCancellationWindowMinutes;
+      if (cancellationChargeType !== undefined) fee.cancellationChargeType = cancellationChargeType;
+      if (cancellationFixedAmount !== undefined) fee.cancellationFixedAmount = cancellationFixedAmount;
       fee.updatedBy = req.user.id;
       await fee.save();
     } else {
@@ -95,6 +123,12 @@ const updatePlatformFee = async (req, res, next) => {
         feePercentage: feePercentage || 5,
         cancellationFeePercentage: cancellationFeePercentage || 25,
         adminCommissionPercentage: adminCommissionPercentage || 10,
+        callEnabled: callEnabled !== undefined ? callEnabled : true,
+        callWindowMinutes: callWindowMinutes || 60,
+        cancellationChargeEnabled: cancellationChargeEnabled !== undefined ? cancellationChargeEnabled : true,
+        freeCancellationWindowMinutes: freeCancellationWindowMinutes || 60,
+        cancellationChargeType: cancellationChargeType || 'PERCENTAGE',
+        cancellationFixedAmount: cancellationFixedAmount || 0,
         updatedBy: req.user.id,
       });
     }

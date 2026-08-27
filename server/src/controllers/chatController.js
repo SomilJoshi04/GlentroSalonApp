@@ -2,7 +2,7 @@ const chatService = require('../services/chatService');
 
 const initiateChat = async (req, res, next) => {
   try {
-    let { recipientId, recipientRole, chatType, salonId } = req.body;
+    let { recipientId, recipientRole, chatType, salonId, bookingId } = req.body;
     
     if (chatType === 'user-admin' && recipientRole === 'admin' && !recipientId) {
       const admin = await require('../models/User').findOne({ role: 'admin' });
@@ -14,7 +14,7 @@ const initiateChat = async (req, res, next) => {
 
     const participant1 = { userId: req.user.id, role: req.user.role };
     const participant2 = { userId: recipientId, role: recipientRole };
-    const chat = await chatService.getOrCreateChat(participant1, participant2, chatType, salonId);
+    const chat = await chatService.getOrCreateChat(participant1, participant2, chatType, salonId, bookingId);
     res.json({ success: true, data: chat });
   } catch (error) { next(error); }
 };

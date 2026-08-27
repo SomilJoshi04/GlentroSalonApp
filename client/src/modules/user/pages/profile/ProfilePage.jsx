@@ -186,6 +186,12 @@ const ProfilePage = () => {
                   onClick={() => navigate('/bookings', { state: { fromProfile: true } })}
                 />
                 <ListItem
+                  icon="phone_in_talk"
+                  label="Call History"
+                  description="View your past and missed calls"
+                  onClick={() => navigate('/call-history', { state: { fromProfile: true } })}
+                />
+                <ListItem
                   icon="favorite"
                   label="My Favourites"
                   description="View salons you have liked and saved"
@@ -220,7 +226,11 @@ const ProfilePage = () => {
                 <ListItem
                   icon="location_on"
                   label="Location"
-                  description={selectedLocation?.city ? `📍 ${selectedLocation.city}` : 'Select your city'}
+                  description={selectedLocation?.city ? (
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">location_on</span> {selectedLocation.city}
+                    </span>
+                  ) : 'Select your city'}
                   onClick={() => setIsLocationModalOpen(true)}
                 />
               </div>
