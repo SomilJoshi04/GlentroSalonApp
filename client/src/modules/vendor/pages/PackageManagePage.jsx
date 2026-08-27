@@ -9,6 +9,8 @@ import VendorListToolbar from '../../../components/vendor/layout/VendorListToolb
 import VendorTableContainer from '../../../components/vendor/layout/VendorTableContainer';
 import VendorPagination from '../../../components/vendor/layout/VendorPagination';
 import { formatPaise, getRupeesFromPaise } from '../../../utils/money';
+import { toast } from 'react-hot-toast';
+import { useConfirm } from '../../../context/ConfirmContext';
 
 const PackageManagePage = () => {
   const { selectedSalon, loadingBranches, salons } = useBranch();
@@ -17,6 +19,7 @@ const PackageManagePage = () => {
   const [saving, setSaving] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [pagination, setPagination] = useState({ page: 1, limit: 12, total: 0, totalPages: 1 });
+  const { confirm } = useConfirm();
 
   // Filters
   const [filters, setFilters] = useState({ search: '', status: '' });
@@ -64,11 +67,11 @@ const PackageManagePage = () => {
     const file = e.target.files[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file (PNG, JPG, JPEG, WEBP).');
+      toast.error('Please upload an image file (PNG, JPG, JPEG, WEBP).');
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      alert('Image file size must be less than 2MB.');
+      toast.error('Image file size must be less than 2MB.');
       return;
     }
     setImageFile(file);
@@ -90,13 +93,13 @@ const PackageManagePage = () => {
 
     if (!editingPackage || isNewValidFromDate) {
       if (validFromDate < today) {
-        alert('Valid From date cannot be earlier than today.');
+        toast.error('Valid From date cannot be earlier than today.');
         return;
       }
     }
 
     if (form.validTo && new Date(form.validTo) < validFromDate) {
-      alert('Valid To date cannot be earlier than Valid From date.');
+      toast.error('Valid To date cannot be earlier than Valid From date.');
       return;
     }
 
@@ -131,26 +134,29 @@ const PackageManagePage = () => {
         validFrom: '', validTo: '', usageLimit: 0, perUserLimit: 0, terms: ''
       });
       loadPackages(); 
+      toast.success('Offer saved successfully');
     } catch (e) { 
-      alert(e.response?.data?.message || 'Failed to save offer/package'); 
+      toast.error(e.response?.data?.message || 'Failed to save offer/package'); 
     }
     setSaving(false);
   };
 
   const handleDelete = async (id) => { 
-    if (!confirm('Are you sure you want to delete this offer/package?')) return; 
+    if (!(await confirm('Are you sure you want to delete this offer/package?'))) return; 
     try { 
       await deletePackage(id); 
       loadPackages(); 
-    } catch (e) { alert('Failed to delete'); } 
+      toast.success('Offer deleted');
+    } catch (e) { toast.error('Failed to delete'); } 
   };
 
   const handleToggleStatus = async (id) => {
     try {
       await togglePackageStatus(id);
       loadPackages();
+      toast.success('Status updated');
     } catch (e) {
-      alert('Failed to update status');
+      toast.error('Failed to update status');
     }
   };
 

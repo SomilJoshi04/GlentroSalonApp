@@ -5,6 +5,8 @@ import { goBack } from '../../../utils/navigation';
 import api from '../../../services/api/axiosInstance';
 import { useCall } from '../../../context/CallContext';
 import { checkCallAvailability } from '../../../services/callService';
+import { toast } from 'react-hot-toast';
+import { useConfirm } from '../../../context/ConfirmContext';
 
 const BookingDetailPage = () => {
   const { id } = useParams();
@@ -16,6 +18,7 @@ const BookingDetailPage = () => {
   const [error, setError] = useState(null);
   const [callAvailability, setCallAvailability] = useState({ canCall: false });
   const { startCall, callError, clearError } = useCall();
+  const { confirm } = useConfirm();
 
   useEffect(() => {
     if (booking?.status === 'CONFIRMED') {
@@ -43,16 +46,18 @@ const BookingDetailPage = () => {
       else if (action === 'reject') await rejectBooking(id, { reason: 'Rejected' });
       else if (action === 'complete') await completeBooking(id);
       load();
-    } catch (e) { alert(e.response?.data?.message || 'Failed'); }
+      toast.success(`Booking ${action}ed successfully`);
+    } catch (e) { toast.error(e.response?.data?.message || 'Failed'); }
   };
 
   const handleRecordCash = async () => {
-    if (!window.confirm('Confirm recording cash payment of ₹' + booking.finalAmount + ' received from customer?')) return;
+    if (!(await confirm('Confirm recording cash payment of ₹' + booking.finalAmount + ' received from customer?'))) return;
     try {
       await api.post('/payments/cash', { bookingId: id });
       load();
+      toast.success('Cash payment recorded successfully');
     } catch (e) {
-      alert(e.response?.data?.message || 'Failed to record cash payment');
+      toast.error(e.response?.data?.message || 'Failed to record cash payment');
     }
   };
 
@@ -92,7 +97,7 @@ const BookingDetailPage = () => {
   const handleChat = async () => {
     try {
       if (!booking?.user?._id) {
-        alert('Customer information not found');
+        toast.error('Customer information not found');
         return;
       }
       const { initiateChat } = await import('../services/vendorApi');
@@ -106,18 +111,18 @@ const BookingDetailPage = () => {
         navigate(`/vendor/chat/${res.data.data._id}`);
       }
     } catch (e) {
-      alert(e.response?.data?.message || 'Failed to initiate chat');
+      toast.error(e.response?.data?.message || 'Failed to initiate chat');
     }
   };
 
   const handleNativeCall = () => {
     if (!booking?.user?.phone) {
-      alert('Phone number is unavailable for this customer.');
+      toast.error('Phone number is unavailable for this customer.');
       return;
     }
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     if (!isMobile) {
-      alert('Calling is available from a mobile device. Phone Number: ' + booking.user.phone);
+      toast.error('Calling is available from a mobile device. Phone Number: ' + booking.user.phone);
       return;
     }
     window.location.href = `tel:${booking.user.phone}`;

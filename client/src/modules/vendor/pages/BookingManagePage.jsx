@@ -1,6 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import { getVendorRecentBookings, getSalonBookings, acceptBooking, rejectBooking, completeBooking } from '../services/vendorApi';
 import { useBranch } from '../../../context/BranchContext';
 import Pagination from '../../../components/common/Pagination';
@@ -92,7 +92,8 @@ const BookingManagePage = () => {
       else if (action === 'reject') await rejectBooking(id, { reason: 'Rejected by vendor' });
       else if (action === 'complete') await completeBooking(id);
       loadBookings(pagination.currentPage);
-    } catch (e) { alert(e.response?.data?.message || 'Failed'); }
+      toast.success(`Booking ${action}ed successfully`);
+    } catch (e) { toast.error(e.response?.data?.message || 'Failed'); }
   };
 
   if (loadingBranches) {

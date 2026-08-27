@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { checkSubscription, getSubscriptionPlans, startFreeTrial, createSubscriptionOrder, verifySubscriptionPayment } from '../services/vendorApi';
 import { useAuth } from '../../../context/AuthContext';
+import { toast } from 'react-hot-toast';
 
 // Use standard Razorpay checkout
 const loadRazorpay = () => {
@@ -48,10 +49,10 @@ const VendorSubscriptionPage = () => {
     setActionLoading(true);
     try {
       await startFreeTrial();
-      alert('Free trial started successfully!');
+      toast.success('Free trial started successfully!');
       loadData();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to start trial.');
+      toast.error(err.response?.data?.message || 'Failed to start trial.');
     }
     setActionLoading(false);
   };
@@ -61,7 +62,7 @@ const VendorSubscriptionPage = () => {
     try {
       const isLoaded = await loadRazorpay();
       if (!isLoaded) {
-        alert('Razorpay SDK failed to load. Check your connection.');
+        toast.error('Razorpay SDK failed to load. Check your connection.');
         setActionLoading(false);
         return;
       }
@@ -84,10 +85,10 @@ const VendorSubscriptionPage = () => {
               razorpaySignature: response.razorpay_signature,
               planId: plan._id
             });
-            alert('Subscription purchased successfully!');
+            toast.success('Subscription purchased successfully!');
             loadData();
           } catch (verificationError) {
-            alert('Payment verification failed. If money was deducted, it will be refunded automatically.');
+            toast.error('Payment verification failed. If money was deducted, it will be refunded automatically.');
           }
         },
         prefill: {
@@ -102,12 +103,12 @@ const VendorSubscriptionPage = () => {
 
       const rzp = new window.Razorpay(options);
       rzp.on('payment.failed', function (response) {
-        alert('Payment failed: ' + response.error.description);
+        toast.error('Payment failed: ' + response.error.description);
       });
       rzp.open();
 
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to initiate payment.');
+      toast.error(err.response?.data?.message || 'Failed to initiate payment.');
     }
     setActionLoading(false);
   };

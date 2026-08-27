@@ -9,6 +9,8 @@ import VendorListToolbar from '../../../components/vendor/layout/VendorListToolb
 import VendorTableContainer from '../../../components/vendor/layout/VendorTableContainer';
 import VendorPagination from '../../../components/vendor/layout/VendorPagination';
 import { formatPaise, getRupeesFromPaise } from '../../../utils/money';
+import { toast } from 'react-hot-toast';
+import { useConfirm } from '../../../context/ConfirmContext';
 
 const ServiceManagePage = () => {
   const { selectedSalon, loadingBranches } = useBranch();
@@ -17,7 +19,8 @@ const ServiceManagePage = () => {
   const [subcategories, setSubcategories] = useState([]);
   const [saving, setSaving] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
-  const [pagination, setPagination] = useState({ page: 1, limit: 12, total: 0, totalPages: 1 });
+  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
+  const { confirm } = useConfirm();
 
   // Filters
   const [filters, setFilters] = useState({ search: '', category: '', isActive: 'all' });
@@ -70,7 +73,7 @@ const ServiceManagePage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault(); 
     if (!selectedSalon) {
-      alert("Please select a specific branch to create or edit a service.");
+      toast.error("Please select a specific branch to create or edit a service.");
       return;
     }
     setSaving(true);
@@ -92,15 +95,20 @@ const ServiceManagePage = () => {
       setEditingService(null);
       setForm({ name: '', category: '', subcategory: '', gender: 'unisex', price: '', duration: '', description: '', requiresStaff: true, requiresResource: false, resourceType: '' });
       loadServices(); 
+      toast.success('Service saved successfully');
     } catch (e) { 
-      alert(e.response?.data?.message || 'Failed to save service'); 
+      toast.error(e.response?.data?.message || 'Failed to save service'); 
     }
     setSaving(false);
   };
 
   const handleDelete = async (id) => { 
-    if (confirm('Are you sure you want to delete this service?')) { 
-      try { await deleteService(id); loadServices(); } catch (e) { alert('Failed to delete'); } 
+    if (await confirm('Are you sure you want to delete this service?')) { 
+      try { 
+        await deleteService(id); 
+        loadServices(); 
+        toast.success('Service deleted');
+      } catch (e) { toast.error('Failed to delete'); } 
     } 
   };
 
@@ -108,14 +116,15 @@ const ServiceManagePage = () => {
     try {
       await toggleServiceStatus(id);
       loadServices();
+      toast.success('Status updated');
     } catch (e) {
-      alert('Failed to update status');
+      toast.error('Failed to update status');
     }
   };
 
   const openEditForm = (s) => {
     if (!selectedSalon) {
-      alert("Please select a specific branch to edit this service.");
+      toast.error("Please select a specific branch to edit this service.");
       return;
     }
     setEditingService(s);
@@ -155,7 +164,7 @@ const ServiceManagePage = () => {
         actions={
           <button onClick={() => {
             if (!selectedSalon) {
-              alert("Please select a specific branch to create a service.");
+              toast.error("Please select a specific branch to create a service.");
               return;
             }
             setEditingService(null);

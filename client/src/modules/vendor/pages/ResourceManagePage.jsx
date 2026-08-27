@@ -5,9 +5,12 @@ import VendorPageHeader from '../../../components/vendor/layout/VendorPageHeader
 import Modal from '../../../components/common/Modal';
 import api from '../../../services/api/axiosInstance';
 import { getImageUrl } from '../../../utils/imageUtils';
+import { toast } from 'react-hot-toast';
+import { useConfirm } from '../../../context/ConfirmContext';
 
 const ResourceManagePage = () => {
   const { selectedSalon, loadingBranches } = useBranch();
+  const { confirm } = useConfirm();
   const [resources, setResources] = useState([]);
   const [jacuzziEnabled, setJacuzziEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -41,9 +44,10 @@ const ResourceManagePage = () => {
     try {
       await api.put(`/salons/${selectedSalon._id}/jacuzzi-toggle`, { jacuzziEnabled: enabled });
       setJacuzziEnabled(enabled);
+      toast.success(enabled ? 'Jacuzzi Enabled' : 'Jacuzzi Disabled');
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || 'Failed to toggle Jacuzzi setting');
+      toast.error(err.response?.data?.message || 'Failed to toggle Jacuzzi setting');
     }
   };
 
@@ -73,19 +77,21 @@ const ResourceManagePage = () => {
       setForm({ name: '', type: 'JACUZZI', status: 'ACTIVE' });
       setImageFile(null);
       loadResources();
+      toast.success('Resource saved successfully');
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to save resource');
+      toast.error(err.response?.data?.message || 'Failed to save resource');
     }
     setSaving(false);
   };
 
   const handleDelete = async (id) => {
-    if (confirm('Are you sure you want to deactivate this resource?')) {
+    if (await confirm('Are you sure you want to deactivate this resource?')) {
       try {
         await api.delete(`/vendor/resources/${id}`);
         loadResources();
+        toast.success('Resource deactivated');
       } catch (e) {
-        alert('Failed to deactivate resource');
+        toast.error('Failed to deactivate resource');
       }
     }
   };

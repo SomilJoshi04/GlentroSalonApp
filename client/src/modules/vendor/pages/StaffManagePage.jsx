@@ -8,11 +8,14 @@ import VendorPageHeader from '../../../components/vendor/layout/VendorPageHeader
 import VendorListToolbar from '../../../components/vendor/layout/VendorListToolbar';
 import VendorTableContainer from '../../../components/vendor/layout/VendorTableContainer';
 import VendorPagination from '../../../components/vendor/layout/VendorPagination';
+import { toast } from 'react-hot-toast';
+import { useConfirm } from '../../../context/ConfirmContext';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 const StaffManagePage = () => {
   const { selectedSalon, loadingBranches } = useBranch();
+  const { confirm } = useConfirm();
   const [staff, setStaff] = useState([]);
   const [saving, setSaving] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
@@ -60,7 +63,7 @@ const StaffManagePage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault(); 
     if (!selectedSalon) {
-      alert("Please select a specific branch to add or edit staff.");
+      toast.error("Please select a specific branch to add or edit staff.");
       return;
     }
     setSaving(true);
@@ -81,19 +84,21 @@ const StaffManagePage = () => {
       setEditingStaff(null);
       setForm({ name: '', phone: '', specializations: '' }); 
       loadStaff();
+      toast.success('Staff saved successfully');
     } catch (e) { 
-      alert(e.response?.data?.message || 'Failed to save staff'); 
+      toast.error(e.response?.data?.message || 'Failed to save staff'); 
     }
     setSaving(false);
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this staff member?')) return;
+    if (!(await confirm('Are you sure you want to delete this staff member?'))) return;
     try { 
       await deleteStaff(id); 
       loadStaff(); 
+      toast.success('Staff deleted');
     } catch (e) { 
-      alert('Failed to delete'); 
+      toast.error('Failed to delete'); 
     }
   };
 
@@ -101,8 +106,9 @@ const StaffManagePage = () => {
     try {
       await toggleStaffStatus(id);
       loadStaff();
+      toast.success('Status updated');
     } catch (e) {
-      alert('Failed to update status');
+      toast.error('Failed to update status');
     }
   };
 
@@ -129,8 +135,9 @@ const StaffManagePage = () => {
       await updateSchedule(selectedStaffForAvailability._id, { workingSchedule: availabilityForm });
       setShowAvailability(false);
       loadStaff();
+      toast.success('Availability updated');
     } catch (e) {
-      alert('Failed to update availability');
+      toast.error('Failed to update availability');
     }
     setSaving(false);
   };

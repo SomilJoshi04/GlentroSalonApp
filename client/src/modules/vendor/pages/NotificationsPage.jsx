@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { getNotifications, markNotificationRead, markAllNotificationsRead, clearAllNotifications } from '../services/vendorApi';
 import { useNotifications } from '../../../context/NotificationContext';
 import { formatDistanceToNow } from 'date-fns';
-import { useAuth } from '../../../context/AuthContext';
-import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import { useConfirm } from '../../../context/ConfirmContext';
 import VendorPageLayout from '../../../components/vendor/layout/VendorPageLayout';
 import VendorPageHeader from '../../../components/vendor/layout/VendorPageHeader';
 import VendorTableContainer from '../../../components/vendor/layout/VendorTableContainer';
@@ -17,7 +18,8 @@ const NotificationsPage = () => {
   const [total, setTotal] = useState(0);
   
   const { unreadCount, decrementCount, resetCount } = useNotifications();
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { confirm } = useConfirm();
 
   useEffect(() => {
     fetchNotifications(page);
@@ -64,7 +66,7 @@ const NotificationsPage = () => {
 
   const handleClearAll = async () => {
     if (notifications.length === 0) return;
-    if (window.confirm('Are you sure you want to clear all notifications?')) {
+    if (await confirm('Are you sure you want to clear all notifications?')) {
       try {
         await clearAllNotifications();
         setNotifications([]);

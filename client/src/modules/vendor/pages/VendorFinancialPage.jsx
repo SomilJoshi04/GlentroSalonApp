@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'react-hot-toast';
 import { useAuth } from '../../../context/AuthContext';
 import { useBranch } from '../../../context/BranchContext';
 import api from '../../../services/api/axiosInstance';
@@ -235,11 +236,16 @@ const VendorFinancialPage = () => {
     setProofLoading((p) => ({ ...p, [withdrawalId]: true }));
     try {
       const res = await api.get(`/payments/withdrawal/${withdrawalId}/proof`, { responseType: 'blob' });
-      const url = URL.createObjectURL(res.data);
-      window.open(url, '_blank');
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `proof_${withdrawalId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
       setTimeout(() => URL.revokeObjectURL(url), 30000);
     } catch (e) {
-      alert('Proof not available or access denied');
+      toast.error('Proof not available or access denied');
     }
     setProofLoading((p) => ({ ...p, [withdrawalId]: false }));
   };
@@ -267,16 +273,16 @@ const VendorFinancialPage = () => {
               razorpay_signature: response.razorpay_signature,
             });
             if (verifyRes.data?.success) {
-              alert('Cash Settlement Successful!');
+              toast.success('Cash Settlement Successful!');
               loadCashStatus();
               loadLedger(1);
               window.location.reload(); 
             } else {
-              alert('Payment verification failed.');
+              toast.error('Payment verification failed.');
             }
           } catch (err) {
             console.error('Verify err', err);
-            alert('Failed to verify payment. Please contact support.');
+            toast.error('Failed to verify payment. Please contact support.');
           }
         },
         prefill: {
@@ -289,12 +295,12 @@ const VendorFinancialPage = () => {
 
       const rzp = new window.Razorpay(options);
       rzp.on('payment.failed', function (response) {
-        alert(`Payment Failed: ${response.error.description}`);
+        toast.error(`Payment Failed: ${response.error.description}`);
       });
       rzp.open();
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.message || 'Failed to initiate cash settlement');
+      toast.error(error.response?.data?.message || 'Failed to initiate cash settlement');
     } finally {
       setSettlingCash(false);
     }
