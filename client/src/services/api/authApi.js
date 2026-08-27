@@ -6,3 +6,8 @@ export const getProfile = (token) => api.get('/auth/profile', token ? { headers:
 export const updateProfile = (data) => api.put('/users/profile', data);
 export const updateLocation = (data) => api.put('/users/location', data);
 export const updateFcmToken = (data) => api.put('/users/fcm-token', data);
+
+// Password Reset
+export const forgotPasswordAPI = (data) => api.post('/auth/forgot-password', data);
+export const verifyOTPAPI = (data) => api.post('/auth/verify-otp', data);
+export const resetPasswordAPI = (data) => api.post('/auth/reset-password', data);

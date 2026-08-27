@@ -3,12 +3,19 @@ const { registerUser, loginUser, registerVendor, loginVendor, loginAdmin, getPro
 const { protect } = require('../middleware/authMiddleware');
 const { validate } = require('../middleware/validationMiddleware');
 const { registerUserValidation, registerVendorValidation, loginValidation } = require('../utils/validators');
+const { authLimiter, passwordResetLimiter, otpLimiter } = require('../middleware/rateLimiter');
+const { forgotPassword, verifyOTP, resetPassword } = require('../controllers/passwordController');
 
-router.post('/register/user', registerUserValidation, validate, registerUser);
-router.post('/login/user', loginValidation, validate, loginUser);
-router.post('/register/vendor', registerVendorValidation, validate, registerVendor);
-router.post('/login/vendor', loginValidation, validate, loginVendor);
-router.post('/login/admin', loginValidation, validate, loginAdmin);
+router.post('/register/user', authLimiter, registerUserValidation, validate, registerUser);
+router.post('/login/user', authLimiter, loginValidation, validate, loginUser);
+router.post('/register/vendor', authLimiter, registerVendorValidation, validate, registerVendor);
+router.post('/login/vendor', authLimiter, loginValidation, validate, loginVendor);
+router.post('/login/admin', authLimiter, loginValidation, validate, loginAdmin);
 router.get('/profile', protect, getProfile);
+
+// Password Reset Routes
+router.post('/forgot-password', passwordResetLimiter, forgotPassword);
+router.post('/verify-otp', otpLimiter, verifyOTP);
+router.post('/reset-password', passwordResetLimiter, resetPassword);
 
 module.exports = router;

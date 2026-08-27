@@ -18,4 +18,19 @@ module.exports = {
   GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY || '',
   MAX_FILE_SIZE: parseInt(process.env.MAX_FILE_SIZE) || 5242880,
   UPLOAD_PATH: process.env.UPLOAD_PATH || 'uploads',
+  
+  // Forgot Password
+  PASSWORD_RESET_OTP_EXPIRY_MINUTES: parseInt(process.env.PASSWORD_RESET_OTP_EXPIRY_MINUTES) || 10,
+  PASSWORD_RESET_MAX_OTP_ATTEMPTS: parseInt(process.env.PASSWORD_RESET_MAX_OTP_ATTEMPTS) || 5,
+  PASSWORD_RESET_RESEND_COOLDOWN_SECONDS: parseInt(process.env.PASSWORD_RESET_RESEND_COOLDOWN_SECONDS) || 60,
+  PASSWORD_RESET_MAX_RESENDS: parseInt(process.env.PASSWORD_RESET_MAX_RESENDS) || 3,
+  PASSWORD_RESET_TOKEN_EXPIRY_MINUTES: parseInt(process.env.PASSWORD_RESET_TOKEN_EXPIRY_MINUTES) || 10,
+  
+  // SMTP
+  EMAIL_PROVIDER_MODE: process.env.EMAIL_PROVIDER_MODE || 'development',
+  SMTP_HOST: process.env.SMTP_HOST || '',
+  SMTP_PORT: process.env.SMTP_PORT || '',
+  SMTP_USER: process.env.SMTP_USER || '',
+  SMTP_PASSWORD: process.env.SMTP_PASSWORD || '',
+  SMTP_FROM: process.env.SMTP_FROM || '',
 };

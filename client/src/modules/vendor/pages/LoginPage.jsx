@@ -52,7 +52,12 @@ const LoginPage = () => {
                 className="w-full px-4 py-3 bg-surface text-on-surface rounded-xl border border-border text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary shadow-sm" placeholder="vendor@email.com" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-muted-text mb-1.5">Password</label>
+              <div className="flex justify-between items-center mb-1.5 px-1">
+                <label className="text-[13px] font-medium text-muted-text">Password</label>
+                <Link to="/forgot-password" state={{ returnUrl: '/vendor/login' }} className="text-[13px] font-medium text-primary hover:text-primary-dark transition-colors">
+                  Forgot Password?
+                </Link>
+              </div>
               <div className="relative">
                 <input type={showPassword ? "text" : "password"} value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required
                   className="w-full px-4 py-3 pr-12 bg-surface text-on-surface rounded-xl border border-border text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary shadow-sm" placeholder="Enter password" />

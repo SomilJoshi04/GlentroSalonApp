@@ -9,6 +9,7 @@ import ErrorBoundary from '../../../components/common/ErrorBoundary';
 
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
+import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
 import HomePage from '../pages/home/HomePage';
 import SearchPage from '../pages/home/SearchPage';
 
@@ -40,6 +41,7 @@ export default function UserRoutes() {
     <Routes>
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
       {/* Public Routes under MainLayout */}
       <Route element={<MainLayout />}>

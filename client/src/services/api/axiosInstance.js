@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toast } from 'react-hot-toast';
 
 const rawApiUrl = import.meta.env.VITE_API_URL || '';
 const API_BASE_URL = rawApiUrl 
@@ -51,6 +52,9 @@ axiosInstance.interceptors.response.use(
           window.dispatchEvent(new CustomEvent('auth:unauthorized', { detail: { role: 'user' } }));
         }
       }
+    } else if (error.response?.status === 429) {
+      // Handle rate limit exceeded
+      toast.error('Too many requests. Please wait a moment and try again.');
     }
     return Promise.reject(error);
   }

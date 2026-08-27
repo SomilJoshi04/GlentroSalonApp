@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
+const { adminLimiter } = require('../middleware/rateLimiter');
 const {
   getDashboardStats,
   getRecentBookings,
@@ -30,6 +31,7 @@ const {
 // Apply protection and authorization to all admin routes
 router.use(protect);
 router.use(authorize('admin'));
+router.use(adminLimiter);
 
 // Dashboard & Analytics
 router.get('/dashboard', getDashboardStats);

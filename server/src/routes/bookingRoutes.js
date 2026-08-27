@@ -5,9 +5,10 @@ const { authorize } = require('../middleware/roleMiddleware');
 const { requireActiveVendor } = require('../middleware/vendorSuspensionMiddleware');
 
 const { requireSubscriptionAccess } = require('../middleware/subscriptionMiddleware');
+const { bookingLimiter } = require('../middleware/rateLimiter');
 
 router.post('/calculate-total', protect, calculateTotal);
-router.post('/', protect, authorize('user'), createBooking);
+router.post('/', protect, authorize('user'), bookingLimiter, createBooking);
 router.get('/my', protect, authorize('user'), getMyBookings);
 router.get('/salon/:salonId', protect, authorize('vendor'), getSalonBookings);
 router.get('/vendor/recent', protect, authorize('vendor'), getVendorRecentBookings);

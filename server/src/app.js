@@ -5,6 +5,7 @@ const morgan = require('morgan');
 const path = require('path');
 const { CLIENT_URL, NODE_ENV } = require('./config/env');
 const { errorHandler, notFound } = require('./middleware/errorMiddleware');
+const { globalLimiter } = require('./middleware/rateLimiter');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -37,6 +38,9 @@ const bookingIssueRoutes = require('./routes/bookingIssueRoutes');
 const resourceRoutes = require('./routes/resourceRoutes');
 const callRoutes = require('./routes/callRoutes');
 const app = express();
+
+// Trust proxy for rate limiting behind reverse proxies (like Nginx, Vercel, Render)
+app.set('trust proxy', 1);
 
 // Security middleware
 app.use(helmet({
@@ -88,6 +92,9 @@ const uploadsDir = process.env.UPLOAD_PATH
   ? require('path').resolve(process.env.UPLOAD_PATH)
   : path.join(__dirname, '..', 'uploads');
 app.use('/uploads', express.static(uploadsDir));
+
+// Apply Global Rate Limiter to all API routes
+app.use('/api', globalLimiter);
 
 // API Routes
 app.use('/api/auth', authRoutes);
