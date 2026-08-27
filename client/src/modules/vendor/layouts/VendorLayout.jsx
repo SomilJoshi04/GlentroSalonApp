@@ -5,6 +5,7 @@ import { useSettings } from '../../../context/SettingContext';
 import { useNotifications } from '../../../context/NotificationContext';
 import { getImageUrl } from '../../../utils/imageUtils';
 import BranchSwitcher from '../components/BranchSwitcher';
+import VendorBottomNav from '../components/VendorBottomNav';
 
 const VendorLayout = () => {
   const { vendor: user, logout } = useAuth();
@@ -36,28 +37,28 @@ const VendorLayout = () => {
 
   return (
     <div className="h-screen w-full bg-background flex font-inter overflow-hidden">
-      {/* Sidebar */}
-      <aside className={`absolute md:relative inset-y-0 left-0 z-50 w-[260px] bg-[#1b0639] border-r border-white/10 transform transition-transform duration-300 flex flex-col h-full ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        <div className="flex items-center gap-3 px-6 py-6 border-b border-white/10 shrink-0">
+      {/* Sidebar (Drawer on Mobile) */}
+      <aside className={`fixed lg:relative inset-y-0 left-0 z-50 w-[260px] bg-[#1b0639] border-r border-white/10 transform transition-transform duration-300 ease-in-out flex flex-col h-[100dvh] lg:h-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <div className="flex items-center gap-3 px-6 py-6 border-b border-white/10 shrink-0 mt-[env(safe-area-inset-top)]">
           {settings?.appLogo ? (
             <img src={getImageUrl(settings.appLogo)} alt="App Logo" className="w-10 h-10 rounded-lg object-contain bg-white/5 p-1" />
           ) : (
-            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-primary border border-white/20 shadow-inner">
+            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-primary border border-white/20 shadow-inner shrink-0">
               <span className="material-symbols-outlined text-[24px]">spa</span>
             </div>
           )}
-          <div>
-            <h1 className="font-headline-sm text-[18px] text-white leading-tight font-bold tracking-wide">{settings?.appName || 'Glentro Salon'}</h1>
-            <p className="font-label-sm text-[11px] text-white/70 tracking-wider">Vendor Portal</p>
+          <div className="min-w-0">
+            <h1 className="font-headline-sm text-[18px] text-white leading-tight font-bold tracking-wide truncate">{settings?.appName || 'Glentro Salon'}</h1>
+            <p className="font-label-sm text-[11px] text-white/70 tracking-wider truncate">Vendor Portal</p>
           </div>
         </div>
-        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto hide-scrollbar">
+        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto hide-scrollbar pb-24 lg:pb-6">
           {navItems.map(item => (
             <NavLink key={item.to} to={item.to} end={item.to === '/vendor'} onClick={() => setSidebarOpen(false)}
               className={({ isActive }) => `flex items-center justify-between px-3 py-2.5 rounded-xl text-[14px] font-medium transition-all duration-200 ${isActive ? 'bg-primary text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}>
-              <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
-                {item.label}
+              <div className="flex items-center gap-3 truncate">
+                <span className="material-symbols-outlined text-[20px] shrink-0">{item.icon}</span>
+                <span className="truncate">{item.label}</span>
               </div>
               {item.count > 0 && (
                 <span className="bg-error text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center shrink-0">
@@ -67,7 +68,7 @@ const VendorLayout = () => {
             </NavLink>
           ))}
         </nav>
-        <div className="p-4 border-t border-white/10 mt-auto shrink-0">
+        <div className="p-4 border-t border-white/10 mt-auto shrink-0 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-4">
           <button onClick={() => { logout('vendor'); navigate('/vendor/login'); }}
             className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-[13px] font-medium text-white/80 hover:bg-error hover:text-white transition-colors duration-200">
             <span className="material-symbols-outlined text-[18px]">logout</span>
@@ -76,37 +77,32 @@ const VendorLayout = () => {
         </div>
       </aside>
 
-      {/* Overlay */}
-      {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
+      {/* Overlay for Mobile Drawer */}
+      {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm transition-opacity" onClick={() => setSidebarOpen(false)} />}
 
-      {/* Main */}
+      {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
         {!hideHeader && (
-          <header className="shrink-0 z-30 bg-surface/95 backdrop-blur-md border-b border-border h-[72px] px-4 md:px-6 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 -ml-2 rounded-xl text-muted-text hover:bg-surface-variant flex items-center">
+          <header className="shrink-0 z-30 bg-surface/95 backdrop-blur-md border-b border-border h-[60px] lg:h-[72px] px-3 lg:px-6 flex items-center justify-between pt-[env(safe-area-inset-top)]">
+            <div className="flex items-center gap-2 lg:gap-4 min-w-0 flex-1">
+              <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-xl text-muted-text hover:bg-surface-variant active:bg-surface-variant flex items-center shrink-0">
                 <span className="material-symbols-outlined">menu</span>
               </button>
               
               {/* Branch Switcher Component */}
-              <div className="hidden sm:block">
+              <div className="min-w-0 flex-1 lg:max-w-xs">
                 <BranchSwitcher />
               </div>
             </div>
             
-            <div className="flex items-center gap-4 ml-auto">
-              {/* Mobile Branch Switcher */}
-              <div className="block sm:hidden">
-                <BranchSwitcher />
-              </div>
-              
+            <div className="flex items-center gap-3 lg:gap-4 ml-2 shrink-0">
               <div onClick={() => navigate('/vendor/profile')} className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-semibold text-on-surface leading-tight">{user?.businessName || user?.name}</p>
-                <p className="text-[10px] text-muted-text uppercase tracking-wider font-semibold mt-0.5">{user?.businessName ? 'Vendor' : 'Owner'}</p>
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-semibold text-on-surface leading-tight truncate max-w-[120px]">{user?.businessName || user?.name}</p>
+                  <p className="text-[10px] text-muted-text uppercase tracking-wider font-semibold mt-0.5">{user?.businessName ? 'Vendor' : 'Owner'}</p>
+                </div>
+                <img src={getImageUrl(user?.avatar) || `https://ui-avatars.com/api/?name=${user?.name}&background=7c3aed&color=fff`} alt={user?.name} className="w-8 h-8 lg:w-10 lg:h-10 rounded-full object-cover border-2 border-primary/20 shadow-sm shrink-0" />
               </div>
-              <img src={getImageUrl(user?.avatar) || `https://ui-avatars.com/api/?name=${user?.name}&background=7c3aed&color=fff`} alt={user?.name} className="w-10 h-10 rounded-full object-cover border-2 border-primary/20 shadow-sm" />
-             </div>
             </div>
           </header>
         )}
@@ -116,23 +112,26 @@ const VendorLayout = () => {
           <div className="bg-red-50 border-b border-red-200 px-4 py-3 flex items-center justify-between shrink-0 z-20 shadow-sm">
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-red-600">warning</span>
-              <p className="text-sm font-medium text-red-800">
-                Your account has been suspended because you exceeded the cash holding limit.
+              <p className="text-xs lg:text-sm font-medium text-red-800">
+                Account suspended (cash limit exceeded).
               </p>
             </div>
             <button
               onClick={() => navigate('/vendor/financials')}
-              className="text-sm font-semibold bg-red-600 text-white px-4 py-1.5 rounded-lg shadow-sm hover:bg-red-700 transition-colors"
+              className="text-xs lg:text-sm font-semibold bg-red-600 text-white px-3 py-1.5 rounded-lg shadow-sm hover:bg-red-700 transition-colors whitespace-nowrap shrink-0"
             >
               Settle Now
             </button>
           </div>
         )}
 
-        <main className={`flex-1 overflow-y-auto min-h-0 ${hideHeader ? '' : 'p-4 md:p-6 flex flex-col'}`}>
+        <main className={`flex-1 overflow-y-auto overflow-x-hidden min-h-0 w-full pb-[80px] lg:pb-0 ${hideHeader ? '' : 'p-3 lg:p-6 flex flex-col'}`}>
           <Outlet />
         </main>
       </div>
+
+      {/* Bottom Navigation for Mobile */}
+      {!hideHeader && <VendorBottomNav />}
     </div>
   );
 };

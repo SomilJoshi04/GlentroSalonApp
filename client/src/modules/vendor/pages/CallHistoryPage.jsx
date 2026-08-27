@@ -58,9 +58,9 @@ const CallHistoryPage = () => {
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-on-surface mb-2">Call History</h1>
-      <p className="text-muted-text mb-6">View your recent incoming and outgoing calls.</p>
+    <div className="p-4 md:p-6">
+      <h1 className="text-xl md:text-2xl font-bold text-on-surface mb-2">Call History</h1>
+      <p className="text-sm md:text-base text-muted-text mb-6">View your recent incoming and outgoing calls.</p>
 
       {calls.length === 0 ? (
         <div className="bg-surface rounded-2xl p-12 text-center border border-border shadow-sm">
@@ -70,7 +70,56 @@ const CallHistoryPage = () => {
         </div>
       ) : (
         <div className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+          
+          {/* Mobile View: Cards */}
+          <div className="md:hidden divide-y divide-border">
+            {calls.map((call) => (
+              <div key={call._id} className="p-4 flex flex-col gap-3">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img 
+                      src={call.contactAvatar || `https://ui-avatars.com/api/?name=${call.contactName}&background=random`} 
+                      alt={call.contactName} 
+                      className="w-10 h-10 rounded-full object-cover shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-on-surface truncate">{call.contactName}</p>
+                      <p className="text-xs text-muted-text capitalize truncate">{call.contactRole}</p>
+                    </div>
+                  </div>
+                  <div className="shrink-0">
+                    {getStatusBadge(call.status)}
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center text-sm border-t border-border pt-3">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-1 text-xs text-muted-text">
+                      <span className={`material-symbols-outlined text-[14px] ${call.isOutgoing ? 'text-blue-500' : 'text-emerald-500'}`}>
+                        {call.isOutgoing ? 'call_made' : 'call_received'}
+                      </span>
+                      <span>{call.isOutgoing ? 'Outgoing' : 'Incoming'}</span>
+                      <span className="mx-1">•</span>
+                      <span>{formatDuration(call.durationSeconds)}</span>
+                    </div>
+                    <div className="text-xs text-muted-text">
+                      {format(new Date(call.createdAt), 'MMM dd, yyyy hh:mm a')}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => startCall(call.bookingId, 'audio')}
+                    disabled={!call.bookingId}
+                    className="shrink-0 flex items-center justify-center w-10 h-10 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">call</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop View: Table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-surface-variant/50 border-b border-border">

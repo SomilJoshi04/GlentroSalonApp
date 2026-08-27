@@ -216,7 +216,7 @@ const getAllBookings = async (req, res, next) => {
 // @desc    Get all recent bookings across all vendor's salons (Vendor Dashboard)
 const getVendorRecentBookings = async (req, res, next) => {
   try {
-    const { page = 1, limit = 5, salon } = req.query;
+    const { page = 1, limit = 5, salon, status } = req.query;
     const salons = await Salon.find({ vendor: req.user.id }, '_id');
     const salonIds = salons.map(s => s._id);
 
@@ -229,6 +229,9 @@ const getVendorRecentBookings = async (req, res, next) => {
     }
 
     const query = { salon: { $in: targetSalonIds } };
+    if (status) {
+      query.status = status;
+    }
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const bookings = await Booking.find(query)

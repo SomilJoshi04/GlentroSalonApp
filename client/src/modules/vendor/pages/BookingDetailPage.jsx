@@ -111,35 +111,35 @@ const BookingDetailPage = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-[100dvh] sm:min-h-full bg-surface sm:rounded-2xl sm:border border-border max-w-4xl mx-auto w-full overflow-hidden shadow-sm">
+    <div className="flex flex-col min-h-[100dvh] lg:min-h-full bg-surface lg:rounded-2xl lg:border border-border max-w-4xl mx-auto w-full shadow-sm relative pb-[80px] lg:pb-0">
       {/* Header */}
-      <div className="flex items-center gap-4 p-4 border-b border-border bg-surface sticky top-0 z-10">
-        <button onClick={() => goBack(navigate, '/vendor/bookings')} className="p-2 -ml-2 rounded-xl text-on-surface hover:bg-surface-variant transition-colors flex items-center justify-center">
+      <div className="flex items-center gap-4 p-4 border-b border-border bg-surface sticky top-0 z-20 pt-[calc(1rem+env(safe-area-inset-top))] lg:pt-4">
+        <button onClick={() => goBack(navigate, '/vendor/bookings')} className="p-2 -ml-2 rounded-xl text-on-surface hover:bg-surface-variant transition-colors flex items-center justify-center shrink-0">
           <span className="material-symbols-outlined text-[24px]">arrow_back</span>
         </button>
-        <div>
-          <h2 className="font-semibold text-on-surface text-lg">Booking Details</h2>
-          <p className="text-xs text-muted-text font-medium">#{booking._id.slice(-6).toUpperCase()}</p>
+        <div className="min-w-0">
+          <h2 className="font-semibold text-on-surface text-lg truncate">Booking Details</h2>
+          <p className="text-xs text-muted-text font-medium truncate">#{booking._id.slice(-6).toUpperCase()}</p>
         </div>
       </div>
 
-      <div className="flex-1 p-5 space-y-6 animate-fade-in bg-background-alt/50 pb-10">
+      <div className="flex-1 p-4 lg:p-5 space-y-4 lg:space-y-6 animate-fade-in bg-background-alt/50 pb-[220px] lg:pb-10">
         <div className={`rounded-2xl p-6 text-center border ${statusColors[booking.status]}`}>
           <p className="text-xs font-semibold uppercase tracking-wider opacity-75">Status</p>
           <p className="text-2xl font-bold mt-1">{booking.status}</p>
         </div>
         
-        <div className="bg-surface rounded-2xl p-5 border border-border space-y-4 shadow-sm">
+        <div className="bg-surface rounded-2xl p-4 lg:p-5 border border-border space-y-4 shadow-sm">
           <h3 className="font-semibold text-on-surface text-base border-b border-border pb-2 flex items-center gap-1.5">
             <span className="material-symbols-outlined text-[18px] text-muted-text">person</span>
             Customer Details
           </h3>
           <div className="text-sm space-y-1.5 text-on-surface">
             <p className="font-semibold text-[15px]">{booking.user?.name}</p>
-            <p className="text-muted-text"> {booking.user?.email}</p>
+            <p className="text-muted-text break-all"> {booking.user?.email}</p>
             <p className="text-muted-text"> {booking.user?.phone}</p>
           </div>
-          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border bg-background-alt/30 -mx-5 -mb-5 p-5 rounded-b-2xl">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-border bg-background-alt/30 -mx-4 lg:-mx-5 -mb-4 lg:-mb-5 p-4 lg:p-5 rounded-b-2xl">
             <div>
               <p className="text-xs text-muted-text font-semibold uppercase tracking-wider">Date</p>
               <p className="font-bold text-on-surface text-[15px] mt-1">
@@ -153,7 +153,7 @@ const BookingDetailPage = () => {
           </div>
         </div>
 
-        <div className="bg-surface rounded-2xl p-5 border border-border shadow-sm">
+        <div className="bg-surface rounded-2xl p-4 lg:p-5 border border-border shadow-sm">
           <h3 className="font-semibold text-on-surface text-base border-b border-border pb-2 flex items-center gap-1.5">
             <span className="material-symbols-outlined text-[18px] text-muted-text">content_cut</span>
             Services Catalog
@@ -161,8 +161,8 @@ const BookingDetailPage = () => {
           <div className="divide-y divide-border">
             {services.map(s => (
               <div key={s._id} className="flex justify-between py-3 text-sm text-on-surface">
-                <span>{s.service?.name} ({s.duration} min)</span>
-                <span className="font-semibold">₹{s.price}</span>
+                <span className="pr-2">{s.service?.name} ({s.duration} min)</span>
+                <span className="font-semibold shrink-0">₹{s.price}</span>
               </div>
             ))}
           </div>
@@ -172,8 +172,8 @@ const BookingDetailPage = () => {
           </div>
         </div>
 
-        <div className="bg-primary/5 rounded-2xl p-5 border border-primary/20 shadow-sm">
-          <div className="flex justify-between items-start mb-4">
+        <div className="bg-primary/5 rounded-2xl p-4 lg:p-5 border border-primary/20 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
             <div className="flex flex-col">
               <h3 className="font-semibold text-on-surface text-base flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-[18px] text-primary">payments</span>
@@ -181,8 +181,8 @@ const BookingDetailPage = () => {
               </h3>
               <span className="text-sm text-muted-text mt-1">Method: {booking.paymentMethod === 'ONLINE' ? 'Online (Razorpay)' : 'Cash / Pay at Salon'}</span>
             </div>
-            <div className="flex flex-col items-end gap-1">
-              <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
+            <div className="flex flex-col items-start sm:items-end gap-1">
+              <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide inline-block ${
                 booking.paymentStatus === 'PAID' ? 'bg-success/20 text-success' :
                 booking.paymentStatus === 'REFUNDED' ? 'bg-blue-100 text-blue-700' :
                 booking.paymentStatus === 'REFUND_PENDING' ? 'bg-orange-100 text-orange-700' :
@@ -233,7 +233,7 @@ const BookingDetailPage = () => {
           </div>
         </div>
 
-        <div className="bg-surface rounded-2xl p-5 border border-border shadow-sm">
+        <div className="bg-surface rounded-2xl p-4 lg:p-5 border border-border shadow-sm">
           <h3 className="font-semibold text-on-surface text-base border-b border-border pb-2 flex items-center gap-1.5">
             <span className="material-symbols-outlined text-[18px] text-muted-text">account_balance_wallet</span>
             Financial Settlement
@@ -252,7 +252,10 @@ const BookingDetailPage = () => {
             </div>
           </div>
         </div>
+      </div>
 
+      {/* Sticky Bottom Actions on Mobile */}
+      <div className="fixed lg:static bottom-0 left-0 right-0 bg-surface lg:bg-transparent border-t border-border lg:border-t-0 p-4 lg:p-5 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] lg:shadow-none z-30 lg:z-auto pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-0">
         {booking.status === 'CONFIRMED' && (
           <div className="flex flex-col gap-3">
             {callError && (
@@ -262,49 +265,51 @@ const BookingDetailPage = () => {
               </div>
             )}
             <div className="flex gap-3">
-            <button onClick={handleChat} className="flex-1 py-3 bg-surface border border-border text-on-surface rounded-xl font-semibold hover:bg-surface-variant transition-colors shadow-sm flex items-center justify-center gap-1.5">
-              <span className="material-symbols-outlined text-[18px]">chat</span>
-              Chat with Customer
-            </button>
-            {callAvailability.canCall && (
-              <button
-                onClick={() => startCall(booking._id, booking.user?._id, 'user', booking.user?.name, null)}
-                className="flex-1 py-3 bg-emerald-500/10 border border-emerald-400/30 text-emerald-600 rounded-xl font-semibold hover:bg-emerald-500 hover:text-white transition-all shadow-sm flex items-center justify-center gap-1.5"
-              >
-                <span className="material-symbols-outlined text-[18px]">call</span>
-                Call Customer
+              <button onClick={handleChat} className="flex-1 py-3 bg-surface border border-border text-on-surface rounded-xl font-semibold hover:bg-surface-variant transition-colors shadow-sm flex items-center justify-center gap-1.5 min-h-[48px]">
+                <span className="material-symbols-outlined text-[18px]">chat</span>
+                Chat
               </button>
-            )}
-          </div>
+              {callAvailability.canCall && (
+                <button
+                  onClick={() => startCall(booking._id, booking.user?._id, 'user', booking.user?.name, null)}
+                  className="flex-1 py-3 bg-emerald-500/10 border border-emerald-400/30 text-emerald-600 rounded-xl font-semibold hover:bg-emerald-500 hover:text-white transition-all shadow-sm flex items-center justify-center gap-1.5 min-h-[48px]"
+                >
+                  <span className="material-symbols-outlined text-[18px]">call</span>
+                  Call
+                </button>
+              )}
+            </div>
           </div>
         )}
 
         {booking.status === 'PENDING' && (
           <div className="flex gap-3">
-            <button onClick={() => handleAction('accept')} className="flex-1 py-3 bg-success/10 border border-success/30 text-success rounded-xl font-semibold hover:bg-success hover:text-white transition-all shadow-sm flex items-center justify-center gap-1.5">
+            <button onClick={() => handleAction('accept')} className="flex-1 py-3 bg-success/10 border border-success/30 text-success rounded-xl font-semibold hover:bg-success hover:text-white transition-all shadow-sm flex items-center justify-center gap-1.5 min-h-[48px]">
               <span className="material-symbols-outlined text-[18px]">check_circle</span>
               Accept
             </button>
-            <button onClick={() => handleAction('reject')} className="flex-1 py-3 bg-error/10 border border-error/30 text-error rounded-xl font-semibold hover:bg-error hover:text-white transition-all shadow-sm flex items-center justify-center gap-1.5">
+            <button onClick={() => handleAction('reject')} className="flex-1 py-3 bg-error/10 border border-error/30 text-error rounded-xl font-semibold hover:bg-error hover:text-white transition-all shadow-sm flex items-center justify-center gap-1.5 min-h-[48px]">
               <span className="material-symbols-outlined text-[18px]">cancel</span>
               Reject
             </button>
           </div>
         )}
-        {/* Record Cash Payment — only for CASH bookings that are PENDING payment */}
+        
+        {/* Record Cash Payment */}
         {booking.paymentMethod === 'CASH' &&
           booking.paymentStatus === 'PENDING' &&
           ['CONFIRMED', 'COMPLETED'].includes(booking.status) && (
             <button
               onClick={handleRecordCash}
-              className="w-full py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 active:scale-[0.98] transition-all shadow-sm flex items-center justify-center gap-2"
+              className={`w-full py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 active:scale-[0.98] transition-all shadow-sm flex items-center justify-center gap-2 min-h-[48px] ${booking.status === 'CONFIRMED' ? 'mt-3' : ''}`}
             >
               <span className="material-symbols-outlined text-[20px]">payments</span>
-              Record Cash Payment (₹{booking.finalAmount})
+              Record Cash (₹{booking.finalAmount})
             </button>
           )}
+
         {booking.status === 'CONFIRMED' && (
-          <button onClick={() => handleAction('complete')} className="w-full py-3 bg-primary/10 border border-primary/30 text-primary rounded-xl font-semibold hover:bg-primary hover:text-white transition-all shadow-sm flex items-center justify-center gap-1.5">
+          <button onClick={() => handleAction('complete')} className="w-full mt-3 py-3 bg-primary/10 border border-primary/30 text-primary rounded-xl font-semibold hover:bg-primary hover:text-white transition-all shadow-sm flex items-center justify-center gap-1.5 min-h-[48px]">
             <span className="material-symbols-outlined text-[18px]">task_alt</span>
             Mark Complete
           </button>

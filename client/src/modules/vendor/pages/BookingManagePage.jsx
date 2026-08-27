@@ -119,10 +119,10 @@ const BookingManagePage = () => {
 
       <VendorListToolbar>
         {/* BranchSwitcher is now in the global header, so we just show filters here */}
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto sm:justify-end md:ml-auto">
+        <div className="flex overflow-x-auto hide-scrollbar gap-2 w-full md:w-auto md:ml-auto pb-1 md:pb-0">
           {['', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'].map(f => (
             <button key={f} onClick={() => handleFilterChange(f)}
-              className={`px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all border ${filter === f ? 'bg-soft-primary text-primary border-primary/20 font-bold shadow-sm' : 'bg-surface border-border text-muted-text hover:bg-surface-variant hover:text-on-surface'}`}>
+              className={`px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all border shrink-0 ${filter === f ? 'bg-soft-primary text-primary border-primary/20 font-bold shadow-sm' : 'bg-surface border-border text-muted-text hover:bg-surface-variant hover:text-on-surface'}`}>
               {f || 'All'}
             </button>
           ))}
@@ -145,38 +145,45 @@ const BookingManagePage = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {bookings.map(b => (
-              <div key={b._id} className="bg-surface rounded-2xl p-5 border border-border hover:shadow-md transition-all flex flex-col shadow-sm">
-                <div className="flex items-start justify-between gap-3">
+              <div key={b._id} className="bg-surface rounded-2xl p-4 md:p-5 border border-border hover:shadow-md transition-all flex flex-col shadow-sm min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                   <div className="cursor-pointer flex-1 min-w-0" onClick={() => navigate(`/vendor/booking/${b._id}`)}>
-                    <h4 className="font-semibold text-on-surface text-[16px] hover:text-primary transition-colors truncate">{b.user?.name || 'Customer'}</h4>
-                    <div className="flex items-center text-sm text-muted-text mt-2 truncate">
-                      <span className="material-symbols-outlined text-[16px] text-muted-text/75 mr-1.5">calendar_today</span>
-                      <span>{new Date(b.bookingDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} • {b.startTime}-{b.endTime}</span>
+                    <div className="flex items-center justify-between sm:justify-start gap-2">
+                      <h4 className="font-semibold text-on-surface text-[16px] hover:text-primary transition-colors truncate">{b.user?.name || 'Customer'}</h4>
+                      <span className={`sm:hidden px-2 py-0.5 rounded-full text-[10px] font-semibold border ${statusColors[b.status]} shrink-0`}>{b.status}</span>
+                    </div>
+                    <div className="flex items-center text-sm text-muted-text mt-1 md:mt-2 truncate">
+                      <span className="material-symbols-outlined text-[16px] text-muted-text/75 mr-1.5 shrink-0">calendar_today</span>
+                      <span className="truncate">{new Date(b.bookingDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} • {b.startTime}-{b.endTime}</span>
                     </div>
                     <p className="text-xs text-muted-text mt-1.5 truncate flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px]">mail</span> {b.user?.email}
+                      <span className="material-symbols-outlined text-[14px] shrink-0">mail</span> <span className="truncate">{b.user?.email}</span>
                     </p>
                     <p className="text-xs text-muted-text truncate flex items-center gap-1 mt-0.5">
-                      <span className="material-symbols-outlined text-[14px]">call</span> {b.user?.phone}
+                      <span className="material-symbols-outlined text-[14px] shrink-0">call</span> <span className="truncate">{b.user?.phone}</span>
                     </p>
                   </div>
-                  <div className="text-right shrink-0">
+                  <div className="hidden sm:block text-right shrink-0">
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${statusColors[b.status]}`}>{b.status}</span>
                     <div className="mt-2">
                       <p className="text-[11px] text-muted-text uppercase tracking-wider">Net Payout</p>
                       <p className="text-sm font-bold text-success">{b.vendorPayoutPaise !== undefined ? formatPaise(b.vendorPayoutPaise, b.vendorPayout) : formatPaise(b.finalAmountPaise, b.finalAmount)}</p>
                     </div>
                   </div>
+                  <div className="sm:hidden flex items-center justify-between border-t border-border pt-2 mt-1">
+                    <p className="text-[11px] text-muted-text uppercase tracking-wider">Net Payout</p>
+                    <p className="text-sm font-bold text-success">{b.vendorPayoutPaise !== undefined ? formatPaise(b.vendorPayoutPaise, b.vendorPayout) : formatPaise(b.finalAmountPaise, b.finalAmount)}</p>
+                  </div>
                 </div>
                 {b.status === 'PENDING' && (
-                  <div className="flex gap-3 mt-4 pt-4 border-t border-border">
-                    <button onClick={() => handleAction(b._id, 'accept')} className="flex-1 py-2 bg-success/10 border border-success/30 text-success rounded-xl text-sm font-medium hover:bg-success hover:text-white transition-all shadow-sm">Accept</button>
-                    <button onClick={() => handleAction(b._id, 'reject')} className="flex-1 py-2 bg-error/10 border border-error/30 text-error rounded-xl text-sm font-medium hover:bg-error hover:text-white transition-all shadow-sm">Reject</button>
+                  <div className="flex gap-3 mt-3 md:mt-4 pt-3 md:pt-4 border-t border-border">
+                    <button onClick={() => handleAction(b._id, 'accept')} className="flex-1 min-h-[44px] py-2 bg-success/10 border border-success/30 text-success rounded-xl text-sm font-medium hover:bg-success hover:text-white transition-all shadow-sm flex items-center justify-center">Accept</button>
+                    <button onClick={() => handleAction(b._id, 'reject')} className="flex-1 min-h-[44px] py-2 bg-error/10 border border-error/30 text-error rounded-xl text-sm font-medium hover:bg-error hover:text-white transition-all shadow-sm flex items-center justify-center">Reject</button>
                   </div>
                 )}
                 {b.status === 'CONFIRMED' && (
-                  <div className="mt-4 pt-4 border-t border-border">
-                    <button onClick={() => handleAction(b._id, 'complete')} className="w-full py-2 bg-primary/10 border border-primary/30 text-primary rounded-xl text-sm font-medium hover:bg-primary hover:text-white transition-all shadow-sm">Mark Complete</button>
+                  <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-border">
+                    <button onClick={() => handleAction(b._id, 'complete')} className="w-full min-h-[44px] py-2 bg-primary/10 border border-primary/30 text-primary rounded-xl text-sm font-medium hover:bg-primary hover:text-white transition-all shadow-sm flex items-center justify-center">Mark Complete</button>
                   </div>
                 )}
               </div>
