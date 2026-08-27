@@ -81,12 +81,7 @@ export const CallProvider = ({ children }) => {
         tokenData.uid
       );
 
-      // 3. Setup remote user audio subscription
-      callService.on('user-published', async (user, mediaType) => {
-        await callService.subscribeRemoteAudio(user, mediaType);
-      });
-
-      // 4. Notify recipient via socket (socket validates on backend too)
+      // 3. Notify recipient via socket (socket validates on backend too)
       if (socket) {
         socket.emit('call:initiate', {
           bookingId,
@@ -138,10 +133,6 @@ export const CallProvider = ({ children }) => {
         channelName, // use channel from incoming event, not new one
         tokenData.uid
       );
-
-      callService.on('user-published', async (user, mediaType) => {
-        await callService.subscribeRemoteAudio(user, mediaType);
-      });
 
       // Notify caller
       if (socket) {

@@ -5,6 +5,7 @@ import AuthLayout from '../layouts/AuthLayout';
 import MainLayout from '../layouts/MainLayout';
 import LegalPageLayout from '../layouts/LegalPageLayout';
 import ProtectedRoute from '../../../components/common/ProtectedRoute';
+import ErrorBoundary from '../../../components/common/ErrorBoundary';
 
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
@@ -55,7 +56,7 @@ export default function UserRoutes() {
       {/* Protected Routes under MainLayout */}
       <Route element={<ProtectedRoute role="user"><MainLayout /></ProtectedRoute>}>
         <Route path="/bookings" element={<SuspenseWrapper><BookingListPage /></SuspenseWrapper>} />
-        <Route path="/booking/:id" element={<SuspenseWrapper><BookingDetailPage /></SuspenseWrapper>} />
+        <Route path="/booking/:id" element={<ErrorBoundary><SuspenseWrapper><BookingDetailPage /></SuspenseWrapper></ErrorBoundary>} />
         <Route path="/chat" element={<SuspenseWrapper><ChatListPage /></SuspenseWrapper>} />
         <Route path="/chat/:chatId" element={<SuspenseWrapper><ChatPage /></SuspenseWrapper>} />
         <Route path="/notifications" element={<SuspenseWrapper><NotificationsPage /></SuspenseWrapper>} />

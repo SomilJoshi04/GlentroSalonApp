@@ -50,6 +50,14 @@ export const joinChannel = async (appId, token, channelName, uid) => {
 
   client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
 
+  // Subscribe to remote users BEFORE joining so we don't miss already-published tracks
+  client.on('user-published', async (user, mediaType) => {
+    await client.subscribe(user, mediaType);
+    if (mediaType === 'audio') {
+      user.audioTrack.play();
+    }
+  });
+
   await client.join(appId, channelName, token, uid);
   isJoined = true;
 

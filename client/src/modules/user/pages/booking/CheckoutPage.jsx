@@ -393,7 +393,7 @@ const CheckoutPage = () => {
       </main>
 
       {/* Sticky Bottom Action */}
-      <div className="fixed bottom-[72px] md:bottom-0 left-0 w-full bg-surface shadow-[0px_-10px_20px_rgba(109,62,168,0.08)] px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] z-40 border-t border-border/50">
+      <div className="fixed bottom-0 left-0 w-full bg-surface shadow-[0px_-10px_20px_rgba(109,62,168,0.08)] px-4 pt-4 pb-[calc(1rem+53px+env(safe-area-inset-bottom))] md:pb-[calc(1rem+env(safe-area-inset-bottom))] z-40 border-t border-border/50">
         <div className="w-full max-w-md mx-auto">
           <button
             onClick={handleSubmit}
