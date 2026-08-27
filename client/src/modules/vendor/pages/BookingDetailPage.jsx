@@ -110,6 +110,19 @@ const BookingDetailPage = () => {
     }
   };
 
+  const handleNativeCall = () => {
+    if (!booking?.user?.phone) {
+      alert('Phone number is unavailable for this customer.');
+      return;
+    }
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (!isMobile) {
+      alert('Calling is available from a mobile device. Phone Number: ' + booking.user.phone);
+      return;
+    }
+    window.location.href = `tel:${booking.user.phone}`;
+  };
+
   return (
     <div className="flex flex-col min-h-[100dvh] lg:min-h-full bg-surface lg:rounded-2xl lg:border border-border max-w-4xl mx-auto w-full shadow-sm relative pb-[80px] lg:pb-0">
       {/* Header */}
@@ -271,7 +284,7 @@ const BookingDetailPage = () => {
               </button>
               {callAvailability.canCall && (
                 <button
-                  onClick={() => startCall(booking._id, booking.user?._id, 'user', booking.user?.name, null)}
+                  onClick={handleNativeCall}
                   className="flex-1 py-3 bg-emerald-500/10 border border-emerald-400/30 text-emerald-600 rounded-xl font-semibold hover:bg-emerald-500 hover:text-white transition-all shadow-sm flex items-center justify-center gap-1.5 min-h-[48px]"
                 >
                   <span className="material-symbols-outlined text-[18px]">call</span>

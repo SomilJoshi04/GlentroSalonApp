@@ -184,6 +184,19 @@ const BookingDetailPage = () => {
     }
   };
 
+  const handleNativeCall = () => {
+    if (!booking?.salon?.phone) {
+      alert('Phone number is unavailable for this salon.');
+      return;
+    }
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (!isMobile) {
+      alert('Calling is available from a mobile device. Phone Number: ' + booking.salon.phone);
+      return;
+    }
+    window.location.href = `tel:${booking.salon.phone}`;
+  };
+
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
     if (reviewForm.rating < 1 || reviewForm.rating > 5) {
@@ -381,7 +394,7 @@ const BookingDetailPage = () => {
         {booking.status === 'CONFIRMED' && callAvailability.canCall && (
           <Button
             variant="primary"
-            onClick={() => startCall(booking._id, booking.salon?.vendor, 'vendor', booking.salon?.name, null)}
+            onClick={handleNativeCall}
             className="flex-1 flex items-center gap-1.5 justify-center"
           >
             <span className="material-symbols-outlined text-[18px]">call</span>

@@ -66,6 +66,11 @@ export const CallProvider = ({ children }) => {
   // ── INITIATE a call (caller side) ─────────────────────────────────────────
   const startCall = useCallback(async (bookingId, recipientId, recipientRole, calleeName, calleeAvatar) => {
     console.log('startCall called with:', { bookingId, recipientId, recipientRole });
+    /*
+      // TEMPORARILY DISABLED
+      // ORIGINAL AGORA CALLING IMPLEMENTATION
+      // DO NOT DELETE - MAY BE RESTORED LATER
+
     if (callState !== 'idle') return;
     setCallError(null);
 
@@ -114,10 +119,17 @@ export const CallProvider = ({ children }) => {
       setCallError(msg);
       await resetState();
     }
+    */
+    console.log('Agora calling is temporarily disabled. Using native phone dialer.');
   }, [callState, socket, resetState]);
 
   // ── ACCEPT an incoming call (receiver side) ─────────────────────────────
   const acceptCall = useCallback(async () => {
+    /*
+      // TEMPORARILY DISABLED
+      // ORIGINAL AGORA CALLING IMPLEMENTATION
+      // DO NOT DELETE - MAY BE RESTORED LATER
+
     if (!incomingCallData || callState !== 'incoming') return;
 
     try {
@@ -154,10 +166,17 @@ export const CallProvider = ({ children }) => {
       setCallError(msg);
       await resetState();
     }
+    */
+    console.log('Agora calling is temporarily disabled.');
   }, [incomingCallData, callState, socket, clearTimers, startDurationTimer, resetState]);
 
   // ── REJECT an incoming call ───────────────────────────────────────────────
   const rejectCall = useCallback(() => {
+    /*
+      // TEMPORARILY DISABLED
+      // ORIGINAL AGORA CALLING IMPLEMENTATION
+      // DO NOT DELETE - MAY BE RESTORED LATER
+
     if (!incomingCallData) return;
     const { callerId, callerRole, bookingId } = incomingCallData;
     if (socket) {
@@ -165,6 +184,7 @@ export const CallProvider = ({ children }) => {
     }
     clearTimers();
     resetState();
+    */
   }, [incomingCallData, socket, clearTimers, resetState]);
 
   // ── END an active / outgoing call ─────────────────────────────────────────
