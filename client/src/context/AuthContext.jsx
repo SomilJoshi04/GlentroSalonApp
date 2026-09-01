@@ -69,6 +69,8 @@ export const AuthProvider = ({ children }) => {
     if (role === 'user') {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      sessionStorage.removeItem('location_prompt_dismissed');
+      localStorage.removeItem('guest_location');
       setUserToken(null);
       setUser(null);
     } else if (role === 'vendor') {

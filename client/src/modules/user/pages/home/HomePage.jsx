@@ -88,18 +88,16 @@ const HomePage = () => {
   // Trigger permission modal on first load if no location exists
   useEffect(() => {
     const checkLocationPermission = async () => {
-      if (!selectedLocation && !localStorage.getItem('location_prompt_dismissed')) {
+      if (!selectedLocation && !sessionStorage.getItem('location_prompt_dismissed')) {
         if (navigator.permissions && navigator.permissions.query) {
           try {
             const result = await navigator.permissions.query({ name: 'geolocation' });
             if (result.state === 'granted') {
               // Silently fetch location if already granted
               requestCurrentLocation();
-            } else if (result.state === 'prompt') {
-              setIsPermissionModalOpen(true);
             } else {
-              // Denied: Skip modal and rely on user to manually select
-              localStorage.setItem('location_prompt_dismissed', 'true');
+              // For 'prompt' or 'denied', show the modal so user can choose to select manually
+              setIsPermissionModalOpen(true);
             }
           } catch (error) {
             // Fallback for browsers that don't fully support permissions API
@@ -550,11 +548,11 @@ const HomePage = () => {
         isOpen={isPermissionModalOpen}
         onClose={() => {
           setIsPermissionModalOpen(false);
-          localStorage.setItem('location_prompt_dismissed', 'true');
+          sessionStorage.setItem('location_prompt_dismissed', 'true');
         }}
         onSelectManually={() => {
           setIsPermissionModalOpen(false);
-          localStorage.setItem('location_prompt_dismissed', 'true');
+          sessionStorage.setItem('location_prompt_dismissed', 'true');
           setIsLocationModalOpen(true);
         }}
       />
