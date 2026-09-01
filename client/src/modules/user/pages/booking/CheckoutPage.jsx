@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { createBooking, validateCoupon, createPaymentOrder, verifyPayment, previewBookingTotal } from '../../services/userApi';
 import { useAuth } from '../../../../context/AuthContext';
@@ -34,6 +34,12 @@ const CheckoutPage = () => {
   const [success, setSuccess] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('ONLINE');
   const [paymentError, setPaymentError] = useState('');
+  const [toast, setToast] = useState(null); // { message, type: 'info'|'error' }
+
+  const showToast = useCallback((message, type = 'info') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  }, []);
 
   // Preview State (Source of Truth for Frontend)
   const [previewData, setPreviewData] = useState(null);
@@ -46,6 +52,11 @@ const CheckoutPage = () => {
   }, []);
 
   const loadPreview = async (appliedCouponCode = '') => {
+    // If user not logged in, don't make the API call (would get 401)
+    if (!user) {
+      setPreviewLoading(false);
+      return;
+    }
     setPreviewLoading(true);
     setPaymentError('');
     try {
@@ -109,7 +120,8 @@ const CheckoutPage = () => {
 
     if (!user) {
       submittingRef.current = false;
-      navigate('/login', { state: { from: location.pathname } });
+      showToast('Please login to confirm your booking', 'info');
+      setTimeout(() => navigate('/login', { state: { from: location.pathname } }), 1200);
       return;
     }
 
@@ -403,13 +415,25 @@ const CheckoutPage = () => {
         <div className="w-full max-w-md mx-auto">
           <button
             onClick={handleSubmit}
-            disabled={submitting || previewLoading || !previewData}
+            disabled={submitting}
             className="w-full bg-primary text-white font-label-md text-[16px] py-4 rounded-xl shadow-sm hover:bg-primary-dark active:scale-[0.98] transition-all flex justify-center items-center gap-2 disabled:opacity-70"
           >
-            {submitting ? 'Confirming...' : `Confirm Booking - ${previewData ? formatPaise(previewData.finalAmountPaise) : ''}`}
+            {submitting ? 'Confirming...' : user ? `Confirm Booking${previewData ? ` - ${formatPaise(previewData.finalAmountPaise)}` : ''}` : 'Login to Book'}
           </button>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-lg text-white text-sm font-medium transition-all animate-fade-in ${
+          toast.type === 'error' ? 'bg-red-500' : 'bg-[#6D3EA8]'
+        }`}>
+          <span className="material-symbols-outlined text-[20px]">
+            {toast.type === 'error' ? 'error' : 'lock'}
+          </span>
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 };

@@ -70,7 +70,11 @@ const corsOptions = {
       return callback(null, true);
     }
     
-    return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
+    // Do NOT throw an Error here — throwing causes the cors library to send
+    // a 500 response without CORS headers, making browsers report a CORS error
+    // instead of the real problem. Return false so cors sends a clean 403.
+    console.warn(`[CORS] Blocked origin: ${origin} | Allowed: ${allowedOrigins.join(', ')}`);
+    return callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
