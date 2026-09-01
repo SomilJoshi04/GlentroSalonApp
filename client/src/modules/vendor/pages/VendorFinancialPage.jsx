@@ -236,13 +236,12 @@ const VendorFinancialPage = () => {
     setProofLoading((p) => ({ ...p, [withdrawalId]: true }));
     try {
       const res = await api.get(`/payments/withdrawal/${withdrawalId}/proof`, { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `proof_${withdrawalId}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
+      // Use the actual content type returned by the backend, default to jpeg if missing
+      const contentType = res.headers['content-type'] || 'image/jpeg';
+      const blob = new Blob([res.data], { type: contentType });
+      const url = window.URL.createObjectURL(blob);
+      
+      window.open(url, '_blank');
       setTimeout(() => URL.revokeObjectURL(url), 30000);
     } catch (e) {
       toast.error('Proof not available or access denied');
@@ -282,7 +281,8 @@ const VendorFinancialPage = () => {
             }
           } catch (err) {
             console.error('Verify err', err);
-            toast.error('Failed to verify payment. Please contact support.');
+            const errMsg = err.response?.data?.message || 'Failed to verify payment. Please contact support.';
+            toast.error(errMsg);
           }
         },
         prefill: {

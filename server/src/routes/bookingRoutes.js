@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { createBooking, calculateTotal, getMyBookings, getSalonBookings, getBookingById, acceptBooking, rejectBooking, cancelBooking, completeBooking, getAvailability, getAllBookings, getVendorRecentBookings, getVendorStats, getVendorAnalytics } = require('../controllers/bookingController');
+const { createBooking, calculateTotal, getMyBookings, getSalonBookings, getBookingById, acceptBooking, rejectBooking, cancelBooking, completeBooking, markNoShow, requestCompletionOtp, getAvailability, getAllBookings, getVendorRecentBookings, getVendorStats, getVendorAnalytics } = require('../controllers/bookingController');
 const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 const { requireActiveVendor } = require('../middleware/vendorSuspensionMiddleware');
@@ -22,5 +22,7 @@ router.patch('/:id/accept', protect, authorize('vendor'), requireActiveVendor, r
 router.patch('/:id/reject', protect, authorize('vendor'), rejectBooking);
 router.patch('/:id/cancel', protect, authorize('user', 'vendor'), cancelBooking);
 router.patch('/:id/complete', protect, authorize('vendor'), completeBooking);
+router.patch('/:id/no-show', protect, authorize('vendor'), markNoShow);
+router.post('/:id/request-otp', protect, authorize('vendor'), requestCompletionOtp);
 
 module.exports = router;

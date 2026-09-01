@@ -52,7 +52,8 @@ export const getVendorAnalytics = (params) => api.get('/bookings/vendor/analytic
 export const getBookingById = (id) => api.get(`/bookings/${id}`);
 export const acceptBooking = (id) => api.patch(`/bookings/${id}/accept`);
 export const rejectBooking = (id, data) => api.patch(`/bookings/${id}/reject`, data);
-export const completeBooking = (id) => api.patch(`/bookings/${id}/complete`);
+export const requestCompletionOtp = (id) => api.post(`/bookings/${id}/request-otp`);
+export const completeBooking = (id, otp) => api.patch(`/bookings/${id}/complete`, { otp });
 
 // Reviews
 export const getVendorReviews = (params) => api.get('/reviews/vendor', { params });

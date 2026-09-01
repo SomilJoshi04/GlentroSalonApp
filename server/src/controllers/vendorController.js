@@ -54,7 +54,7 @@ const getOwnProfile = async (req, res, next) => {
 // @desc    Update vendor profile (personal + business info)
 const updateProfile = async (req, res, next) => {
   try {
-    const { name, phone, businessName, businessType, businessDescription, businessEmail, businessContact, registeredAddress, city, state, country } = req.body;
+    const { name, phone, email, businessName, businessType, businessDescription, businessEmail, businessContact, registeredAddress, city, state, country } = req.body;
     let newImage = null;
 
     const vendor = await Vendor.findById(req.user.id);
@@ -72,6 +72,7 @@ const updateProfile = async (req, res, next) => {
     // Personal fields
     if (name !== undefined) updateData.name = name;
     if (phone !== undefined) updateData.phone = phone;
+    if (email !== undefined) updateData.email = email;
     if (businessName !== undefined) updateData.businessName = businessName;
     // Business fields
     if (businessType !== undefined) updateData.businessType = businessType;

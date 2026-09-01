@@ -677,6 +677,58 @@ const updateVendorCashLimit = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+// @desc    Clear vendor pending recovery dues, clear excess cash, and un-suspend
+// @route   POST /api/admin/vendor-cash-control/:id/clear-dues
+// @access  Private/Admin
+const clearVendorDues = async (req, res, next) => {
+  try {
+    const vendorId = req.params.id;
+    const VendorWallet = require('../models/VendorWallet');
+    const Vendor = require('../models/Vendor');
+    const { getVendorFinancials, syncVendorCashSuspension } = require('../services/vendorCashService');
+    const VendorLedger = require('../models/VendorLedger');
+    const VendorCashLedger = require('../models/VendorCashLedger');
+    
+    // Clear recoveryOutstanding to 0
+    await VendorWallet.findOneAndUpdate(
+      { vendor: vendorId },
+      { $set: { recoveryOutstanding: 0, lastUpdatedAt: new Date() } },
+      { new: true, upsert: true }
+    );
+    
+    // Re-activate vendor account manually just in case
+    await Vendor.findByIdAndUpdate(vendorId, {
+      accountStatus: 'active'
+    });
+
+    // Check if they have cash held that needs to be settled
+    const financials = await getVendorFinancials(vendorId);
+    if (financials.cashHeldPaise > 0) {
+      // Create a ledger entry to wipe out their held cash (Admin manually settled it)
+      await VendorLedger.create({
+        vendor: vendorId,
+        amount: financials.cashHeldPaise / 100,
+        amountPaise: financials.cashHeldPaise,
+        direction: 'DEBIT',
+        entryType: 'CASH_SETTLEMENT_PAID',
+        description: 'Admin manually cleared cash limits and dues.',
+        metadata: { referenceId: `admin-clear-${Date.now()}` }
+      });
+      
+      // Also update VendorCashLedgers so they don't get double counted later
+      await VendorCashLedger.updateMany(
+        { vendor: vendorId, cashStatus: { $in: ['UNSETTLED', 'PARTIALLY_SETTLED'] } },
+        { $set: { cashStatus: 'SETTLED', remainingUnsettledAmountPaise: 0, remainingVendorNetSharePaise: 0 } }
+      );
+    }
+    
+    // Sync the suspension state to ensure limits are updated
+    await syncVendorCashSuspension(vendorId);
+
+    res.json({ success: true, message: 'Vendor dues and cash limits cleared, account reactivated' });
+  } catch (error) { next(error); }
+};
+
 // ── Account Recovery Requests ──────────────────────────────────────────────────
 // @desc    Get all account recovery requests
 // @route   GET /api/admin/account-recovery
@@ -1105,5 +1157,6 @@ module.exports = {
   getServices,
   getAnalytics,
   getVendorCashControl,
-  updateVendorCashLimit
+  updateVendorCashLimit,
+  clearVendorDues
 };

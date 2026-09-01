@@ -6,6 +6,7 @@ const Vendor = require('../models/Vendor');
 const OTP = require('../models/OTP');
 const { sendEmail } = require('../utils/emailService');
 const env = require('../config/env');
+const { isRedisReady, getRedisClient } = require('../config/redis');
 
 const generateOTP = () => {
   // Generate a random 6-digit number
@@ -21,6 +22,101 @@ const getAccountByEmail = async (email) => {
 
   return null;
 };
+
+// ============================================================
+// Redis OTP helpers — used only when Redis is ready.
+// All data is stored with TTL. Attempts tracked in a separate key.
+// ============================================================
+
+const REDIS_OTP_PREFIX       = 'otp:password-reset:';
+const REDIS_VERIFIED_PREFIX  = 'otp:verified:';
+const REDIS_ATTEMPTS_PREFIX  = 'otp:attempts:';
+
+const redisOtpKey      = (email) => `${REDIS_OTP_PREFIX}${email.toLowerCase()}`;
+const redisVerifiedKey = (email) => `${REDIS_VERIFIED_PREFIX}${email.toLowerCase()}`;
+const redisAttemptsKey = (email) => `${REDIS_ATTEMPTS_PREFIX}${email.toLowerCase()}`;
+
+/**
+ * Store OTP data in Redis with TTL.
+ */
+const storeOTPInRedis = async (email, accountType, otpHash) => {
+  const redis = getRedisClient();
+  const ttl = env.PASSWORD_RESET_OTP_EXPIRY_MINUTES * 60;
+  const payload = JSON.stringify({ otpHash, accountType });
+  await redis.set(redisOtpKey(email), payload, 'EX', ttl);
+  // Reset attempt counter
+  await redis.del(redisAttemptsKey(email));
+};
+
+/**
+ * Get OTP data from Redis. Returns null if not found / expired.
+ */
+const getOTPFromRedis = async (email) => {
+  const redis = getRedisClient();
+  const raw = await redis.get(redisOtpKey(email));
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch (_) {
+    return null;
+  }
+};
+
+/**
+ * Increment attempt counter in Redis. Returns the new count.
+ */
+const incrementRedisAttempts = async (email) => {
+  const redis = getRedisClient();
+  const key = redisAttemptsKey(email);
+  const count = await redis.incr(key);
+  // Give the counter the same TTL as the OTP itself
+  await redis.expire(key, env.PASSWORD_RESET_OTP_EXPIRY_MINUTES * 60);
+  return count;
+};
+
+/**
+ * Delete OTP from Redis after successful verification.
+ */
+const deleteOTPFromRedis = async (email) => {
+  const redis = getRedisClient();
+  await redis.del(redisOtpKey(email));
+  await redis.del(redisAttemptsKey(email));
+};
+
+/**
+ * Store verified state in Redis (short-lived — 15 minutes max).
+ */
+const setVerifiedInRedis = async (email, accountType) => {
+  const redis = getRedisClient();
+  const payload = JSON.stringify({ accountType });
+  await redis.set(redisVerifiedKey(email), payload, 'EX', 900); // 15 minutes
+};
+
+/**
+ * Check verified state in Redis.
+ */
+const getVerifiedFromRedis = async (email) => {
+  const redis = getRedisClient();
+  const raw = await redis.get(redisVerifiedKey(email));
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch (_) {
+    return null;
+  }
+};
+
+/**
+ * Delete verified state from Redis after password reset.
+ */
+const deleteVerifiedFromRedis = async (email) => {
+  const redis = getRedisClient();
+  await redis.del(redisVerifiedKey(email));
+};
+
+// ============================================================
+// Controller functions
+// ============================================================
 
 // @desc    Request forgot password (sends OTP)
 // @route   POST /api/auth/forgot-password
@@ -46,25 +142,22 @@ const forgotPassword = async (req, res, next) => {
 
     const { account, type } = accountData;
 
-    // Invalidate any existing OTPs for this email
-    await OTP.deleteMany({ email });
-
     // Generate secure OTP
-    // Better secure generation
     const otp = crypto.randomInt(100000, 999999).toString();
     const salt = await bcrypt.genSalt(10);
     const otpHash = await bcrypt.hash(otp, salt);
 
-    const expiresAt = new Date(Date.now() + env.PASSWORD_RESET_OTP_EXPIRY_MINUTES * 60000);
+    if (isRedisReady()) {
+      // ── Redis path: store OTP in Redis with TTL ──
+      await storeOTPInRedis(email, type, otpHash);
+    } else {
+      // ── Fallback path: MongoDB OTP model ──
+      await OTP.deleteMany({ email });
+      const expiresAt = new Date(Date.now() + env.PASSWORD_RESET_OTP_EXPIRY_MINUTES * 60000);
+      await OTP.create({ email, accountType: type, otpHash, expiresAt });
+    }
 
-    await OTP.create({
-      email,
-      accountType: type,
-      otpHash,
-      expiresAt
-    });
-
-    // Send email
+    // Send email (same regardless of storage backend)
     const emailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2D0B5A;">Password Reset Request</h2>
@@ -101,36 +194,68 @@ const verifyOTP = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Email and OTP are required' });
     }
 
-    const otpRecord = await OTP.findOne({ email });
+    let otpHash;
+    let accountType;
+    let useRedis = false;
 
-    if (!otpRecord) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+    if (isRedisReady()) {
+      // ── Redis path ──
+      const redisData = await getOTPFromRedis(email);
+      if (!redisData) {
+        return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+      }
+      otpHash = redisData.otpHash;
+      accountType = redisData.accountType;
+      useRedis = true;
+
+      // Check attempts
+      const attemptsKey = redisAttemptsKey(email);
+      const currentAttempts = parseInt(await getRedisClient().get(attemptsKey) || '0', 10);
+      if (currentAttempts >= env.PASSWORD_RESET_MAX_OTP_ATTEMPTS) {
+        await deleteOTPFromRedis(email);
+        return res.status(400).json({ success: false, message: 'Maximum attempts reached. Please request a new code.' });
+      }
+    } else {
+      // ── Fallback: MongoDB ──
+      const otpRecord = await OTP.findOne({ email });
+      if (!otpRecord) {
+        return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+      }
+      if (otpRecord.usedAt || otpRecord.verifiedAt) {
+        return res.status(400).json({ success: false, message: 'This OTP has already been used' });
+      }
+      if (otpRecord.attempts >= env.PASSWORD_RESET_MAX_OTP_ATTEMPTS) {
+        await OTP.deleteOne({ _id: otpRecord._id });
+        return res.status(400).json({ success: false, message: 'Maximum attempts reached. Please request a new code.' });
+      }
+      otpHash = otpRecord.otpHash;
+      accountType = otpRecord.accountType;
     }
 
-    if (otpRecord.usedAt || otpRecord.verifiedAt) {
-      return res.status(400).json({ success: false, message: 'This OTP has already been used' });
-    }
-
-    if (otpRecord.attempts >= env.PASSWORD_RESET_MAX_OTP_ATTEMPTS) {
-      await OTP.deleteOne({ _id: otpRecord._id });
-      return res.status(400).json({ success: false, message: 'Maximum attempts reached. Please request a new code.' });
-    }
-
-    const isMatch = await bcrypt.compare(otp.toString(), otpRecord.otpHash);
+    const isMatch = await bcrypt.compare(otp.toString(), otpHash);
 
     if (!isMatch) {
-      otpRecord.attempts += 1;
-      await otpRecord.save();
+      if (useRedis) {
+        await incrementRedisAttempts(email);
+      } else {
+        const otpRecord = await OTP.findOne({ email });
+        if (otpRecord) { otpRecord.attempts += 1; await otpRecord.save(); }
+      }
       return res.status(400).json({ success: false, message: 'Invalid OTP' });
     }
 
-    // OTP is correct
-    otpRecord.verifiedAt = new Date();
-    await otpRecord.save();
+    // OTP is correct — mark as verified
+    if (useRedis) {
+      await deleteOTPFromRedis(email);
+      await setVerifiedInRedis(email, accountType);
+    } else {
+      const otpRecord = await OTP.findOne({ email });
+      if (otpRecord) { otpRecord.verifiedAt = new Date(); await otpRecord.save(); }
+    }
 
     // Generate short-lived reset token (not an access token)
     const resetToken = jwt.sign(
-      { email: otpRecord.email, type: otpRecord.accountType, purpose: 'password_reset' },
+      { email, type: accountType, purpose: 'password_reset' },
       env.JWT_SECRET,
       { expiresIn: `${env.PASSWORD_RESET_TOKEN_EXPIRY_MINUTES}m` }
     );
@@ -172,13 +297,22 @@ const resetPassword = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Invalid token purpose' });
     }
 
-    const otpRecord = await OTP.findOne({ email: decoded.email, verifiedAt: { $ne: null } });
-    if (!otpRecord) {
-      return res.status(400).json({ success: false, message: 'No verified reset session found. Please try again.' });
-    }
-
-    if (otpRecord.usedAt) {
-      return res.status(400).json({ success: false, message: 'Password has already been reset using this session' });
+    // Verify session is still valid
+    if (isRedisReady()) {
+      // ── Redis path ──
+      const verified = await getVerifiedFromRedis(decoded.email);
+      if (!verified) {
+        return res.status(400).json({ success: false, message: 'No verified reset session found. Please try again.' });
+      }
+    } else {
+      // ── Fallback: MongoDB ──
+      const otpRecord = await OTP.findOne({ email: decoded.email, verifiedAt: { $ne: null } });
+      if (!otpRecord) {
+        return res.status(400).json({ success: false, message: 'No verified reset session found. Please try again.' });
+      }
+      if (otpRecord.usedAt) {
+        return res.status(400).json({ success: false, message: 'Password has already been reset using this session' });
+      }
     }
 
     const { account } = await getAccountByEmail(decoded.email);
@@ -186,16 +320,17 @@ const resetPassword = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Account not found' });
     }
 
-    // Update password (pre-save hook will hash it)
+    // Update password (pre-save hook will hash it) — MongoDB remains source of truth
     account.password = newPassword;
-    
-    // Invalidate sessions/refresh tokens if applicable by updating something like passwordChangedAt (if implemented)
-    // We don't have passwordChangedAt, but saving will update the user record.
     await account.save();
 
-    // Mark OTP as used
-    otpRecord.usedAt = new Date();
-    await otpRecord.save();
+    // Clean up session state
+    if (isRedisReady()) {
+      await deleteVerifiedFromRedis(decoded.email);
+    } else {
+      const otpRecord = await OTP.findOne({ email: decoded.email, verifiedAt: { $ne: null } });
+      if (otpRecord) { otpRecord.usedAt = new Date(); await otpRecord.save(); }
+    }
 
     res.status(200).json({
       success: true,

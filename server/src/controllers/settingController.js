@@ -1,13 +1,22 @@
 const AppSetting = require('../models/AppSetting');
 const { processAndStoreImage, deleteImageSafe } = require('../services/imageService');
+const { getCache, setCache, deleteCache } = require('../utils/cache');
+
+const SETTINGS_CACHE_KEY = 'app:settings';
 
 // @desc    Get all settings (Public)
 const getSettings = async (req, res, next) => {
   try {
+    // Try Redis cache first
+    const cached = await getCache(SETTINGS_CACHE_KEY);
+    if (cached) {
+      return res.json({ success: true, data: cached });
+    }
+
     const PUBLIC_KEYS = [
       'appName', 'appLogo', 'salonSearchRadius', 
       'supportEmail', 'supportPhone', 'supportWhatsApp', 'supportHours', 'supportDescription',
-      'loginPageImage', 'registerPageImage', 'jacuzziGlobalEnabled'
+      'loginPageImage', 'registerPageImage', 'jacuzziGlobalEnabled', 'maxPendingDuesLimit'
     ];
     
     const settings = await AppSetting.find({ key: { $in: PUBLIC_KEYS } });
@@ -15,6 +24,10 @@ const getSettings = async (req, res, next) => {
     settings.forEach(setting => {
       settingsObj[setting.key] = setting.value;
     });
+
+    // Store in Redis cache (TTL from env)
+    await setCache(SETTINGS_CACHE_KEY, settingsObj);
+
     res.json({ success: true, data: settingsObj });
   } catch (error) {
     next(error);
@@ -45,6 +58,9 @@ const updateAppLogo = async (req, res, next) => {
       deleteImageSafe(oldImage);
     }
 
+    // Invalidate settings cache so next read gets fresh data
+    await deleteCache(SETTINGS_CACHE_KEY);
+
     res.json({ success: true, data: updatedSetting });
   } catch (error) {
     if (req.file && error) {
@@ -68,6 +84,7 @@ const updateLoginImage = async (req, res, next) => {
       { new: true, upsert: true }
     );
     if (oldImage) deleteImageSafe(oldImage);
+    await deleteCache(SETTINGS_CACHE_KEY);
     res.json({ success: true, data: updatedSetting });
   } catch (error) {
     next(error);
@@ -88,6 +105,7 @@ const updateRegisterImage = async (req, res, next) => {
       { new: true, upsert: true }
     );
     if (oldImage) deleteImageSafe(oldImage);
+    await deleteCache(SETTINGS_CACHE_KEY);
     res.json({ success: true, data: updatedSetting });
   } catch (error) {
     next(error);
@@ -108,6 +126,7 @@ const updateAppName = async (req, res, next) => {
       { new: true, upsert: true }
     );
 
+    await deleteCache(SETTINGS_CACHE_KEY);
     res.json({ success: true, data: updatedSetting });
   } catch (error) {
     next(error);
@@ -129,6 +148,7 @@ const updateSalonSearchRadius = async (req, res, next) => {
       { new: true, upsert: true }
     );
 
+    await deleteCache(SETTINGS_CACHE_KEY);
     res.json({ success: true, data: updatedSetting });
   } catch (error) {
     next(error);
@@ -163,6 +183,9 @@ const updateBulkSettings = async (req, res, next) => {
     updatedSettings.forEach(setting => {
       settingsObj[setting.key] = setting.value;
     });
+
+    // Invalidate public settings cache
+    await deleteCache(SETTINGS_CACHE_KEY);
 
     res.json({ success: true, data: settingsObj });
   } catch (error) {

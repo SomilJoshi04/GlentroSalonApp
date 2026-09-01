@@ -5,7 +5,11 @@ const VendorLedger = require('../models/VendorLedger');
 const { creditWalletFromSettlement } = require('./withdrawalService');
 const { syncVendorCashSuspension } = require('./vendorCashService');
 
-const processCashSettlementAllocation = async (settlementId, paymentId) => {
+/**
+ * Runs the settlement allocation inside a transaction.
+ * Separated so the retry wrapper can call it multiple times.
+ */
+const _runAllocationTransaction = async (settlementId, paymentId) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -98,6 +102,7 @@ const processCashSettlementAllocation = async (settlementId, paymentId) => {
     await session.commitTransaction();
     session.endSession();
 
+    // Sync suspension state AFTER commit (outside transaction)
     await syncVendorCashSuspension(lockedSettlement.vendor);
 
     return { alreadyProcessed: false, success: true };
@@ -108,6 +113,36 @@ const processCashSettlementAllocation = async (settlementId, paymentId) => {
   }
 };
 
+/**
+ * Retry wrapper — MongoDB recommends retrying on TransientTransactionError (WriteConflict code 112)
+ * Uses exponential backoff: 100ms → 200ms → 400ms → 800ms → 1600ms
+ */
+const processCashSettlementAllocation = async (settlementId, paymentId, maxRetries = 5) => {
+  let attempt = 0;
+  while (attempt < maxRetries) {
+    try {
+      return await _runAllocationTransaction(settlementId, paymentId);
+    } catch (error) {
+      const isTransient =
+        error.errorLabels?.includes('TransientTransactionError') ||
+        error.code === 112 || // WriteConflict
+        error.codeName === 'WriteConflict';
+
+      attempt++;
+      if (isTransient && attempt < maxRetries) {
+        const delayMs = Math.min(100 * Math.pow(2, attempt - 1), 1600); // 100, 200, 400, 800, 1600ms
+        console.warn(`[CashSettle] WriteConflict on attempt ${attempt}, retrying in ${delayMs}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      } else {
+        // Either not transient or exhausted retries — rethrow
+        console.error(`[CashSettle] Failed after ${attempt} attempt(s):`, error.message);
+        throw error;
+      }
+    }
+  }
+};
+
 module.exports = {
   processCashSettlementAllocation
 };
+

@@ -103,7 +103,7 @@ const AdminLayout = () => {
             <NavLink 
               key={item.to} 
               to={item.to} 
-              end={item.to === '/admin'} 
+              end={item.to === '/admin' || item.to === '/admin/vendors'} 
               onClick={() => setSidebarOpen(false)}
               className={({ isActive }) => `flex items-center justify-between px-3 py-2.5 rounded-xl text-[14px] font-medium transition-all duration-200 ${isActive ? 'bg-primary text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
             >

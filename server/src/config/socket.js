@@ -1,6 +1,7 @@
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET, CLIENT_URL } = require('./env');
+const { isRedisReady, getRedisClient } = require('./redis');
 
 let io;
 
@@ -33,6 +34,19 @@ const initializeSocket = (httpServer) => {
     pingTimeout: 60000,
     pingInterval: 25000,
   });
+
+  // Attach Redis adapter for multi-server scaling (only when Redis is ready)
+  if (isRedisReady()) {
+    try {
+      const { createAdapter } = require('@socket.io/redis-adapter');
+      const pubClient = getRedisClient();
+      const subClient = pubClient.duplicate();
+      io.adapter(createAdapter(pubClient, subClient));
+      console.log('Socket.IO Redis adapter attached.');
+    } catch (err) {
+      console.warn(`Socket.IO Redis adapter failed to attach: ${err.message}. Running without adapter.`);
+    }
+  }
 
   // Authentication middleware for socket connections
   io.use((socket, next) => {

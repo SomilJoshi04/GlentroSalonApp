@@ -204,11 +204,16 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className="space-y-6 md:space-y-8 animate-fade-in pb-10">
+    <div className="space-y-6 md:space-y-8 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="font-headline-md text-[24px] md:text-[28px] text-on-surface font-bold truncate">Welcome back, {vendor?.businessName || vendor?.name}!</h1>
-          <p className="font-body-sm md:font-body-md text-muted-text mt-1 truncate">Hello, {vendor?.name} • Managing {salons.length} salon{salons.length !== 1 ? 's' : ''}</p>
+        <div className="min-w-0 flex flex-col">
+          <span className="text-[14px] md:text-[16px] text-muted-text font-medium mb-0.5">Welcome back,</span>
+          <h1 className="font-headline-md text-[20px] md:text-[26px] text-on-surface font-bold truncate">
+            {vendor?.businessName || vendor?.name}
+          </h1>
+          <p className="text-[13px] md:text-[14px] text-muted-text mt-1 truncate">
+            Managing {salons.length} salon{salons.length !== 1 ? 's' : ''}
+          </p>
         </div>
         <select 
           value={analyticsRange}

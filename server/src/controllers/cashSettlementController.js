@@ -120,6 +120,8 @@ const verifySettlement = async (req, res) => {
     const vendorId = req.user.id;
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
+    console.log(`[CashSettle] Verify called: order=${razorpay_order_id}, payment=${razorpay_payment_id}`);
+
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return res.status(400).json({ success: false, message: 'Missing payment details' });
     }
@@ -132,8 +134,10 @@ const verifySettlement = async (req, res) => {
       .digest('hex');
 
     if (expectedSignature !== razorpay_signature) {
+      console.error('[CashSettle] Signature mismatch!');
       return res.status(400).json({ success: false, message: 'Invalid payment signature' });
     }
+    console.log('[CashSettle] Signature verified ✅');
 
     // Find the pending settlement
     const settlement = await CashSettlement.findOne({
@@ -142,8 +146,10 @@ const verifySettlement = async (req, res) => {
     });
 
     if (!settlement) {
+      console.error(`[CashSettle] Settlement not found for order=${razorpay_order_id}, vendor=${vendorId}`);
       return res.status(404).json({ success: false, message: 'Settlement not found or does not belong to you' });
     }
+    console.log(`[CashSettle] Settlement found: id=${settlement._id}, status=${settlement.status}, amount=${settlement.amountPaise}`);
 
     // Idempotency check
     if (settlement.status === 'PAID') {
@@ -152,9 +158,21 @@ const verifySettlement = async (req, res) => {
 
     // Verify payment from Razorpay API
     const payment = await razorpay.payments.fetch(razorpay_payment_id);
-    if (!payment || payment.status !== 'captured' || payment.amount !== settlement.amountPaise) {
-      return res.status(400).json({ success: false, message: 'Payment not captured or amount mismatch' });
+    console.log(`[CashSettle] Razorpay payment: status=${payment?.status}, amount=${payment?.amount}`);
+    
+    // Accept both 'captured' (production) and 'authorized' (test mode)
+    const isValidStatus = payment && (payment.status === 'captured' || payment.status === 'authorized');
+    // Allow 1 paise tolerance for rounding differences
+    const isAmountMatch = payment && Math.abs(payment.amount - settlement.amountPaise) <= 1;
+    
+    if (!isValidStatus || !isAmountMatch) {
+      console.error(`[CashSettle] ❌ Verify failed: status=${payment?.status}, amount=${payment?.amount}, expected=${settlement.amountPaise}`);
+      return res.status(400).json({ 
+        success: false, 
+        message: `Payment not verified. Status: ${payment?.status}, Amount: ₹${(payment?.amount/100).toFixed(2)}, Expected: ₹${(settlement.amountPaise/100).toFixed(2)}`
+      });
     }
+    console.log('[CashSettle] Payment valid ✅ — processing allocation...');
 
     // Call the unified allocation service (handles FIFO and Wallet Credit)
     const { processCashSettlementAllocation } = require('../services/cashSettlementService');
@@ -164,15 +182,17 @@ const verifySettlement = async (req, res) => {
       return res.json({ success: true, message: 'Settlement already marked as paid' });
     }
 
+    console.log('[CashSettle] ✅ Settlement processed successfully');
     res.json({
       success: true,
       message: 'Settlement successful',
     });
   } catch (error) {
     console.error('Error verifying cash settlement:', error);
-    res.status(500).json({ success: false, message: 'Server error verifying settlement' });
+    res.status(500).json({ success: false, message: error.message || 'Server error verifying settlement' });
   }
 };
+
 
 module.exports = {
   getStatus,

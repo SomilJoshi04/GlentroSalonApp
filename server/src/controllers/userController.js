@@ -32,7 +32,7 @@ const getUserById = async (req, res, next) => {
 // @desc    Update user profile
 const updateProfile = async (req, res, next) => {
   try {
-    const { name, phone, city } = req.body;
+    const { name, phone, city, email } = req.body;
     let newImage = null;
 
     const currentUser = await User.findById(req.user.id);
@@ -48,6 +48,7 @@ const updateProfile = async (req, res, next) => {
     }
 
     const updateData = { name, phone, city };
+    if (email) updateData.email = email;
     if (newImage) {
       updateData.avatar = newImage;
     } else if (req.body.avatar === '') {

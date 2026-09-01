@@ -19,7 +19,7 @@ const mongoose = require('mongoose');
 // Valid status transitions — enforced server-side
 const VALID_TRANSITIONS = {
   PENDING:     ['PROCESSING', 'REJECTED', 'CANCELLED'],
-  PROCESSING:  ['PAID', 'FAILED'],
+  PROCESSING:  ['PAID', 'FAILED', 'REJECTED'],
   FAILED:      ['PENDING'],      // Admin can re-queue a failed payout
   PAID:        [],               // Terminal state
   REJECTED:    [],               // Terminal state

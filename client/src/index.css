@@ -229,7 +229,9 @@ body {
     opacity: 1 !important;
     transform: none !important;
   }
+}
 
+:root {
   --color-secondary: #7031d9;
   --color-on-secondary: #ffffff;
   --color-secondary-container: #8a50f3;

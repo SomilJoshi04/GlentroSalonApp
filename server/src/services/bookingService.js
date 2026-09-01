@@ -35,6 +35,14 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
       throw new Error('Salon is currently unavailable for new bookings');
     }
 
+    // Live real-time cash limit check — prevents new bookings if limit exceeded
+    const { getCashHeld, getCashLimit } = require('./vendorCashService');
+    const cashHeldPaise = await getCashHeld(salon.vendor);
+    const cashLimitPaise = await getCashLimit(salon.vendor);
+    if (cashLimitPaise !== Infinity && cashHeldPaise > cashLimitPaise) {
+      throw new Error('This salon is currently unavailable for new bookings due to a cash settlement issue.');
+    }
+
     // Validate and prepare services
     const requestedDateStr = new Date(bookingDate).toISOString().split('T')[0];
     const todayStr = new Date().toISOString().split('T')[0];
@@ -151,7 +159,7 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
         if (!autoResource) {
           throw new Error(`No ${service.resourceType} resource available for ${service.name} at ${currentTime}`);
         }
-        
+
         assignedResource = autoResource._id;
         resourceSnapshot = { name: autoResource.name };
       }
@@ -171,6 +179,17 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
         duration: service.duration,
         staffAutoAssigned,
       });
+
+      // ── CONCURRENCY LOCK ──────────────────────────────────────────────────
+      // Force a MongoDB WriteConflict (code 112) if two concurrent transactions
+      // attempt to book the SAME staff or resource simultaneously.
+      const Staff = mongoose.model('Staff');
+      await Staff.findByIdAndUpdate(assignedStaff, { $set: { updatedAt: new Date() } }, { session });
+      if (assignedResource) {
+        const SalonResource = mongoose.model('SalonResource');
+        await SalonResource.findByIdAndUpdate(assignedResource, { $set: { updatedAt: new Date() } }, { session });
+      }
+      // ────────────────────────────────────────────────────────────────────────
 
       // Move current time forward for sequential booking
       currentTime = endTime;
@@ -204,7 +223,7 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
       pkg,
       currentPlatformFeePercentage
     );
-    
+
     const pointsEarned = 0; // Not implemented yet
     const pointsCalculationAmount = 0;
 
@@ -235,7 +254,7 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
           commissionPaise: financials.commissionPaise,
           platformFeePaise: financials.platformFeePaise,
           vendorPayoutPaise: financials.vendorPayoutPaise,
-          
+
           pointsEarned,
           pointsCalculationAmount,
           coupon: coupon ? coupon._id : undefined,
@@ -248,7 +267,7 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
             discount: packageDiscountPaise / 100, // Legacy display
           } : undefined,
           paymentMethod: ['ONLINE', 'online'].includes(paymentMethod) ? 'ONLINE' : 'CASH',
-          
+
           platformFeePercentage: financials.platformFeePercentage,
           adminCommissionPercentage: financials.adminCommissionPercentage,
           vendorPlanType: financials.vendorPlanType,
@@ -256,7 +275,7 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
           // New strict paise fields inside pricing snapshot
           pricing: {
             subtotal: totalAmountPaise / 100,
-            subtotalPaise: totalAmountPaise, 
+            subtotalPaise: totalAmountPaise,
             packageDiscount: packageDiscountPaise / 100,
             packageDiscountPaise,
             couponDiscount: couponDiscountPaise / 100,
@@ -316,6 +335,11 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
+    // Catch WriteConflict (112) to retry gracefully or propagate the error to the frontend
+    if (error.code === 112) {
+      console.warn(`[Concurrency] WriteConflict (112) detected in createBooking. Propagating to client to retry.`);
+      throw new Error('This time slot was just booked by someone else. Please try again or select another time.');
+    }
     throw error;
   }
 };
@@ -332,6 +356,39 @@ const acceptBooking = async (bookingId, vendorId) => {
   if (booking.status !== 'PENDING') {
     throw new Error(`Cannot accept booking with status ${booking.status}`);
   }
+
+  // Prevent suspended vendors from accepting bookings
+  // Check BOTH DB status AND live cash calculation to catch un-synced states
+  const vendor = await Vendor.findById(vendorId);
+  if (vendor && vendor.accountStatus === 'suspended') {
+    throw new Error('Your account is suspended. You cannot accept bookings until you clear your dues or resolve the suspension.');
+  }
+
+  // Live real-time cash limit check (catches cases where DB hasn't synced yet)
+  const { getCashHeld, getCashLimit, syncVendorCashSuspension } = require('./vendorCashService');
+  const cashHeldPaise = await getCashHeld(vendorId);
+  const cashLimitPaise = await getCashLimit(vendorId);
+  if (cashLimitPaise !== Infinity && cashHeldPaise > cashLimitPaise) {
+    // Sync the DB status so it's corrected for future checks
+    await syncVendorCashSuspension(vendorId);
+    const excessRs = ((cashHeldPaise - cashLimitPaise) / 100).toFixed(2);
+    throw new Error(`Your cash holding limit is exceeded by ₹${excessRs}. Please settle your cash with admin to accept bookings.`);
+  }
+
+  // ── Past date guard ──────────────────────────────────────────────────────
+  // Prevent vendor from accepting a booking whose appointment date/time has
+  // already passed. The booking date is stored as a Date (midnight UTC), so
+  // we combine it with startTime (HH:MM) to get the precise appointment moment.
+  const [h, m] = (booking.startTime || '00:00').split(':').map(Number);
+  const appointmentDateTime = new Date(booking.bookingDate);
+  appointmentDateTime.setHours(h, m, 0, 0);
+
+  if (appointmentDateTime < new Date()) {
+    throw new Error(
+      'This booking cannot be accepted because its appointment date and time have already passed.'
+    );
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   // Re-check availability for each service to prevent double booking
   const bookingServices = await BookingService.find({ booking: bookingId });
@@ -385,12 +442,15 @@ const cancelBooking = async (bookingId, userId, userRole, reason) => {
   if (userRole === 'user' && booking.user.toString() !== userId.toString()) {
     throw new Error('Not authorized to cancel this booking');
   }
-  
+
   if (userRole === 'vendor' && booking.salon.vendor.toString() !== userId.toString()) {
     throw new Error('Not authorized to cancel this booking');
   }
 
   if (!['PENDING', 'CONFIRMED'].includes(booking.status)) {
+    if (booking.status === 'CANCELLED') {
+      return booking; // Idempotent: already cancelled, no error needed
+    }
     throw new Error(`Cannot cancel booking with status ${booking.status}`);
   }
 
@@ -420,10 +480,126 @@ const cancelBooking = async (bookingId, userId, userRole, reason) => {
 };
 
 /**
- * Complete a booking
+ * Mark a booking as No-Show
+ * Validates that the appointment time has actually passed.
  */
-const completeBooking = async (bookingId, vendorId) => {
-  const booking = await Booking.findById(bookingId).populate('salon');
+const markNoShow = async (bookingId, vendorId) => {
+  const { sendEmail } = require('../utils/emailService');
+  const AppSetting = require('../models/AppSetting');
+  const booking = await Booking.findById(bookingId).populate('user').populate('salon');
+  if (!booking) throw new Error('Booking not found');
+  if (booking.salon.vendor.toString() !== vendorId.toString()) {
+    throw new Error('Not authorized to manage this booking');
+  }
+  if (booking.status !== 'CONFIRMED') {
+    throw new Error(`Cannot mark booking with status ${booking.status} as No-Show`);
+  }
+
+  // Time-Lock Check: Cannot mark No-Show before the appointment start time
+  const [h, m] = (booking.startTime || '00:00').split(':').map(Number);
+  const appointmentStartDateTime = new Date(booking.bookingDate);
+  appointmentStartDateTime.setHours(h, m, 0, 0);
+
+  if (new Date() < appointmentStartDateTime) {
+    throw new Error('Cannot mark as No-Show before the appointment time has started.');
+  }
+
+  booking.status = 'NO_SHOW';
+  booking.cancellationReason = 'Customer did not show up.';
+  await booking.save();
+
+  // Notify customer
+  if (booking.user && booking.user.email) {
+    // Fetch support settings for the email
+    const supportEmailSetting = await AppSetting.findOne({ key: 'supportEmail' });
+    const supportPhoneSetting = await AppSetting.findOne({ key: 'supportPhone' });
+    const supportEmail = supportEmailSetting ? supportEmailSetting.value : 'support@example.com';
+    const supportPhone = supportPhoneSetting ? supportPhoneSetting.value : '';
+
+    let supportContactHtml = `<p><strong>Email:</strong> ${supportEmail}</p>`;
+    if (supportPhone) {
+      supportContactHtml += `<p><strong>Phone:</strong> ${supportPhone}</p>`;
+    }
+
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; line-height: 1.5; color: #333;">
+        <h2 style="color: #D32F2F; border-bottom: 2px solid #D32F2F; padding-bottom: 10px;">Booking Marked as No-Show</h2>
+        <p>Hi <b>${booking.user.name}</b>,</p>
+        <p>The salon <b>${booking.salon.name}</b> has marked your appointment (Booking #${booking._id}) as a <b>No-Show</b> because you did not arrive for your scheduled service.</p>
+        
+        <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #eee;">
+          <h3 style="margin-top: 0; color: #4A1578;">Believe this is a mistake?</h3>
+          <p style="margin-bottom: 10px;">If you were present at the salon and believe this was marked incorrectly, please contact our support team immediately.</p>
+          ${supportContactHtml}
+        </div>
+      </div>
+    `;
+    try {
+      await sendEmail({
+        to: booking.user.email,
+        subject: `Appointment No-Show - ${booking.salon.name}`,
+        html: emailHtml,
+      });
+    } catch (e) {
+      console.error('Failed to send No-Show email to user:', e.message);
+    }
+  }
+
+  return booking;
+};
+
+/**
+ * Request OTP to complete a booking
+ */
+const requestCompletionOtp = async (bookingId, vendorId) => {
+  const crypto = require('crypto');
+  const { sendEmail } = require('../utils/emailService');
+
+  const booking = await Booking.findById(bookingId).populate('user').populate('salon');
+  if (!booking) throw new Error('Booking not found');
+  if (booking.salon.vendor.toString() !== vendorId.toString()) {
+    throw new Error('Not authorized to manage this booking');
+  }
+  if (booking.status !== 'CONFIRMED') {
+    throw new Error(`Cannot generate OTP for booking with status ${booking.status}`);
+  }
+
+  // Generate 4 digit OTP
+  const otp = crypto.randomInt(1000, 9999).toString();
+  booking.completionOtp = otp;
+  booking.otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+  await booking.save();
+
+  // Send email to customer
+  const emailHtml = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #2D0B5A;">Booking Completion Code</h2>
+      <p>Please share this code with the salon staff to complete your service.</p>
+      <h1 style="font-size: 32px; letter-spacing: 5px; color: #4A1578; background: #f4f4f4; padding: 10px; text-align: center; border-radius: 8px;">${otp}</h1>
+      <p>This code is valid for 15 minutes.</p>
+    </div>
+  `;
+
+  try {
+    await sendEmail({
+      to: booking.user.email,
+      subject: `Service Completion OTP - ${booking.salon.name}`,
+      html: emailHtml,
+    });
+  } catch (err) {
+    console.error('Failed to send OTP email:', err);
+    throw new Error('Failed to send OTP to customer');
+  }
+
+  return { message: 'OTP sent successfully to the customer' };
+};
+
+/**
+ * Complete a booking (Requires OTP Verification)
+ */
+const completeBooking = async (bookingId, vendorId, otp) => {
+  // Use select('+completionOtp') to explicitly fetch it
+  const booking = await Booking.findById(bookingId).select('+completionOtp +otpExpiresAt').populate('salon');
   if (!booking) throw new Error('Booking not found');
   if (booking.salon.vendor.toString() !== vendorId.toString()) {
     throw new Error('Not authorized to manage this booking');
@@ -432,7 +608,21 @@ const completeBooking = async (bookingId, vendorId) => {
     throw new Error(`Cannot complete booking with status ${booking.status}`);
   }
 
+  // OTP Verification
+  if (!otp) {
+    throw new Error('OTP is required to complete the booking');
+  }
+  if (!booking.completionOtp || booking.completionOtp !== otp.toString()) {
+    throw new Error('Invalid OTP');
+  }
+  if (booking.otpExpiresAt && new Date() > booking.otpExpiresAt) {
+    throw new Error('OTP has expired. Please request a new one.');
+  }
+
   booking.status = 'COMPLETED';
+  booking.otpVerified = true;
+  booking.completionOtp = undefined;
+  booking.otpExpiresAt = undefined;
   await booking.save();
 
   return booking;
@@ -502,4 +692,4 @@ const previewBookingTotal = async ({ salonId, services, couponCode, packageId })
   };
 };
 
-module.exports = { createBooking, previewBookingTotal, acceptBooking, rejectBooking, cancelBooking, completeBooking };
+module.exports = { createBooking, previewBookingTotal, acceptBooking, rejectBooking, cancelBooking, completeBooking, markNoShow, requestCompletionOtp };

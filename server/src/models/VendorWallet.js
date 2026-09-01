@@ -55,7 +55,9 @@ const vendorWalletSchema = new mongoose.Schema(
  * Helper: Get wallet for a vendor, create if it doesn't exist.
  * Safe for concurrent calls — upsert is atomic.
  */
-vendorWalletSchema.statics.getOrCreate = async function (vendorId) {
+vendorWalletSchema.statics.getOrCreate = async function (vendorId, session = null) {
+  const options = { upsert: true, new: true };
+  if (session) options.session = session;
   return this.findOneAndUpdate(
     { vendor: vendorId },
     {
@@ -70,8 +72,40 @@ vendorWalletSchema.statics.getOrCreate = async function (vendorId) {
         version: 0,
       },
     },
-    { upsert: true, new: true }
+    options
   );
+};
+
+/**
+ * Add dues to recoveryOutstanding and suspend vendor if limit exceeded.
+ */
+vendorWalletSchema.statics.addDuesAndCheckSuspension = async function (vendorId, amountPaise) {
+  const Vendor = mongoose.model('Vendor');
+  const AppSetting = mongoose.model('AppSetting');
+  
+  let thresholdPaise = 50000; // default ₹500
+  const setting = await AppSetting.findOne({ key: 'maxPendingDuesLimit' });
+  if (setting && setting.value) {
+    const parsed = parseInt(setting.value, 10);
+    if (!isNaN(parsed)) {
+      thresholdPaise = parsed;
+    }
+  }
+
+  const wallet = await this.findOneAndUpdate(
+    { vendor: vendorId },
+    { $inc: { recoveryOutstanding: amountPaise, version: 1 }, $set: { lastUpdatedAt: new Date() } },
+    { new: true, upsert: true } // upsert ensures wallet exists
+  );
+
+  if (wallet.recoveryOutstanding > thresholdPaise) {
+    await Vendor.findByIdAndUpdate(vendorId, {
+      accountStatus: 'suspended',
+      $addToSet: { suspensionReasons: 'CASH_LIMIT_EXCEEDED' },
+    });
+  }
+
+  return wallet;
 };
 
 module.exports = mongoose.model('VendorWallet', vendorWalletSchema);

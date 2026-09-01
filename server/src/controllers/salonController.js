@@ -5,6 +5,7 @@ const Package = require('../models/Package');
 const Category = require('../models/Category');
 const AppSetting = require('../models/AppSetting');
 const SalonResource = require('../models/SalonResource');
+const Vendor = require('../models/Vendor');
 
 const { processAndStoreImage, deleteImageSafe } = require('../services/imageService');
 
@@ -53,7 +54,11 @@ const createSalon = async (req, res, next) => {
 const getSalons = async (req, res, next) => {
   try {
     const { page = 1, limit = 20, city, zone, gender, search, category } = req.query;
-    const query = { isActive: true, isApproved: true };
+
+    const activeVendors = await Vendor.find({ accountStatus: { $ne: 'suspended' } }).select('_id');
+    const activeVendorIds = activeVendors.map(v => v._id);
+
+    const query = { isActive: true, isApproved: true, vendor: { $in: activeVendorIds } };
     if (city) query.city = { $regex: city, $options: 'i' };
     if (zone) query.zone = { $regex: zone, $options: 'i' };
     if (gender) query.gender = { $in: [gender, 'unisex'] };
@@ -115,10 +120,14 @@ const getNearbySalons = async (req, res, next) => {
     const radiusSetting = await AppSetting.findOne({ key: 'salonSearchRadius' }).lean();
     const radiusInKm = radiusSetting ? parseFloat(radiusSetting.value) : 50;
     const maxDistanceInMeters = radiusInKm * 1000;
+    // Find active vendors to filter out suspended ones
+    const activeVendors = await Vendor.find({ accountStatus: { $ne: 'suspended' } }).select('_id');
+    const activeVendorIds = activeVendors.map(v => v._id);
 
     const query = {
       isActive: true,
       isApproved: true,
+      vendor: { $in: activeVendorIds },
       location: {
         $nearSphere: {
           $geometry: { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] },
@@ -170,7 +179,16 @@ const getSalonsByCity = async (req, res, next) => {
   try {
     const { city } = req.params;
     const { zone, page = 1, limit = 20, category, search } = req.query;
-    const query = { isActive: true, isApproved: true, city: { $regex: city, $options: 'i' } };
+
+    const activeVendors = await Vendor.find({ accountStatus: { $ne: 'suspended' } }).select('_id');
+    const activeVendorIds = activeVendors.map(v => v._id);
+
+    const query = { 
+      isActive: true, 
+      isApproved: true, 
+      vendor: { $in: activeVendorIds },
+      city: { $regex: city, $options: 'i' } 
+    };
     if (zone) query.zone = { $regex: zone, $options: 'i' };
     
     if (search) {

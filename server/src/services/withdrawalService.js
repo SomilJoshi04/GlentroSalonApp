@@ -155,7 +155,7 @@ const creditWalletFromSettlement = async ({
 }) => {
   if (amountPaise <= 0) return;
 
-  const wallet = await VendorWallet.getOrCreate(vendorId);
+  const wallet = await VendorWallet.getOrCreate(vendorId, session);
   const balanceBefore = wallet.availableBalance;
 
   // Handle recovery Outstanding first if any

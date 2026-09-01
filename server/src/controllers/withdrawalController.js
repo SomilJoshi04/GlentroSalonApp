@@ -281,14 +281,8 @@ const adminRejectWithdrawal = async (req, res, next) => {
     await withdrawalService.rejectWithdrawal(req.params.id, req.user.id, rejectionReason);
     res.json({ success: true, message: 'Withdrawal rejected and balance released' });
   } catch (error) {
-    if (
-      error.message.includes('required') ||
-      error.message.includes('Cannot') ||
-      error.message.includes('not found')
-    ) {
-      return res.status(400).json({ success: false, message: error.message });
-    }
-    next(error);
+    console.error('[adminRejectWithdrawal] Error:', error);
+    res.status(400).json({ success: false, message: error.message || 'Action failed' });
   }
 };
 

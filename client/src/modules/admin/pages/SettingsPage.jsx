@@ -12,10 +12,12 @@ export default function SettingsPage() {
   const [registerImageLoading, setRegisterImageLoading] = useState(false);
   const [appName, setAppName] = useState('');
   const [searchRadius, setSearchRadius] = useState('');
+  const [maxPendingDuesLimit, setMaxPendingDuesLimit] = useState('500'); // default display 500
   const [jacuzziEnabled, setJacuzziEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
   const [nameLoading, setNameLoading] = useState(false);
   const [radiusLoading, setRadiusLoading] = useState(false);
+  const [duesLimitLoading, setDuesLimitLoading] = useState(false);
   const [jacuzziLoading, setJacuzziLoading] = useState(false);
   const [supportLoading, setSupportLoading] = useState(false);
   const [supportSettings, setSupportSettings] = useState({
@@ -37,6 +39,10 @@ export default function SettingsPage() {
   useEffect(() => {
     if (settings?.appName) setAppName(settings.appName);
     if (settings?.salonSearchRadius) setSearchRadius(settings.salonSearchRadius);
+    if (settings?.maxPendingDuesLimit) {
+      // convert from paise to rupees for display
+      setMaxPendingDuesLimit((parseInt(settings.maxPendingDuesLimit, 10) / 100).toString());
+    }
     if (settings?.jacuzziGlobalEnabled !== undefined) setJacuzziEnabled(settings.jacuzziGlobalEnabled === 'true' || settings.jacuzziGlobalEnabled === true);
     if (settings) {
       setSupportSettings({
@@ -155,6 +161,30 @@ export default function SettingsPage() {
       setMessage({ type: 'error', text: 'Failed to update search radius' });
     } finally {
       setRadiusLoading(false);
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+    }
+  };
+
+  const handleSaveDuesLimit = async () => {
+    if (!maxPendingDuesLimit || isNaN(maxPendingDuesLimit) || Number(maxPendingDuesLimit) < 0) {
+      setMessage({ type: 'error', text: 'Please enter a valid amount' });
+      return;
+    }
+    setDuesLimitLoading(true);
+    setMessage({ type: '', text: '' });
+    try {
+      // convert rupees to paise for backend
+      const amountPaise = Math.round(Number(maxPendingDuesLimit) * 100);
+      const res = await updateBulkSettings({ maxPendingDuesLimit: amountPaise.toString() });
+      if (res.data?.success) {
+        setMessage({ type: 'success', text: 'Max Pending Dues Limit updated successfully' });
+        await fetchSettings();
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage({ type: 'error', text: 'Failed to update dues limit' });
+    } finally {
+      setDuesLimitLoading(false);
       setTimeout(() => setMessage({ type: '', text: '' }), 5000);
     }
   };
@@ -429,6 +459,39 @@ export default function SettingsPage() {
                 <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
               {jacuzziLoading && <span className="text-xs text-muted-text">Saving...</span>}
+            </div>
+          </div>
+          <div className="w-32 hidden sm:block shrink-0"></div>
+        </div>
+
+        <hr className="my-8 border-border" />
+
+        <div className="flex flex-col sm:flex-row gap-6 items-start">
+          <div className="flex-1 space-y-2">
+            <h3 className="text-sm font-medium text-on-surface">Max Vendor Pending Dues (₹)</h3>
+            <p className="text-xs text-muted-text max-w-md">
+              If a vendor's recovery dues (unpaid commission from auto-settled cash bookings) exceeds this amount, their account will be automatically suspended.
+            </p>
+            
+            <div className="pt-4 flex flex-col sm:flex-row gap-3 items-center">
+              <div className="flex items-center gap-2 flex-1">
+                <span className="font-label-md text-muted-text">₹</span>
+                <input 
+                  type="number" 
+                  min="0"
+                  value={maxPendingDuesLimit}
+                  onChange={(e) => setMaxPendingDuesLimit(e.target.value)}
+                  placeholder="e.g. 500"
+                  className="w-full sm:max-w-[150px] px-4 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-background-alt"
+                />
+              </div>
+              <button 
+                onClick={handleSaveDuesLimit}
+                disabled={duesLimitLoading || !maxPendingDuesLimit}
+                className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                {duesLimitLoading ? 'Saving...' : 'Save Changes'}
+              </button>
             </div>
           </div>
           <div className="w-32 hidden sm:block shrink-0"></div>

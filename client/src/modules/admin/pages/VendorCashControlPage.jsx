@@ -8,6 +8,7 @@ const VendorCashControlPage = () => {
   const [updating, setUpdating] = useState({});
   const [editingLimit, setEditingLimit] = useState(null);
   const [newLimit, setNewLimit] = useState('');
+  const [clearingDues, setClearingDues] = useState({});
 
   const loadVendors = async () => {
     setLoading(true);
@@ -48,6 +49,23 @@ const VendorCashControlPage = () => {
       alert(error.message || 'Failed to update limit');
     }
     setUpdating((prev) => ({ ...prev, [vendorId]: false }));
+  };
+
+  const handleClearDues = async (vendorId) => {
+    if (!window.confirm("Are you sure you want to clear all recovery dues and cash limits for this vendor and reactivate their account?")) return;
+    
+    setClearingDues(prev => ({ ...prev, [vendorId]: true }));
+    try {
+      const res = await api.post(`/admin/vendor-cash-control/${vendorId}/clear-dues`);
+      if (res.data?.success) {
+        alert("Dues cleared successfully!");
+        loadVendors();
+      }
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.message || 'Failed to clear dues');
+    }
+    setClearingDues(prev => ({ ...prev, [vendorId]: false }));
   };
 
   const fmt = (paise) => `₹${Number((paise || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
@@ -136,7 +154,7 @@ const VendorCashControlPage = () => {
                         )}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {vendor.suspensionReasons?.includes('CASH_LIMIT_EXCEEDED') ? (
+                        {(vendor.accountStatus === 'suspended' || isExceeded) ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
                             <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
                             Suspended
@@ -147,8 +165,16 @@ const VendorCashControlPage = () => {
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4">
-                        {/* More actions can go here */}
+                      <td className="px-6 py-4 text-right">
+                        {(vendor.accountStatus === 'suspended' || isExceeded) && (
+                          <button
+                            onClick={() => handleClearDues(vendor._id)}
+                            disabled={clearingDues[vendor._id]}
+                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-medium shadow-sm transition-colors disabled:opacity-50"
+                          >
+                            {clearingDues[vendor._id] ? 'Clearing...' : 'Clear Dues & Reactivate'}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

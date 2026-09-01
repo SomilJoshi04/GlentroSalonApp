@@ -23,6 +23,7 @@ const VendorLedger = require('../models/VendorLedger');
 const VendorCashLedger = require('../models/VendorCashLedger');
 const RefundTransaction = require('../models/RefundTransaction');
 const Salon = require('../models/Salon');
+const { syncVendorCashSuspension } = require('./vendorCashService');
 const razorpay = require('../utils/razorpay');
 const { calculateCancellationFee } = require('../utils/calculateFees');
 // Wallet service — lazy require to avoid circular deps
@@ -297,6 +298,7 @@ const recordCashPayment = async (bookingId, vendorId) => {
           paymentTransaction: transaction._id,
           entryType: 'CASH_RECEIVED',
           amount: booking.finalAmount,
+          amountPaise: booking.finalAmountPaise !== undefined ? booking.finalAmountPaise : Math.round((booking.finalAmount || 0) * 100),
           direction: 'CREDIT',
           paymentMethod: 'CASH',
           description: `Cash collected for Booking #${booking._id}`,
@@ -357,6 +359,11 @@ const recordCashPayment = async (bookingId, vendorId) => {
 
     await session.commitTransaction();
     session.endSession();
+
+    // Fire & forget sync to update limits/suspension after cash is added
+    syncVendorCashSuspension(salon.vendor).catch(err => 
+      console.error('Failed to sync vendor cash suspension:', err)
+    );
 
     return { success: true, alreadyProcessed: false, transaction };
   } catch (error) {
@@ -783,10 +790,10 @@ const getVendorFinancialSummary = async (vendorId, salonId) => {
   const settledToAdmin =
     (settlements.find((s) => s._id === 'VENDOR_TO_ADMIN')?.totalAmount || 0) + cashSettlementPaid;
 
-  // Vendor outstanding payable to admin (from cash dues)
-  const cashAdminReceivable = Math.max(0, commissionDebit - settledToAdmin);
-  // Admin outstanding payable to vendor (from online share)
-  const onlineVendorReceivable = Math.max(0, onlineReceived - refundReversal - settledToVendor);
+  const VendorWallet = require('../models/VendorWallet');
+  const wallet = await VendorWallet.findOne({ vendor: vendorId });
+  const adminReceivableOutstanding = wallet ? wallet.recoveryOutstanding / 100 : 0;
+  const vendorReceivableOutstanding = wallet ? (wallet.availableBalance + wallet.pendingBalance) / 100 : 0;
 
   return {
     onlineCollected: onlineReceived,
@@ -797,9 +804,9 @@ const getVendorFinancialSummary = async (vendorId, salonId) => {
     settledToVendor,
     settledToAdmin,
     // What vendor still owes admin (cash dues outstanding)
-    adminReceivableOutstanding: cashAdminReceivable,
+    adminReceivableOutstanding,
     // What admin still owes vendor (online share not yet settled)
-    vendorReceivableOutstanding: onlineVendorReceivable,
+    vendorReceivableOutstanding,
   };
 };
 

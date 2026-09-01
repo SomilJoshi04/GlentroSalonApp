@@ -25,7 +25,8 @@ const {
   rejectAccountRecovery,
   getAnalytics,
   getVendorCashControl,
-  updateVendorCashLimit
+  updateVendorCashLimit,
+  clearVendorDues
 } = require('../controllers/adminController');
 
 // Apply protection and authorization to all admin routes
@@ -69,6 +70,7 @@ router.patch('/vendors/:id/kyc', updateKycStatus);
 // Vendor Cash Control
 router.get('/vendor-cash-control', getVendorCashControl);
 router.put('/vendor-cash-control/:id', updateVendorCashLimit);
+router.post('/vendor-cash-control/:id/clear-dues', clearVendorDues);
 
 // Content Management
 const { getAdminContentByType, updateContent } = require('../controllers/contentController');

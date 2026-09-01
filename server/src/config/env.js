@@ -33,4 +33,11 @@ module.exports = {
   SMTP_USER: process.env.SMTP_USER || '',
   SMTP_PASSWORD: process.env.SMTP_PASSWORD || '',
   SMTP_FROM: process.env.SMTP_FROM || '',
+
+  // Redis — REDIS_ENABLED must be parsed as a real boolean.
+  // 'true' → true, 'false' → false, missing → false.
+  // Do NOT use: if (process.env.REDIS_ENABLED) — 'false' is still truthy.
+  REDIS_ENABLED: process.env.REDIS_ENABLED === 'true',
+  REDIS_URL: process.env.REDIS_URL || '',
+  REDIS_CACHE_TTL_SECONDS: parseInt(process.env.REDIS_CACHE_TTL_SECONDS) || 300,
 };

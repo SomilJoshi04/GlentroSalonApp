@@ -34,7 +34,7 @@ const CheckoutPage = () => {
   const [success, setSuccess] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('ONLINE');
   const [paymentError, setPaymentError] = useState('');
-  
+
   // Preview State (Source of Truth for Frontend)
   const [previewData, setPreviewData] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(true);
@@ -135,7 +135,10 @@ const CheckoutPage = () => {
       if (paymentMethod === 'CASH') {
         sessionStorage.removeItem('pendingBooking');
         setSuccess(true);
-        setTimeout(() => navigate(`/booking/${booking._id}`, { state: { fromCheckout: true }, replace: true }), 1500);
+        setTimeout(() => {
+          navigate('/', { replace: true });
+          setTimeout(() => navigate(`/booking/${booking._id}`, { state: { fromCheckout: true } }), 10);
+        }, 1500);
       } else if (paymentMethod === 'ONLINE') {
         // Create Razorpay Order
         const orderRes = await createPaymentOrder({ bookingId: booking._id });
@@ -161,7 +164,10 @@ const CheckoutPage = () => {
               if (verifyRes.data.success) {
                 sessionStorage.removeItem('pendingBooking');
                 setSuccess(true);
-                setTimeout(() => navigate(`/booking/${booking._id}`, { state: { fromCheckout: true }, replace: true }), 1500);
+                setTimeout(() => {
+                  navigate('/', { replace: true });
+                  setTimeout(() => navigate(`/booking/${booking._id}`, { state: { fromCheckout: true } }), 10);
+                }, 1500);
               }
             } catch (err) {
               setPaymentError(err.response?.data?.message || 'Payment verification failed. Please check your booking status.');
@@ -320,7 +326,7 @@ const CheckoutPage = () => {
         {/* Price Breakdown */}
         <section className="bg-surface rounded-[18px] border border-border shadow-sm p-5 flex flex-col gap-3">
           {previewLoading ? (
-             <div className="text-center py-4 text-muted-text text-sm">Calculating total...</div>
+            <div className="text-center py-4 text-muted-text text-sm">Calculating total...</div>
           ) : previewData && (
             <>
               <div className="flex justify-between items-center">

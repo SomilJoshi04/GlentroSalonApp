@@ -172,8 +172,34 @@ const cancelBooking = async (req, res, next) => {
 // @desc    Complete booking (Vendor)
 const completeBooking = async (req, res, next) => {
   try {
-    const booking = await bookingService.completeBooking(req.params.id, req.user.id);
+    const booking = await bookingService.completeBooking(req.params.id, req.user.id, req.body.otp);
     res.json({ success: true, message: 'Booking completed', data: booking });
+  } catch (error) {
+    if (error.message.includes('not authorized') || error.message.includes('Cannot')) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    next(error);
+  }
+};
+
+// @desc    Mark booking as No-Show (Vendor)
+const markNoShow = async (req, res, next) => {
+  try {
+    const booking = await bookingService.markNoShow(req.params.id, req.user.id);
+    res.json({ success: true, message: 'Booking marked as no-show', data: booking });
+  } catch (error) {
+    if (error.message.includes('not authorized') || error.message.includes('Cannot') || error.message.includes('time')) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    next(error);
+  }
+};
+
+// @desc    Request OTP for booking completion (Vendor)
+const requestCompletionOtp = async (req, res, next) => {
+  try {
+    const { message } = await bookingService.requestCompletionOtp(req.params.id, req.user.id);
+    res.json({ success: true, message });
   } catch (error) {
     if (error.message.includes('not authorized') || error.message.includes('Cannot')) {
       return res.status(400).json({ success: false, message: error.message });
@@ -620,6 +646,8 @@ module.exports = {
   rejectBooking,
   cancelBooking,
   completeBooking,
+  markNoShow,
+  requestCompletionOtp,
   getAvailability,
   getAllBookings,
   getVendorRecentBookings,

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getBookingById, acceptBooking, rejectBooking, completeBooking } from '../services/vendorApi';
+import { getBookingById, acceptBooking, rejectBooking, completeBooking, requestCompletionOtp } from '../services/vendorApi';
 import { goBack } from '../../../utils/navigation';
 import api from '../../../services/api/axiosInstance';
 import { useCall } from '../../../context/CallContext';
@@ -19,6 +19,11 @@ const BookingDetailPage = () => {
   const [callAvailability, setCallAvailability] = useState({ canCall: false });
   const { startCall, callError, clearError } = useCall();
   const { confirm } = useConfirm();
+
+  // OTP completion flow state
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpInput, setOtpInput] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
 
   useEffect(() => {
     if (booking?.status === 'CONFIRMED') {
@@ -42,12 +47,45 @@ const BookingDetailPage = () => {
 
   const handleAction = async (action) => {
     try {
-      if (action === 'accept') await acceptBooking(id);
-      else if (action === 'reject') await rejectBooking(id, { reason: 'Rejected' });
-      else if (action === 'complete') await completeBooking(id);
+      if (action === 'accept') {
+        await acceptBooking(id);
+        toast.success('Booking accepted successfully');
+      } else if (action === 'reject') {
+        await rejectBooking(id, { reason: 'Rejected' });
+        toast.success('Booking rejected');
+      } else if (action === 'complete') {
+        // Step 1: Request OTP to be sent to customer
+        setOtpLoading(true);
+        try {
+          await requestCompletionOtp(id);
+          setOtpSent(true);
+          setOtpInput('');
+          toast.success('OTP sent to customer. Please ask them for the code.');
+        } catch (e) {
+          toast.error(e.response?.data?.message || 'Failed to send OTP');
+        } finally {
+          setOtpLoading(false);
+        }
+        return; // Don't reload yet — wait for OTP entry
+      }
       load();
-      toast.success(`Booking ${action}ed successfully`);
     } catch (e) { toast.error(e.response?.data?.message || 'Failed'); }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otpInput.trim()) { toast.error('Please enter the OTP'); return; }
+    setOtpLoading(true);
+    try {
+      await completeBooking(id, otpInput.trim());
+      toast.success('Booking completed successfully!');
+      setOtpSent(false);
+      setOtpInput('');
+      load();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Invalid OTP. Please try again.');
+    } finally {
+      setOtpLoading(false);
+    }
   };
 
   const handleRecordCash = async () => {
@@ -327,10 +365,44 @@ const BookingDetailPage = () => {
           )}
 
         {booking.status === 'CONFIRMED' && (
-          <button onClick={() => handleAction('complete')} className="w-full mt-3 py-3 bg-primary/10 border border-primary/30 text-primary rounded-xl font-semibold hover:bg-primary hover:text-white transition-all shadow-sm flex items-center justify-center gap-1.5 min-h-[48px]">
-            <span className="material-symbols-outlined text-[18px]">task_alt</span>
-            Mark Complete
-          </button>
+          otpSent ? (
+            <div className="w-full mt-3 p-4 bg-primary/5 border border-primary/20 rounded-2xl">
+              <p className="text-sm font-semibold text-on-surface mb-1">Enter OTP from Customer</p>
+              <p className="text-xs text-muted-text mb-3">An OTP has been sent to the customer's email. Ask them for the code.</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={otpInput}
+                  onChange={e => setOtpInput(e.target.value)}
+                  placeholder="Enter 6-digit OTP"
+                  maxLength={6}
+                  className="flex-1 px-4 py-2.5 border border-border rounded-xl text-sm font-mono tracking-widest focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                />
+                <button
+                  onClick={handleVerifyOtp}
+                  disabled={otpLoading || !otpInput.trim()}
+                  className="px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-all"
+                >
+                  {otpLoading ? 'Verifying...' : 'Verify'}
+                </button>
+              </div>
+              <button
+                onClick={() => { setOtpSent(false); setOtpInput(''); }}
+                className="mt-2 text-xs text-muted-text hover:text-on-surface underline"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => handleAction('complete')}
+              disabled={otpLoading}
+              className="w-full mt-3 py-3 bg-primary/10 border border-primary/30 text-primary rounded-xl font-semibold hover:bg-primary hover:text-white transition-all shadow-sm flex items-center justify-center gap-1.5 min-h-[48px] disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-[18px]">task_alt</span>
+              {otpLoading ? 'Sending OTP...' : 'Mark Complete'}
+            </button>
+          )
         )}
       </div>
     </div>

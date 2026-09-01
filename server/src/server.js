@@ -5,15 +5,23 @@ const app = require('./app');
 const connectDB = require('./config/db');
 const { initializeSocket } = require('./config/socket');
 const { PORT, NODE_ENV } = require('./config/env');
+const { initRedis } = require('./config/redis');
 
 // Import socket handlers
 const { setupChatSocket } = require('./sockets/chatSocket');
 const { setupNotificationSocket } = require('./sockets/notificationSocket');
 const { setupBookingSocket } = require('./sockets/bookingSocket');
 
+// Import background jobs
+const { startBookingExpiryCron } = require('./services/bookingExpiryCron');
+const startBookingSettlementCron = require('./services/bookingSettlementCron');
+
 const startServer = async () => {
   // Connect to MongoDB
   await connectDB();
+
+  // Initialize Redis (safe no-op if REDIS_ENABLED=false or unavailable)
+  await initRedis();
 
   // Create HTTP server
   const server = http.createServer(app);
@@ -25,6 +33,10 @@ const startServer = async () => {
   setupChatSocket(io);
   setupNotificationSocket(io);
   setupBookingSocket(io);
+
+  // Start background jobs
+  startBookingExpiryCron();
+  startBookingSettlementCron();
 
   // Start listening
   server.listen(PORT, () => {

@@ -25,7 +25,7 @@ const bookingSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['PENDING', 'CONFIRMED', 'REJECTED', 'CANCELLED', 'COMPLETED', 'NO_SHOW'],
+      enum: ['PENDING', 'CONFIRMED', 'REJECTED', 'CANCELLED', 'COMPLETED', 'NO_SHOW', 'EXPIRED', 'AUTO_SETTLED'],
       default: 'PENDING',
     },
 
@@ -136,6 +136,20 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       enum: ['PENDING', 'AUTHORIZED', 'PAID', 'FAILED', 'REFUND_PENDING', 'PARTIALLY_REFUNDED', 'REFUNDED'],
       default: 'PENDING',
+    },
+
+    // ─── OTP Verification for Completion ───────────────────────────────────────
+    completionOtp: {
+      type: String,
+      select: false, // Don't return by default
+    },
+    otpExpiresAt: {
+      type: Date,
+      select: false,
+    },
+    otpVerified: {
+      type: Boolean,
+      default: false,
     },
 
     // Reference to the successful PaymentTransaction (set after payment)
