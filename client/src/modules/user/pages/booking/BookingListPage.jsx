@@ -41,16 +41,37 @@ const BookingListPage = () => {
       if (filter) params.status = filter;
       
       const res = await getMyBookings(params);
-      
-      // Update to read from new API structure (res.data.data and res.data.pagination)
-      if (res.data?.data) {
-        setBookings(Array.isArray(res.data.data) ? res.data.data : (res.data.data.bookings || []));
+      const responseData = res.data;
+
+      // Shape 1 (new): { success, data: [...], pagination: {...} }
+      // Shape 2 (old): { success, data: { bookings: [...], total, page, totalPages } }
+      let extractedBookings = [];
+      let extractedPagination = null;
+
+      if (Array.isArray(responseData?.data)) {
+        // New shape
+        extractedBookings = responseData.data;
+        extractedPagination = responseData.pagination || null;
+      } else if (responseData?.data?.bookings) {
+        // Old shape
+        extractedBookings = responseData.data.bookings;
+        const total = responseData.data.total || 0;
+        const totalPages = responseData.data.totalPages || 1;
+        extractedPagination = {
+          currentPage: responseData.data.page || page,
+          pageSize: 10,
+          totalItems: total,
+          totalPages,
+          hasNextPage: (responseData.data.page || page) < totalPages,
+          hasPreviousPage: (responseData.data.page || page) > 1,
+        };
       }
-      if (res.data?.pagination) {
-        setPagination(res.data.pagination);
-      }
+
+      setBookings(extractedBookings);
+      if (extractedPagination) setPagination(extractedPagination);
     } catch (e) {
-      console.error('Failed to load bookings', e);
+      console.error('Failed to load bookings:', e?.response?.data || e.message);
+      setBookings([]);
     }
     setLoading(false);
   };
