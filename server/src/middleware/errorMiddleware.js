@@ -14,6 +14,16 @@ const notFound = (req, res, next) => {
  * Consistent response format: { success, message, data?, errors?, stack? }
  */
 const errorHandler = (err, req, res, next) => {
+  // Always ensure CORS header is present on error responses.
+  // If the CORS middleware passed but the server crashed after, the browser
+  // would see a response without CORS headers and report it as a "CORS error"
+  // instead of the actual 500 error. This prevents that confusion.
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+
   let statusCode = err.statusCode ? err.statusCode : (res.statusCode === 200 ? 500 : res.statusCode);
   let message = err.message || 'Internal Server Error';
 
