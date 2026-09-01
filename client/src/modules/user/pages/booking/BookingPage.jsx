@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { getComplexAvailability, getSalonStaff } from '../../services/userApi';
+import { useAuth } from '../../../../context/AuthContext';
 import { goBack } from '../../../../utils/navigation';
 import { Skeleton, SkeletonText } from '../../../../components/common/Skeleton';
 
@@ -8,6 +9,13 @@ const BookingPage = () => {
   const { id: salonId } = useParams();
   const { state } = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [toast, setToast] = useState(null);
+
+  const showToast = useCallback((message, type = 'info') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  }, []);
 
   const salon = state?.salon;
   const selectedServices = state?.selectedServices || [];
@@ -75,12 +83,24 @@ const BookingPage = () => {
 
   const handleProceed = () => {
     if (!date || !time) return;
-    navigate(`/salon/${salonId}/checkout`, {
-      state: { 
-        salon, selectedServices, staff: availableStaff, serviceStaff, date, time, 
-        packageId: state?.packageId, packageDoc: state?.packageDoc 
-      }
-    });
+
+    const bookingState = {
+      salon, selectedServices, staff: availableStaff, serviceStaff, date, time,
+      packageId: state?.packageId, packageDoc: state?.packageDoc
+    };
+
+    if (!user) {
+      // Save booking progress so user can continue after login
+      sessionStorage.setItem('pendingBookingReturn', JSON.stringify({
+        path: `/salon/${salonId}/book`,
+        state: bookingState
+      }));
+      showToast('Please login to proceed with booking', 'info');
+      setTimeout(() => navigate('/login', { state: { from: `/salon/${salonId}/book` } }), 1200);
+      return;
+    }
+
+    navigate(`/salon/${salonId}/checkout`, { state: bookingState });
   };
 
   const groupSlots = () => {
@@ -287,8 +307,21 @@ const BookingPage = () => {
           Proceed to Checkout
         </button>
       </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-lg text-white text-sm font-medium animate-fade-in ${
+          toast.type === 'error' ? 'bg-red-500' : 'bg-[#6D3EA8]'
+        }`}>
+          <span className="material-symbols-outlined text-[20px]">
+            {toast.type === 'error' ? 'error' : 'lock'}
+          </span>
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 };
 
 export default BookingPage;
+

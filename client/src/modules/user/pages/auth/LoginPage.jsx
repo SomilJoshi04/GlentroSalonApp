@@ -37,6 +37,20 @@ const LoginPage = () => {
       const res = await loginUser(formData);
       setAuth('user', res.data.data.user, res.data.data.token);
 
+      // Check if user was redirected from booking page (date/time selection)
+      const pendingBookingReturnStr = sessionStorage.getItem('pendingBookingReturn');
+      if (pendingBookingReturnStr) {
+        try {
+          const { path, state: bookingState } = JSON.parse(pendingBookingReturnStr);
+          sessionStorage.removeItem('pendingBookingReturn');
+          navigate(path, { state: bookingState, replace: true });
+          return;
+        } catch (e) {
+          console.error('Failed to parse pendingBookingReturn', e);
+          sessionStorage.removeItem('pendingBookingReturn');
+        }
+      }
+
       const pendingBookingStr = sessionStorage.getItem('pendingBooking');
       if (pendingBookingStr) {
         try {
