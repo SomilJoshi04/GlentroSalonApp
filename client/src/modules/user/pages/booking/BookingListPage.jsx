@@ -18,19 +18,40 @@ const BookingListPage = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+  
   const navigate = useNavigate();
   const location = useLocation();
   const fromProfile = location.state?.fromProfile;
 
-  useEffect(() => { loadBookings(); }, [filter]);
+  useEffect(() => { loadBookings(); }, [filter, page]);
+
+  const handleFilterChange = (newFilter) => {
+    if (filter !== newFilter) {
+      setFilter(newFilter);
+      setPage(1); // Reset to page 1 on filter change
+    }
+  };
 
   const loadBookings = async () => {
     setLoading(true);
     try {
-      const params = filter ? { status: filter } : {};
+      const params = { page, limit: 10 };
+      if (filter) params.status = filter;
+      
       const res = await getMyBookings(params);
-      setBookings(res.data.data.bookings);
-    } catch (e) {}
+      
+      // Update to read from new API structure (res.data.data and res.data.pagination)
+      if (res.data?.data) {
+        setBookings(Array.isArray(res.data.data) ? res.data.data : (res.data.data.bookings || []));
+      }
+      if (res.data?.pagination) {
+        setPagination(res.data.pagination);
+      }
+    } catch (e) {
+      console.error('Failed to load bookings', e);
+    }
     setLoading(false);
   };
 
@@ -50,7 +71,7 @@ const BookingListPage = () => {
 
       <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
         {filters.map(f => (
-          <button key={f} onClick={() => setFilter(f)}
+          <button key={f} onClick={() => handleFilterChange(f)}
             className={`px-4 py-2 rounded-full text-[14px] font-label-md whitespace-nowrap transition-all ${
               filter === f ? 'bg-primary text-white shadow-sm' : 'bg-surface text-muted-text border border-border hover:border-primary'}`}>
             {f || 'All'}
@@ -95,6 +116,28 @@ const BookingListPage = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {/* Pagination Controls */}
+      {!loading && pagination && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100 pb-4">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={!pagination.hasPreviousPage || loading}
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-surface text-on-surface border border-border disabled:opacity-50 disabled:cursor-not-allowed hover:bg-surface-variant transition-colors"
+          >
+            Previous
+          </button>
+          <span className="text-sm font-medium text-text-secondary">
+            Page {pagination.currentPage} of {pagination.totalPages}
+          </span>
+          <button
+            onClick={() => setPage(p => p + 1)}
+            disabled={!pagination.hasNextPage || loading}
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-surface text-on-surface border border-border disabled:opacity-50 disabled:cursor-not-allowed hover:bg-surface-variant transition-colors"
+          >
+            Next
+          </button>
         </div>
       )}
     </div>

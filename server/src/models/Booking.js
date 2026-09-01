@@ -184,6 +184,8 @@ const bookingSchema = new mongoose.Schema(
 );
 
 bookingSchema.index({ user: 1, status: 1 });
+bookingSchema.index({ user: 1, createdAt: -1, _id: -1 }); // Optimized for pagination
+bookingSchema.index({ user: 1, status: 1, createdAt: -1, _id: -1 }); // Optimized for filtered pagination
 bookingSchema.index({ salon: 1, status: 1 });
 bookingSchema.index({ bookingDate: 1, salon: 1 });
 bookingSchema.index({ paymentStatus: 1 });

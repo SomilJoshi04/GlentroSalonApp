@@ -50,14 +50,44 @@ const calculateTotal = async (req, res, next) => {
 // @desc    Get user's bookings
 const getMyBookings = async (req, res, next) => {
   try {
-    const { status, page = 1, limit = 20 } = req.query;
+    const DEFAULT_LIMIT = 10;
+    const MAX_LIMIT = 50;
+
+    let { status, page = 1, limit = DEFAULT_LIMIT } = req.query;
+    
+    // Sanitize and cap pagination
+    page = parseInt(page, 10);
+    limit = parseInt(limit, 10);
+    if (isNaN(page) || page < 1) page = 1;
+    if (isNaN(limit) || limit < 1) limit = DEFAULT_LIMIT;
+    if (limit > MAX_LIMIT) limit = MAX_LIMIT;
+
     const query = { user: req.user.id };
     if (status) query.status = status;
 
-    const bookings = await Booking.find(query).populate('salon', 'name address images phone').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(parseInt(limit));
-    const total = await Booking.countDocuments(query);
+    const skip = (page - 1) * limit;
 
-    res.json({ success: true, data: { bookings, total, page: parseInt(page), totalPages: Math.ceil(total / limit) } });
+    const bookings = await Booking.find(query)
+      .populate('salon', 'name address images phone')
+      .sort({ createdAt: -1, _id: -1 })
+      .skip(skip)
+      .limit(limit);
+      
+    const totalItems = await Booking.countDocuments(query);
+    const totalPages = Math.ceil(totalItems / limit);
+
+    res.json({
+      success: true,
+      data: bookings,
+      pagination: {
+        currentPage: page,
+        pageSize: limit,
+        totalItems,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1
+      }
+    });
   } catch (error) { next(error); }
 };
 
