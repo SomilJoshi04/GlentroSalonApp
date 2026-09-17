@@ -5,6 +5,7 @@ import { loginUser } from '../../../../services/api/authApi';
 import { requestAccountRecovery } from '../../services/userApi';
 import { useSettings } from '../../../../context/SettingContext';
 import { getImageUrl } from '../../../../utils/imageUtils';
+import LoginSlider from '../../components/LoginSlider';
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -124,31 +125,25 @@ const LoginPage = () => {
       {/* Heavy gradient overlay: Solid purple left, translucent right */}
       <div className="absolute inset-0 z-0 bg-gradient-to-r from-[#2D0B5A] from-40% via-[#2D0B5A]/80 to-[#2D0B5A]/20 backdrop-blur-sm"></div>
 
-      {/* LEFT SIDE: Visuals (Hidden on Mobile) */}
+      {/* LEFT SIDE: Visuals — dynamic slider on desktop (Hidden on Mobile) */}
       <div className="hidden lg:flex w-1/2 relative items-center justify-center p-12 z-10">
-
-        {/* Main Image Container */}
+        {/* Main Slider Container */}
         <div className="relative w-full max-w-[400px] aspect-[1/1.2] rounded-[32px] shadow-2xl z-10 bg-surface overflow-hidden">
-          <img
-            src={loginImage}
-            alt="Premium Salon Interior"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+          <LoginSlider />
         </div>
 
         {/* Floating Glass Elements (Placed outside the overflow-hidden container) */}
-        <div className="absolute top-[20%] left-[15%] w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/30 shadow-xl flex items-center justify-center animate-bounce z-20" style={{ animationDuration: '4s' }}>
+        <div className="absolute top-[15%] left-[15%] w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/30 shadow-xl flex items-center justify-center animate-bounce z-20" style={{ animationDuration: '4s' }}>
           <span className="material-symbols-outlined text-white text-3xl">cut</span>
         </div>
-        <div className="absolute bottom-[25%] left-[25%] w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/30 shadow-xl flex items-center justify-center animate-bounce z-20" style={{ animationDuration: '5s', animationDelay: '1s' }}>
+        <div className="absolute bottom-[10%] left-[15%] w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/30 shadow-xl flex items-center justify-center animate-bounce z-20" style={{ animationDuration: '5s', animationDelay: '1s' }}>
           <span className="material-symbols-outlined text-white text-2xl">content_cut</span>
         </div>
-        <div className="absolute top-[35%] right-[15%] w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/30 shadow-xl flex items-center justify-center animate-bounce z-20" style={{ animationDuration: '6s', animationDelay: '0.5s' }}>
+        <div className="absolute top-[15%] right-[15%] w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/30 shadow-xl flex items-center justify-center animate-bounce z-20" style={{ animationDuration: '6s', animationDelay: '0.5s' }}>
           <span className="material-symbols-outlined text-white text-3xl">sanitizer</span>
         </div>
-        <div className="absolute bottom-[20%] right-[20%] w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/30 shadow-xl flex items-center justify-center animate-bounce z-20" style={{ animationDuration: '4.5s', animationDelay: '1.5s' }}>
-          <span className="material-symbols-outlined text-white text-2xl">sanitizer</span>
+        <div className="absolute bottom-[10%] right-[15%] w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/30 shadow-xl flex items-center justify-center animate-bounce z-20" style={{ animationDuration: '4.5s', animationDelay: '1.5s' }}>
+          <span className="material-symbols-outlined text-white text-2xl">clean_hands</span>
         </div>
       </div>
 
@@ -156,6 +151,11 @@ const LoginPage = () => {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 z-20">
 
         <div className="w-full max-w-[480px] bg-white/80 backdrop-blur-xl rounded-[32px] p-8 sm:p-10 shadow-[0_8px_32px_0_rgba(31,38,135,0.37)] border border-white/60 relative">
+
+          {/* Mobile-only compact slider strip above login card */}
+          <div className="block lg:hidden mb-6 -mx-8 -mt-8 sm:-mx-10 sm:-mt-10 rounded-t-[32px] overflow-hidden" style={{ height: 180 }}>
+            <LoginSlider />
+          </div>
 
           {/* Back Button */}
           <button

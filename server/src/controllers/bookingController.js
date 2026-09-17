@@ -139,8 +139,12 @@ const getBookingById = async (req, res, next) => {
 
     const services = await BookingService.find({ booking: booking._id }).populate('service', 'name price duration category').populate('staff', 'name avatar');
     const review = await require('../models/Review').findOne({ booking: booking._id });
+    
+    // Fetch existing staff reviews for this booking so frontend can show "Already rated" state
+    const staffReviews = await require('../models/StaffReview').find({ booking: booking._id })
+      .select('bookingService staff rating review createdAt');
 
-    res.json({ success: true, data: { booking, services, review } });
+    res.json({ success: true, data: { booking, services, review, staffReviews } });
   } catch (error) { next(error); }
 };
 

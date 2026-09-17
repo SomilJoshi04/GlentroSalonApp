@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { getBookingById, cancelBooking } from '../../services/userApi';
+import { submitStaffReview } from '../../services/staffReviewApi';
 import { goBack } from '../../../../utils/navigation';
 import Button from '../../../../components/common/Button';
 import Loader from '../../../../components/common/Loader';
@@ -10,6 +11,8 @@ import PageHeader from '../../../../components/common/PageHeader';
 import { formatPaise } from '../../../../utils/money';
 import { useCall } from '../../../../context/CallContext';
 import { checkCallAvailability } from '../../../../services/callService';
+import toast from 'react-hot-toast';
+import { getImageUrl } from '../../../../utils/imageUtils';
 
 const statusColors = {
   PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -54,6 +57,10 @@ const BookingDetailPage = () => {
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [callAvailability, setCallAvailability] = useState({ canCall: false });
 
+  // Staff Reviews State
+  const [staffReviews, setStaffReviews] = useState([]); // already-submitted staff reviews
+  const [staffRatingForms, setStaffRatingForms] = useState({}); // { [bookingServiceId]: { rating, review, submitting, submitted } }
+
   // Calling feature
   const {
     startCall, clearError, callError
@@ -79,6 +86,9 @@ const BookingDetailPage = () => {
       setBooking(res.data.data.booking);
       setServices(res.data.data.services);
       setReview(res.data.data.review);
+      // Staff reviews returned from updated getBookingById
+      const existingStaffReviews = res.data.data.staffReviews || [];
+      setStaffReviews(existingStaffReviews);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -335,7 +345,135 @@ const BookingDetailPage = () => {
         )}
       </div>
 
-      {/* Review Section */}
+      {/* Rate Your Stylists (separate from salon review) */}
+      {booking.status === 'COMPLETED' && (() => {
+        // Only show for services where a staff member was actually assigned
+        const reviewableServices = services.filter(bs => bs.staff && bs.staff._id);
+        if (reviewableServices.length === 0) return null;
+
+        return (
+          <div className="bg-white rounded-2xl p-5 border border-gray-100">
+            <h3 className="font-semibold mb-1">Rate Your Stylists</h3>
+            <p className="text-xs text-text-muted mb-4">How was each stylist who served you?</p>
+            <div className="flex flex-col gap-5">
+              {reviewableServices.map((bs) => {
+                const existingReview = staffReviews.find(
+                  (sr) => sr.bookingService?.toString() === bs._id?.toString() ||
+                           sr.bookingService === bs._id
+                );
+
+                const formState = staffRatingForms[bs._id] || { rating: 0, review: '', submitting: false, submitted: false };
+                const isSubmitted = existingReview || formState.submitted;
+
+                return (
+                  <div key={bs._id} className="flex flex-col gap-3 pb-4 border-b border-gray-50 last:border-0 last:pb-0">
+                    {/* Staff info */}
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full overflow-hidden bg-primary-50 flex items-center justify-center shrink-0">
+                        {bs.staff?.avatar ? (
+                          <img src={getImageUrl(bs.staff.avatar)} alt={bs.staff.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="material-symbols-outlined text-[18px] text-primary-400">person</span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-on-surface">{bs.staff?.name}</p>
+                        <p className="text-xs text-text-muted">{bs.service?.name}</p>
+                      </div>
+                    </div>
+
+                    {/* Already reviewed */}
+                    {isSubmitted ? (
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center text-yellow-400">
+                          {[1,2,3,4,5].map(star => (
+                            <span key={star} className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: star <= (existingReview?.rating || formState.rating) ? "'FILL' 1" : "'FILL' 0" }}>star</span>
+                          ))}
+                        </div>
+                        <span className="text-xs font-medium text-green-600 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                          Rated
+                        </span>
+                      </div>
+                    ) : (
+                      /* Rating form */
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-1">
+                          {[1,2,3,4,5].map(star => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setStaffRatingForms(prev => ({
+                                ...prev,
+                                [bs._id]: { ...formState, rating: star }
+                              }))}
+                              className={`material-symbols-outlined text-2xl transition-colors ${
+                                star <= formState.rating ? 'text-yellow-400' : 'text-gray-300'
+                              }`}
+                              style={{ fontVariationSettings: star <= formState.rating ? "'FILL' 1" : "'FILL' 0" }}
+                            >
+                              star
+                            </button>
+                          ))}
+                        </div>
+                        <textarea
+                          placeholder="Share your experience with this stylist (optional)"
+                          value={formState.review}
+                          onChange={e => setStaffRatingForms(prev => ({
+                            ...prev,
+                            [bs._id]: { ...formState, review: e.target.value }
+                          }))}
+                          className="w-full bg-gray-50 border border-gray-200 focus:border-primary-400 focus:ring-1 focus:ring-primary-400 rounded-xl p-3 text-sm resize-none h-16"
+                        />
+                        <Button
+                          type="button"
+                          disabled={formState.rating === 0 || formState.submitting}
+                          loading={formState.submitting}
+                          onClick={async () => {
+                            if (formState.rating < 1 || formState.rating > 5) {
+                              toast.error('Please select a star rating');
+                              return;
+                            }
+                            setStaffRatingForms(prev => ({
+                              ...prev,
+                              [bs._id]: { ...formState, submitting: true }
+                            }));
+                            try {
+                              await submitStaffReview(booking._id, {
+                                bookingServiceId: bs._id,
+                                staffId: bs.staff._id,
+                                rating: formState.rating,
+                                review: formState.review,
+                              });
+                              toast.success(`Rated ${bs.staff.name}!`);
+                              setStaffRatingForms(prev => ({
+                                ...prev,
+                                [bs._id]: { ...formState, submitting: false, submitted: true }
+                              }));
+                            } catch (err) {
+                              const msg = err.response?.data?.message || 'Failed to submit rating';
+                              toast.error(msg);
+                              setStaffRatingForms(prev => ({
+                                ...prev,
+                                [bs._id]: { ...formState, submitting: false }
+                              }));
+                            }
+                          }}
+                          className="text-sm px-4 py-2"
+                        >
+                          Submit Rating
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Review Section (Salon Review) */}
       {booking.status === 'COMPLETED' && (
         <div className="bg-white rounded-2xl p-5 border border-gray-100">
           <h3 className="font-semibold mb-3">Rate Your Experience</h3>

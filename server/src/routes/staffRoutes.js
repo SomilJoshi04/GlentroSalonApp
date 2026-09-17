@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const { addStaff, getSalonStaff, getVendorStaff, updateStaff, toggleStaffStatus, updateSchedule, getAvailability, deleteStaff } = require('../controllers/staffController');
+const { getStaffReviews } = require('../controllers/staffReviewController');
 const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 
@@ -12,6 +13,7 @@ router.put('/:id', protect, authorize('vendor'), requireSubscriptionAccess, upda
 router.patch('/:id/toggle-status', protect, authorize('vendor'), requireSubscriptionAccess, toggleStaffStatus);
 router.put('/:id/schedule', protect, authorize('vendor'), requireSubscriptionAccess, updateSchedule);
 router.get('/:id/availability', getAvailability);
+router.get('/:staffId/reviews', getStaffReviews); // Public: non-hidden staff reviews
 router.delete('/:id', protect, authorize('vendor'), requireSubscriptionAccess, deleteStaff);
 
 module.exports = router;

@@ -13,6 +13,10 @@ router.get('/cities/:city/zones', getZones);
 router.get('/detail/:id', getSalonById);
 router.get('/:id/resources', getSalonResources);
 
+// Public: Top Stylists for a salon (Wilson-score ranked, active staff with >= 1 review)
+const { getTopStylists } = require('../controllers/staffReviewController');
+router.get('/:salonId/top-stylists', getTopStylists);
+
 // Vendor routes
 const { requireSubscriptionAccess } = require('../middleware/subscriptionMiddleware');
 router.post('/', protect, authorize('vendor'), requireSubscriptionAccess, upload.single('image'), createSalon);

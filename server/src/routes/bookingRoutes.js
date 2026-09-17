@@ -3,6 +3,7 @@ const { createBooking, calculateTotal, getMyBookings, getSalonBookings, getBooki
 const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 const { requireActiveVendor } = require('../middleware/vendorSuspensionMiddleware');
+const { submitStaffReview } = require('../controllers/staffReviewController');
 
 const { requireSubscriptionAccess } = require('../middleware/subscriptionMiddleware');
 const { bookingLimiter } = require('../middleware/rateLimiter');
@@ -24,5 +25,8 @@ router.patch('/:id/cancel', protect, authorize('user', 'vendor'), cancelBooking)
 router.patch('/:id/complete', protect, authorize('vendor'), completeBooking);
 router.patch('/:id/no-show', protect, authorize('vendor'), markNoShow);
 router.post('/:id/request-otp', protect, authorize('vendor'), requestCompletionOtp);
+
+// Staff review submission (user only, after booking completion)
+router.post('/:bookingId/staff-review', protect, authorize('user'), submitStaffReview);
 
 module.exports = router;

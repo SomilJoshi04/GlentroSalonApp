@@ -37,6 +37,8 @@ const faqRoutes = require('./routes/faqRoutes');
 const bookingIssueRoutes = require('./routes/bookingIssueRoutes');
 const resourceRoutes = require('./routes/resourceRoutes');
 const callRoutes = require('./routes/callRoutes');
+const loginSlideRoutes = require('./routes/loginSlideRoutes');
+const staffReviewRoutes = require('./routes/staffReviewRoutes');
 const app = express();
 
 // Trust proxy for rate limiting behind reverse proxies (like Nginx, Vercel, Render)
@@ -135,6 +137,8 @@ app.use('/api/faqs', faqRoutes);
 app.use('/api/booking-issues', bookingIssueRoutes);
 app.use('/api/vendor', resourceRoutes);
 app.use('/api/call', callRoutes);
+app.use('/api/login-slides', loginSlideRoutes);
+app.use('/api/staff-reviews', staffReviewRoutes);
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'Salon Booking API is running', timestamp: new Date().toISOString() });

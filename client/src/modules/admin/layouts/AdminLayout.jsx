@@ -67,6 +67,7 @@ const AdminLayout = () => {
     { to: '/admin/reviews', label: 'Reviews', icon: 'star_rate' },
     { to: '/admin/coupons', label: 'Coupons', icon: 'local_activity' },
     { to: '/admin/promotional-videos', label: 'Promotional Videos', icon: 'videocam' },
+    { to: '/admin/login-slides', label: 'Login Slides', icon: 'photo_library' },
     { to: '/admin/commissions', label: 'Commissions Config', icon: 'percent' },
     { to: '/admin/payments', label: 'Payments & Revenue', icon: 'account_balance_wallet' },
     { to: '/admin/notifications', label: 'Notifications', icon: 'notifications' },

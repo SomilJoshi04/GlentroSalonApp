@@ -69,6 +69,22 @@ const staffSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    // Aggregated rating — updated by StaffReview.calcStaffRatings() after each review mutation.
+    // Since Staff.salon is a single reference (one staff = one salon), this aggregate is
+    // naturally salon-scoped. If multi-salon staff is ever added, this must be refactored
+    // into a salonRatings Map. For now, this mirrors the Salon.ratings pattern exactly.
+    ratings: {
+      average: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 5,
+      },
+      count: {
+        type: Number,
+        default: 0,
+      },
+    },
   },
   {
     timestamps: true,

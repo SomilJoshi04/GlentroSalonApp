@@ -16,6 +16,7 @@ import { SalonDetailSkeleton } from '../../components/skeletons/SalonDetailSkele
 import { Skeleton, SkeletonAvatar, SkeletonText } from '../../../../components/common/Skeleton';
 import { useFavorites } from '../../../../context/FavoriteContext';
 import { formatPaise } from '../../../../utils/money';
+import TopStylists from '../../components/TopStylists';
 
 const SalonDetailPage = () => {
   const { id } = useParams();
@@ -341,7 +342,13 @@ const SalonDetailPage = () => {
           {/* Tab Content: Staff */}
           {activeTab === 'staff' && (
             <section className="animate-fade-in">
-              <h3 className="font-headline-sm text-[20px] font-semibold text-on-surface mb-4">Our Top Specialists</h3>
+              {/* Top Stylists — Wilson-score ranked staff with >= 1 review */}
+              <TopStylists salonId={id} salon={salon} staff={staff} />
+
+              {/* All Staff */}
+              <h3 className="font-headline-sm text-[20px] font-semibold text-on-surface mb-4">
+                {staff.length > 0 ? 'All Staff' : 'Our Specialists'}
+              </h3>
               <div className="grid grid-cols-2 gap-4">
                 {staff.length === 0 ? <p className="text-muted-text col-span-2">No staff listed yet.</p> : staff.map(s => (
                   <div key={s._id} className="flex flex-col items-center p-4 rounded-xl bg-surface border border-border shadow-sm">
@@ -354,6 +361,16 @@ const SalonDetailPage = () => {
                     </div>
                     <span className="font-label-md text-[14px] font-bold text-on-surface">{s.name}</span>
                     <span className="font-body-sm text-[12px] text-muted-text mt-1">{s.specializations?.[0] || 'Specialist'}</span>
+                    {/* Rating badge: show 'New' if no reviews */}
+                    {s.ratings && s.ratings.count > 0 ? (
+                      <div className="flex items-center gap-1 mt-1">
+                        <span className="material-symbols-outlined text-[12px] text-yellow-500" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                        <span className="text-[11px] font-semibold text-on-surface">{s.ratings.average?.toFixed(1)}</span>
+                        <span className="text-[10px] text-muted-text">({s.ratings.count})</span>
+                      </div>
+                    ) : (
+                      <span className="mt-1 text-[10px] font-semibold text-muted-text bg-surface-variant px-2 py-0.5 rounded-full">New</span>
+                    )}
                   </div>
                 ))}
               </div>

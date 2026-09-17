@@ -155,7 +155,17 @@ const BookingPage = () => {
     <div className="bg-background min-h-screen text-on-surface pb-[180px] w-full max-w-container-max mx-auto relative">
       {/* Transactional Header */}
       <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-md px-4 md:px-margin-desktop py-4 flex items-center justify-between border-b border-border shadow-sm">
-        <button onClick={() => goBack(navigate, `/salon/${salonId}`)} className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-variant text-on-surface hover:bg-surface-container-high transition-colors -ml-2">
+        <button 
+          type="button"
+          onClick={() => {
+            if (window.history.length > 2) {
+              navigate(-1);
+            } else {
+              navigate(`/salon/${salonId}`, { replace: true });
+            }
+          }} 
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-variant text-on-surface hover:bg-surface-container-high transition-colors -ml-2 cursor-pointer relative z-50"
+        >
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
         <h1 className="font-headline-sm text-[20px] text-on-surface">Select Date & Time</h1>
