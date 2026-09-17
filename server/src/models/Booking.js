@@ -147,6 +147,11 @@ const bookingSchema = new mongoose.Schema(
       type: Date,
       select: false,
     },
+    failedOtpAttempts: {
+      type: Number,
+      default: 0,
+      select: false,
+    },
     otpVerified: {
       type: Boolean,
       default: false,

@@ -21,8 +21,8 @@ router.post('/availability/:salonId', getAvailability);
 router.get('/:id', protect, getBookingById);
 router.patch('/:id/accept', protect, authorize('vendor'), requireActiveVendor, requireSubscriptionAccess, acceptBooking);
 router.patch('/:id/reject', protect, authorize('vendor'), rejectBooking);
-router.patch('/:id/cancel', protect, authorize('user', 'vendor'), cancelBooking);
-router.patch('/:id/complete', protect, authorize('vendor'), completeBooking);
+router.patch('/:id/complete', protect, authorize('vendor', 'user', 'admin'), completeBooking);
+router.patch('/:id/verify-completion', protect, authorize('user'), completeBooking);
 router.patch('/:id/no-show', protect, authorize('vendor'), markNoShow);
 router.post('/:id/request-otp', protect, authorize('vendor'), requestCompletionOtp);
 

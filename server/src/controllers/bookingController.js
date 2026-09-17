@@ -5,7 +5,7 @@ const Salon = require('../models/Salon');
 const PaymentTransaction = require('../models/PaymentTransaction');
 const bookingService = require('../services/bookingService');
 const { getSalonAvailability, getComplexAvailability } = require('../services/availabilityService');
-const { notifyBookingCreated, notifyBookingAccepted, notifyBookingRejected, notifyBookingCancelled } = require('../services/notificationService');
+const { createNotification, notifyBookingCreated, notifyBookingAccepted, notifyBookingRejected, notifyBookingCancelled } = require('../services/notificationService');
 const { getIO } = require('../config/socket');
 
 // @desc    Create booking (User)
@@ -115,7 +115,16 @@ const getSalonBookings = async (req, res, next) => {
 // @desc    Get booking detail
 const getBookingById = async (req, res, next) => {
   try {
-    const booking = await Booking.findById(req.params.id).populate('salon', 'name address phone vendor images').populate('user', 'name email phone').populate('coupon', 'code discountType discountValue');
+    let query = Booking.findById(req.params.id)
+      .populate('salon', 'name address phone vendor images')
+      .populate('user', 'name email phone')
+      .populate('coupon', 'code discountType discountValue');
+
+    if (req.user && req.user.role === 'user') {
+      query = query.select('+completionOtp +otpExpiresAt');
+    }
+
+    const booking = await query;
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
 
     // Authorization check
@@ -203,13 +212,48 @@ const cancelBooking = async (req, res, next) => {
   }
 };
 
-// @desc    Complete booking (Vendor)
+// @desc    Complete booking (Vendor or User with OTP)
 const completeBooking = async (req, res, next) => {
   try {
-    const booking = await bookingService.completeBooking(req.params.id, req.user.id, req.body.otp);
-    res.json({ success: true, message: 'Booking completed', data: booking });
+    const booking = await bookingService.completeBooking(req.params.id, req.user.id, req.user.role, req.body.otp);
+
+    // Realtime notification via Socket.IO
+    try {
+      const io = getIO();
+      const populatedBooking = await Booking.findById(booking._id).populate('salon');
+      io.to(`user:${booking.user}`).emit('booking:update', { eventType: 'COMPLETED', booking });
+      if (populatedBooking?.salon?.vendor) {
+        io.to(`vendor:${populatedBooking.salon.vendor}`).emit('booking:update', { eventType: 'COMPLETED', booking });
+      }
+    } catch (sockErr) {
+      console.log('Socket notification error on complete:', sockErr.message);
+    }
+
+    // In-app notification for user
+    try {
+      await createNotification({
+        recipientId: booking.user,
+        recipientModel: 'User',
+        recipientRole: 'user',
+        type: 'BOOKING_COMPLETED',
+        title: 'Service Completed!',
+        message: 'Your salon appointment has been marked complete. Tap to share your rating & review!',
+        data: { bookingId: booking._id, salonId: booking.salon },
+      });
+    } catch (notifErr) {
+      console.log('In-app notification error on complete:', notifErr.message);
+    }
+
+    res.json({ success: true, message: 'Booking completed successfully', data: booking });
   } catch (error) {
-    if (error.message.includes('not authorized') || error.message.includes('Cannot')) {
+    if (
+      error.message.includes('not authorized') ||
+      error.message.includes('Cannot') ||
+      error.message.includes('OTP') ||
+      error.message.includes('Invalid') ||
+      error.message.includes('expired') ||
+      error.message.includes('attempts')
+    ) {
       return res.status(400).json({ success: false, message: error.message });
     }
     next(error);
@@ -232,10 +276,47 @@ const markNoShow = async (req, res, next) => {
 // @desc    Request OTP for booking completion (Vendor)
 const requestCompletionOtp = async (req, res, next) => {
   try {
-    const { message } = await bookingService.requestCompletionOtp(req.params.id, req.user.id);
-    res.json({ success: true, message });
+    const result = await bookingService.requestCompletionOtp(req.params.id, req.user.id);
+
+    // Realtime Socket.IO emission to User App
+    try {
+      const io = getIO();
+      if (result.userId) {
+        io.to(`user:${result.userId}`).emit('booking:completion-requested', {
+          bookingId: result.bookingId,
+          otp: result.otp,
+          salonName: result.salonName,
+        });
+        io.to(`user:${result.userId}`).emit('booking:update', {
+          eventType: 'COMPLETION_REQUESTED',
+          bookingId: result.bookingId,
+          otp: result.otp,
+        });
+      }
+    } catch (sockErr) {
+      console.log('Socket notification error on OTP request:', sockErr.message);
+    }
+
+    // Create in-app notification for User
+    try {
+      if (result.userId) {
+        await createNotification({
+          recipientId: result.userId,
+          recipientModel: 'User',
+          recipientRole: 'user',
+          type: 'BOOKING_COMPLETION_REQUESTED',
+          title: 'Service Completion Code',
+          message: `${result.salonName} has completed your service. Your confirmation code is ${result.otp}.`,
+          data: { bookingId: result.bookingId, otp: result.otp },
+        });
+      }
+    } catch (notifErr) {
+      console.log('In-app notification error on OTP request:', notifErr.message);
+    }
+
+    res.json({ success: true, message: result.message, bookingId: result.bookingId });
   } catch (error) {
-    if (error.message.includes('not authorized') || error.message.includes('Cannot')) {
+    if (error.message.includes('not authorized') || error.message.includes('Cannot') || error.message.includes('found')) {
       return res.status(400).json({ success: false, message: error.message });
     }
     next(error);

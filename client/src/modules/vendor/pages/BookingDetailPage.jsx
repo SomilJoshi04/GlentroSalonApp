@@ -4,6 +4,7 @@ import { getBookingById, acceptBooking, rejectBooking, completeBooking, requestC
 import { goBack } from '../../../utils/navigation';
 import api from '../../../services/api/axiosInstance';
 import { useCall } from '../../../context/CallContext';
+import { useSocket } from '../../../context/SocketContext';
 import { checkCallAvailability } from '../../../services/callService';
 import { toast } from 'react-hot-toast';
 import { useConfirm } from '../../../context/ConfirmContext';
@@ -19,6 +20,7 @@ const BookingDetailPage = () => {
   const [callAvailability, setCallAvailability] = useState({ canCall: false });
   const { startCall, callError, clearError } = useCall();
   const { confirm } = useConfirm();
+  const { socket } = useSocket();
 
   // OTP completion flow state
   const [otpSent, setOtpSent] = useState(false);
@@ -32,6 +34,26 @@ const BookingDetailPage = () => {
   }, [booking]);
 
   useEffect(() => { load(); }, [id]);
+
+  // Realtime Socket listener for booking completion by customer
+  useEffect(() => {
+    if (!socket) return;
+    const handleUpdate = (data) => {
+      const updatedId = data.booking?._id || data.bookingId;
+      if (updatedId === id) {
+        if (data.eventType === 'COMPLETED' || data.booking?.status === 'COMPLETED') {
+          toast.success('🎉 Customer has confirmed and completed the booking!');
+          setOtpSent(false);
+        }
+        load();
+      }
+    };
+    socket.on('booking:update', handleUpdate);
+    return () => {
+      socket.off('booking:update', handleUpdate);
+    };
+  }, [socket, id]);
+
   const load = async () => { 
     try { 
       const r = await getBookingById(id); 
@@ -54,35 +76,35 @@ const BookingDetailPage = () => {
         await rejectBooking(id, { reason: 'Rejected' });
         toast.success('Booking rejected');
       } else if (action === 'complete') {
-        // Step 1: Request OTP to be sent to customer
+        // Request OTP to be sent to customer app
         setOtpLoading(true);
         try {
           await requestCompletionOtp(id);
           setOtpSent(true);
           setOtpInput('');
-          toast.success('OTP sent to customer. Please ask them for the code.');
+          toast.success('Completion PIN generated and sent to customer’s app!');
         } catch (e) {
-          toast.error(e.response?.data?.message || 'Failed to send OTP');
+          toast.error(e.response?.data?.message || 'Failed to request completion OTP');
         } finally {
           setOtpLoading(false);
         }
-        return; // Don't reload yet — wait for OTP entry
+        return; // Don't reload yet — wait for customer confirmation or OTP entry
       }
       load();
     } catch (e) { toast.error(e.response?.data?.message || 'Failed'); }
   };
 
   const handleVerifyOtp = async () => {
-    if (!otpInput.trim()) { toast.error('Please enter the OTP'); return; }
+    if (!otpInput.trim()) { toast.error('Please enter the 4-digit PIN'); return; }
     setOtpLoading(true);
     try {
       await completeBooking(id, otpInput.trim());
-      toast.success('Booking completed successfully!');
+      toast.success('🎉 Booking completed successfully!');
       setOtpSent(false);
       setOtpInput('');
       load();
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Invalid OTP. Please try again.');
+      toast.error(e.response?.data?.message || 'Invalid PIN. Please try again.');
     } finally {
       setOtpLoading(false);
     }
@@ -366,41 +388,62 @@ const BookingDetailPage = () => {
 
         {booking.status === 'CONFIRMED' && (
           otpSent ? (
-            <div className="w-full mt-3 p-4 bg-primary/5 border border-primary/20 rounded-2xl">
-              <p className="text-sm font-semibold text-on-surface mb-1">Enter OTP from Customer</p>
-              <p className="text-xs text-muted-text mb-3">An OTP has been sent to the customer's email. Ask them for the code.</p>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={otpInput}
-                  onChange={e => setOtpInput(e.target.value)}
-                  placeholder="Enter 6-digit OTP"
-                  maxLength={6}
-                  className="flex-1 px-4 py-2.5 border border-border rounded-xl text-sm font-mono tracking-widest focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                />
+            <div className="w-full mt-3 p-5 bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-2xl space-y-4 animate-fade-in shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[20px] animate-spin">progress_activity</span>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-on-surface">Waiting for Customer Confirmation</p>
+                  <p className="text-xs text-muted-text">The 4-digit PIN is shown directly on customer's phone.</p>
+                </div>
+              </div>
+
+              <div className="bg-surface p-3.5 rounded-xl border border-border/80 space-y-2">
+                <p className="text-xs font-medium text-muted-text">Or enter the 4-digit code if told verbally:</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={otpInput}
+                    onChange={e => setOtpInput(e.target.value.replace(/\D/g, ''))}
+                    placeholder="4-digit PIN"
+                    maxLength={4}
+                    className="flex-1 px-4 py-2.5 border border-border rounded-xl text-sm font-mono font-bold tracking-widest text-center focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary bg-background"
+                  />
+                  <button
+                    onClick={handleVerifyOtp}
+                    disabled={otpLoading || otpInput.trim().length !== 4}
+                    className="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-all shadow-sm"
+                  >
+                    {otpLoading ? 'Verifying...' : 'Verify'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
                 <button
-                  onClick={handleVerifyOtp}
-                  disabled={otpLoading || !otpInput.trim()}
-                  className="px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-all"
+                  onClick={() => handleAction('complete')}
+                  disabled={otpLoading}
+                  className="text-xs text-primary font-medium hover:underline flex items-center gap-1"
                 >
-                  {otpLoading ? 'Verifying...' : 'Verify'}
+                  <span className="material-symbols-outlined text-[14px]">refresh</span> Re-send Code
+                </button>
+                <button
+                  onClick={() => { setOtpSent(false); setOtpInput(''); }}
+                  className="text-xs text-muted-text hover:text-on-surface underline"
+                >
+                  Cancel
                 </button>
               </div>
-              <button
-                onClick={() => { setOtpSent(false); setOtpInput(''); }}
-                className="mt-2 text-xs text-muted-text hover:text-on-surface underline"
-              >
-                Cancel
-              </button>
             </div>
           ) : (
             <button
               onClick={() => handleAction('complete')}
               disabled={otpLoading}
-              className="w-full mt-3 py-3 bg-primary/10 border border-primary/30 text-primary rounded-xl font-semibold hover:bg-primary hover:text-white transition-all shadow-sm flex items-center justify-center gap-1.5 min-h-[48px] disabled:opacity-50"
+              className="w-full mt-3 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-1.5 min-h-[48px] disabled:opacity-50"
             >
-              <span className="material-symbols-outlined text-[18px]">task_alt</span>
-              {otpLoading ? 'Sending OTP...' : 'Mark Complete'}
+              <span className="material-symbols-outlined text-[20px]">task_alt</span>
+              {otpLoading ? 'Generating Code...' : 'Mark Complete'}
             </button>
           )
         )}

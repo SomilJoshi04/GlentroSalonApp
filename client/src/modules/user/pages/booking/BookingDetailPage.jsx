@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { getBookingById, cancelBooking } from '../../services/userApi';
+import { getBookingById, cancelBooking, verifyBookingCompletion } from '../../services/userApi';
 import { submitStaffReview } from '../../services/staffReviewApi';
 import { goBack } from '../../../../utils/navigation';
 import Button from '../../../../components/common/Button';
@@ -10,6 +10,7 @@ import Modal from '../../../../components/common/Modal';
 import PageHeader from '../../../../components/common/PageHeader';
 import { formatPaise } from '../../../../utils/money';
 import { useCall } from '../../../../context/CallContext';
+import { useSocket } from '../../../../context/SocketContext';
 import { checkCallAvailability } from '../../../../services/callService';
 import toast from 'react-hot-toast';
 import { getImageUrl } from '../../../../utils/imageUtils';
@@ -66,7 +67,44 @@ const BookingDetailPage = () => {
     startCall, clearError, callError
   } = useCall();
 
+  // Socket for real-time completion & status updates
+  const { socket } = useSocket();
+
+  // OTP Completion State
+  const [completionOtpCode, setCompletionOtpCode] = useState('');
+  const [userOtpInput, setUserOtpInput] = useState('');
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+
   useEffect(() => { loadBooking(); }, [id]);
+
+  // Real-time socket listener for OTP request and completion
+  useEffect(() => {
+    if (!socket) return;
+    const handleCompletionRequested = (data) => {
+      if (data.bookingId === id) {
+        setCompletionOtpCode(data.otp);
+        loadBooking();
+        toast.success(`Service completed! Your code is ${data.otp}`, { duration: 6000 });
+      }
+    };
+    const handleBookingUpdate = (data) => {
+      const updatedId = data.booking?._id || data.bookingId;
+      if (updatedId === id) {
+        if (data.eventType === 'COMPLETION_REQUESTED' && data.otp) {
+          setCompletionOtpCode(data.otp);
+        }
+        loadBooking();
+      }
+    };
+
+    socket.on('booking:completion-requested', handleCompletionRequested);
+    socket.on('booking:update', handleBookingUpdate);
+
+    return () => {
+      socket.off('booking:completion-requested', handleCompletionRequested);
+      socket.off('booking:update', handleBookingUpdate);
+    };
+  }, [socket, id]);
 
   // Poll call availability every 60 seconds for CONFIRMED bookings
   useEffect(() => {
@@ -83,7 +121,11 @@ const BookingDetailPage = () => {
   const loadBooking = async () => {
     try {
       const res = await getBookingById(id);
-      setBooking(res.data.data.booking);
+      const bData = res.data.data.booking;
+      setBooking(bData);
+      if (bData?.completionOtp) {
+        setCompletionOtpCode(bData.completionOtp);
+      }
       setServices(res.data.data.services);
       setReview(res.data.data.review);
       // Staff reviews returned from updated getBookingById
@@ -91,6 +133,26 @@ const BookingDetailPage = () => {
       setStaffReviews(existingStaffReviews);
     } catch (e) { console.error(e); }
     setLoading(false);
+  };
+
+  const handleConfirmCompletion = async () => {
+    const codeToSubmit = (userOtpInput || completionOtpCode || '').trim();
+    if (!codeToSubmit) {
+      toast.error('Please enter the 4-digit completion code');
+      return;
+    }
+    setIsVerifyingOtp(true);
+    try {
+      await verifyBookingCompletion(id, codeToSubmit);
+      toast.success('🎉 Service completed successfully! Please rate your experience.');
+      setCompletionOtpCode('');
+      setUserOtpInput('');
+      loadBooking();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Invalid confirmation code');
+    } finally {
+      setIsVerifyingOtp(false);
+    }
   };
 
   const handleCancel = async () => {
@@ -245,6 +307,65 @@ const BookingDetailPage = () => {
         <h2 className="text-2xl font-bold">{booking.status}</h2>
         <p className="text-xs mt-1 opacity-80">#{booking._id.slice(-8).toUpperCase()}</p>
       </div>
+
+      {/* In-App Service Completion Confirmation Card */}
+      {booking.status === 'CONFIRMED' && (booking.completionOtp || completionOtpCode) && (
+        <div className="bg-gradient-to-br from-primary-900 to-primary-950 text-white rounded-2xl p-5 shadow-lg border border-primary-700/50 space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-amber-400 text-[24px]">verified</span>
+              <h3 className="font-bold text-base text-white">Service Completion Code</h3>
+            </div>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-400/20 text-amber-300 border border-amber-400/30 animate-pulse">
+              Action Required
+            </span>
+          </div>
+
+          <p className="text-xs text-primary-200">
+            The salon has completed your appointment! Enter the 4-digit completion code below (or share it with the stylist) to confirm and complete your service.
+          </p>
+
+          <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 flex flex-col items-center justify-center border border-white/10">
+            <span className="text-xs uppercase tracking-widest text-primary-300 font-semibold mb-1">Your 4-Digit PIN</span>
+            <div className="text-3xl font-extrabold tracking-[0.3em] font-mono text-amber-300 py-1">
+              {booking.completionOtp || completionOtpCode}
+            </div>
+            <span className="text-[11px] text-primary-300 mt-1">Valid for 15 minutes</span>
+          </div>
+
+          <div className="flex gap-2">
+            <input
+              type="text"
+              maxLength={4}
+              value={userOtpInput}
+              onChange={(e) => setUserOtpInput(e.target.value.replace(/\D/g, ''))}
+              placeholder="Enter 4-digit code"
+              className="flex-1 px-4 py-3 bg-white text-gray-900 rounded-xl text-center font-mono text-lg font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-gray-400 placeholder:text-sm placeholder:font-sans placeholder:tracking-normal"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const code = booking.completionOtp || completionOtpCode;
+                if (code) {
+                  setUserOtpInput(code);
+                }
+              }}
+              className="px-3 py-2 text-xs font-semibold bg-white/15 hover:bg-white/25 text-white rounded-xl border border-white/20 transition-all"
+            >
+              Auto-Fill
+            </button>
+          </div>
+
+          <Button
+            onClick={handleConfirmCompletion}
+            loading={isVerifyingOtp}
+            disabled={isVerifyingOtp}
+            className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-gray-950 font-bold py-3.5 shadow-md"
+          >
+            Confirm & Complete Service
+          </Button>
+        </div>
+      )}
 
       {/* Salon Info */}
       <div className="bg-white rounded-2xl p-5 border border-gray-100">

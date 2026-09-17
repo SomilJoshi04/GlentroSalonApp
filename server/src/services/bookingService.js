@@ -553,9 +553,8 @@ const markNoShow = async (bookingId, vendorId) => {
  */
 const requestCompletionOtp = async (bookingId, vendorId) => {
   const crypto = require('crypto');
-  const { sendEmail } = require('../utils/emailService');
 
-  const booking = await Booking.findById(bookingId).populate('user').populate('salon');
+  const booking = await Booking.findById(bookingId).populate('user', 'name email phone').populate('salon', 'name vendor');
   if (!booking) throw new Error('Booking not found');
   if (booking.salon.vendor.toString() !== vendorId.toString()) {
     throw new Error('Not authorized to manage this booking');
@@ -564,46 +563,49 @@ const requestCompletionOtp = async (bookingId, vendorId) => {
     throw new Error(`Cannot generate OTP for booking with status ${booking.status}`);
   }
 
-  // Generate 4 digit OTP
+  // Generate 4 digit numeric OTP
   const otp = crypto.randomInt(1000, 9999).toString();
   booking.completionOtp = otp;
   booking.otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+  booking.failedOtpAttempts = 0;
   await booking.save();
 
-  // Send email to customer
-  const emailHtml = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #2D0B5A;">Booking Completion Code</h2>
-      <p>Please share this code with the salon staff to complete your service.</p>
-      <h1 style="font-size: 32px; letter-spacing: 5px; color: #4A1578; background: #f4f4f4; padding: 10px; text-align: center; border-radius: 8px;">${otp}</h1>
-      <p>This code is valid for 15 minutes.</p>
-    </div>
-  `;
-
-  try {
-    await sendEmail({
-      to: booking.user.email,
-      subject: `Service Completion OTP - ${booking.salon.name}`,
-      html: emailHtml,
-    });
-  } catch (err) {
-    console.error('Failed to send OTP email:', err);
-    throw new Error('Failed to send OTP to customer');
-  }
-
-  return { message: 'OTP sent successfully to the customer' };
+  return {
+    success: true,
+    message: 'Completion OTP generated successfully',
+    bookingId: booking._id,
+    otp,
+    userId: booking.user?._id ? booking.user._id.toString() : (booking.user?.toString() || null),
+    salonName: booking.salon?.name || 'Salon',
+  };
 };
 
 /**
- * Complete a booking (Requires OTP Verification)
+ * Complete a booking (Requires OTP Verification by Vendor or Customer)
  */
-const completeBooking = async (bookingId, vendorId, otp) => {
-  // Use select('+completionOtp') to explicitly fetch it
-  const booking = await Booking.findById(bookingId).select('+completionOtp +otpExpiresAt').populate('salon');
+const completeBooking = async (bookingId, actorId, role, otp) => {
+  // Use select('+completionOtp +otpExpiresAt +failedOtpAttempts') to explicitly fetch it
+  const booking = await Booking.findById(bookingId)
+    .select('+completionOtp +otpExpiresAt +failedOtpAttempts')
+    .populate('salon', 'name vendor')
+    .populate('user', 'name email phone');
+
   if (!booking) throw new Error('Booking not found');
-  if (booking.salon.vendor.toString() !== vendorId.toString()) {
-    throw new Error('Not authorized to manage this booking');
+
+  // Authorization check
+  if (role === 'vendor') {
+    if (booking.salon.vendor.toString() !== actorId.toString()) {
+      throw new Error('Not authorized to manage this booking');
+    }
+  } else if (role === 'user') {
+    const bookingUserId = booking.user?._id ? booking.user._id.toString() : booking.user.toString();
+    if (bookingUserId !== actorId.toString()) {
+      throw new Error('Not authorized to complete this booking');
+    }
+  } else if (role !== 'admin') {
+    throw new Error('Unauthorized');
   }
+
   if (booking.status !== 'CONFIRMED') {
     throw new Error(`Cannot complete booking with status ${booking.status}`);
   }
@@ -612,17 +614,31 @@ const completeBooking = async (bookingId, vendorId, otp) => {
   if (!otp) {
     throw new Error('OTP is required to complete the booking');
   }
-  if (!booking.completionOtp || booking.completionOtp !== otp.toString()) {
-    throw new Error('Invalid OTP');
-  }
+
   if (booking.otpExpiresAt && new Date() > booking.otpExpiresAt) {
-    throw new Error('OTP has expired. Please request a new one.');
+    throw new Error('OTP has expired. Please ask to generate a new code.');
+  }
+
+  if (!booking.completionOtp || booking.completionOtp !== otp.toString().trim()) {
+    booking.failedOtpAttempts = (booking.failedOtpAttempts || 0) + 1;
+    await booking.save();
+
+    const remainingAttempts = Math.max(0, 5 - booking.failedOtpAttempts);
+    if (remainingAttempts === 0) {
+      booking.completionOtp = undefined;
+      booking.otpExpiresAt = undefined;
+      booking.failedOtpAttempts = 0;
+      await booking.save();
+      throw new Error('Too many invalid attempts. The OTP has been invalidated. Please request a new code.');
+    }
+    throw new Error(`Invalid OTP. ${remainingAttempts} attempts remaining.`);
   }
 
   booking.status = 'COMPLETED';
   booking.otpVerified = true;
   booking.completionOtp = undefined;
   booking.otpExpiresAt = undefined;
+  booking.failedOtpAttempts = undefined;
   await booking.save();
 
   return booking;
