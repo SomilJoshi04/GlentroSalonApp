@@ -1,14 +1,9 @@
 const CashSettlement = require('../models/CashSettlement');
 const VendorLedger = require('../models/VendorLedger');
 const { getVendorFinancials, syncVendorCashSuspension } = require('../services/vendorCashService');
-const Razorpay = require('razorpay');
+const razorpay = require('../utils/razorpay');
 const crypto = require('crypto');
 const { RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET } = require('../config/env');
-
-const razorpay = new Razorpay({
-  key_id: RAZORPAY_KEY_ID,
-  key_secret: RAZORPAY_KEY_SECRET,
-});
 
 /**
  * Get authoritative cash settlement status for vendor
@@ -75,6 +70,13 @@ const createSettlement = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No outstanding cash settlement required' });
     }
 
+    if (!razorpay) {
+      return res.status(503).json({
+        success: false,
+        message: 'Online payments are currently disabled or not configured on this server.',
+      });
+    }
+
     // Create Razorpay Order
     const options = {
       amount: amountPaise,
@@ -124,6 +126,13 @@ const verifySettlement = async (req, res) => {
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return res.status(400).json({ success: false, message: 'Missing payment details' });
+    }
+
+    if (!razorpay || !RAZORPAY_KEY_SECRET) {
+      return res.status(503).json({
+        success: false,
+        message: 'Online payments are currently disabled or not configured on this server.',
+      });
     }
 
     // Verify signature
