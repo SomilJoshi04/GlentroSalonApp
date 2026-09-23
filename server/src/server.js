@@ -27,7 +27,7 @@ const startServer = async () => {
   const server = http.createServer(app);
 
   // Initialize Socket.IO
-  const io = initializeSocket(server);
+  const io = await initializeSocket(server);
 
   // Setup socket event handlers
   setupChatSocket(io);

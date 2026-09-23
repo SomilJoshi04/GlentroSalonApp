@@ -14,7 +14,7 @@ const getAllowedOrigins = () => {
   }).filter(Boolean);
 };
 
-const initializeSocket = (httpServer) => {
+const initializeSocket = async (httpServer) => {
   const allowedOrigins = getAllowedOrigins();
 
   io = new Server(httpServer, {
@@ -39,12 +39,31 @@ const initializeSocket = (httpServer) => {
   if (isRedisReady()) {
     try {
       const { createAdapter } = require('@socket.io/redis-adapter');
-      const pubClient = getRedisClient();
-      const subClient = pubClient.duplicate();
+      const baseClient = getRedisClient();
+
+      const pubClient = baseClient.duplicate({
+        enableOfflineQueue: true,
+        lazyConnect: true,
+      });
+      const subClient = baseClient.duplicate({
+        enableOfflineQueue: true,
+        lazyConnect: true,
+        maxRetriesPerRequest: null,
+      });
+
+      pubClient.on('error', (err) => {
+        console.warn(`Socket.IO Redis pubClient error: ${err.message}`);
+      });
+      subClient.on('error', (err) => {
+        console.warn(`Socket.IO Redis subClient error: ${err.message}`);
+      });
+
+      await Promise.all([pubClient.connect(), subClient.connect()]);
+
       io.adapter(createAdapter(pubClient, subClient));
-      console.log('Socket.IO Redis adapter attached.');
+      console.log('✅ Socket.IO Redis adapter attached.');
     } catch (err) {
-      console.warn(`Socket.IO Redis adapter failed to attach: ${err.message}. Running without adapter.`);
+      console.warn(`⚠️ Socket.IO Redis adapter failed to attach: ${err.message}. Running without adapter.`);
     }
   }
 
