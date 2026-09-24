@@ -3,6 +3,7 @@ const BookingService = require('../models/BookingService');
 const Booking = require('../models/Booking');
 const SalonResource = require('../models/SalonResource');
 const { generateAvailableSlots, isSlotAvailable, calculateEndTime } = require('../utils/calculateAvailability');
+const { getLockedSlotsForStaff, getLockedSlotsForResource } = require('./slotLockService');
 
 /**
  * Get staff working schedule for a specific date
@@ -85,11 +86,13 @@ const getStaffAvailability = async (staffId, date, serviceDuration) => {
   }
 
   const existingBookings = await getStaffBookingsForDate(staffId, date);
+  const lockedSlots = await getLockedSlotsForStaff(staff.salon, staffId, date);
+  const combinedBookings = [...existingBookings, ...lockedSlots];
 
   const slots = generateAvailableSlots({
     workStart: schedule.startTime,
     workEnd: schedule.endTime,
-    existingBookings,
+    existingBookings: combinedBookings,
     serviceDuration,
   });
 
@@ -113,13 +116,15 @@ const checkSlotAvailability = async (staffId, date, startTime, duration) => {
   if (!schedule || !schedule.isWorking) return false;
 
   const existingBookings = await getStaffBookingsForDate(staffId, date);
+  const lockedSlots = await getLockedSlotsForStaff(staff.salon, staffId, date);
+  const combinedBookings = [...existingBookings, ...lockedSlots];
 
   return isSlotAvailable({
     startTime,
     duration,
     workStart: schedule.startTime,
     workEnd: schedule.endTime,
-    existingBookings,
+    existingBookings: combinedBookings,
   });
 };
 
@@ -134,13 +139,15 @@ const autoAssignStaff = async (salonId, date, startTime, duration) => {
     if (!schedule || !schedule.isWorking) continue;
 
     const existingBookings = await getStaffBookingsForDate(staff._id, date);
+    const lockedSlots = await getLockedSlotsForStaff(salonId, staff._id, date);
+    const combinedBookings = [...existingBookings, ...lockedSlots];
 
     const available = isSlotAvailable({
       startTime,
       duration,
       workStart: schedule.startTime,
       workEnd: schedule.endTime,
-      existingBookings,
+      existingBookings: combinedBookings,
     });
 
     if (available) {
@@ -159,13 +166,15 @@ const autoAssignResource = async (salonId, resourceType, date, startTime, durati
 
   for (const resource of resourceList) {
     const existingBookings = await getResourceBookingsForDate(resource._id, date);
+    const lockedSlots = await getLockedSlotsForResource(salonId, resource._id, date);
+    const combinedBookings = [...existingBookings, ...lockedSlots];
 
     const available = isSlotAvailable({
       startTime,
       duration,
       workStart: '00:00',
       workEnd: '23:59',
-      existingBookings,
+      existingBookings: combinedBookings,
     });
 
     if (available) {
@@ -219,9 +228,10 @@ const getComplexAvailability = async (salonId, date, services) => {
     const schedule = getStaffScheduleForDate(staff, date);
     if (schedule && schedule.isWorking) {
       const existingBookings = await getStaffBookingsForDate(staff._id, date);
+      const lockedSlots = await getLockedSlotsForStaff(salonId, staff._id, date);
       staffData[staff._id.toString()] = {
         schedule,
-        existingBookings,
+        existingBookings: [...existingBookings, ...lockedSlots],
       };
     }
   }
@@ -232,9 +242,10 @@ const getComplexAvailability = async (salonId, date, services) => {
       resourceData[resource.type] = [];
     }
     const existingBookings = await getResourceBookingsForDate(resource._id, date);
+    const lockedSlots = await getLockedSlotsForResource(salonId, resource._id, date);
     resourceData[resource.type].push({
       _id: resource._id,
-      existingBookings,
+      existingBookings: [...existingBookings, ...lockedSlots],
       schedule: { startTime: '00:00', endTime: '23:59' }
     });
   }

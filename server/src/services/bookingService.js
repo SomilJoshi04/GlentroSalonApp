@@ -10,12 +10,14 @@ const { checkSlotAvailability, autoAssignStaff, autoAssignResource } = require('
 const { calculateBookingTotal, calculateCancellationFee, calculateFinancialBreakdown } = require('../utils/calculateFees');
 const { calculateEndTime } = require('../utils/calculateAvailability');
 const couponService = require('./couponService');
+const { acquireMultiServiceLocks, releaseSlotLocks } = require('./slotLockService');
 
 /**
  * Create a new booking with multiple services
  * Handles staff auto-assignment, conflict prevention, and financial calculations
  */
 const createBooking = async ({ userId, salonId, services, bookingDate, startTime, couponCode, paymentMethod, packageId }) => {
+  let acquiredLockKeys = [];
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -195,6 +197,26 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
       currentTime = endTime;
     }
 
+    // ── REDIS ATOMIC SLOT LOCKING ──────────────────────────────────────────
+    // Atomically lock all assigned staff and resource slot buckets
+    const lockRequests = bookingServices.map((bs) => ({
+      salonId,
+      staffId: bs.staff,
+      resourceId: bs.resource,
+      date: bookingDate,
+      startTime: bs.startTime,
+      duration: bs.duration,
+    }));
+
+    const lockResult = await acquireMultiServiceLocks(lockRequests, userId);
+    if (!lockResult.success) {
+      throw new Error(
+        'One or more selected time slots are currently being booked by another customer. Please select another time or try again in a moment.'
+      );
+    }
+    acquiredLockKeys = lockResult.allLockKeys || [];
+    // ───────────────────────────────────────────────────────────────────────
+
     // Validate coupon if provided
     let coupon = null;
     if (couponCode) {
@@ -317,6 +339,11 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
     await session.commitTransaction();
     session.endSession();
 
+    // Release temporary Redis locks now that the booking is securely saved in MongoDB
+    if (acquiredLockKeys.length > 0) {
+      await releaseSlotLocks(acquiredLockKeys, userId);
+    }
+
     // Return populated booking
     const populatedBooking = await Booking.findById(booking._id)
       .populate('salon', 'name address phone vendor')
@@ -335,6 +362,12 @@ const createBooking = async ({ userId, salonId, services, bookingDate, startTime
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
+
+    // Clean up temporary slot locks immediately on error/rollback
+    if (acquiredLockKeys.length > 0) {
+      await releaseSlotLocks(acquiredLockKeys, userId);
+    }
+
     // Catch WriteConflict (112) to retry gracefully or propagate the error to the frontend
     if (error.code === 112) {
       console.warn(`[Concurrency] WriteConflict (112) detected in createBooking. Propagating to client to retry.`);

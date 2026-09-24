@@ -46,7 +46,7 @@ const createNotification = async ({
   // Send Firebase Push Notification
   try {
     const admin = require('../utils/firebase');
-    if (admin) {
+    if (admin && admin.apps && admin.apps.length > 0) {
       let recipient;
       if (recipientModel === 'User') {
         const User = require('../models/User');

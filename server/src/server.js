@@ -6,6 +6,7 @@ const connectDB = require('./config/db');
 const { initializeSocket } = require('./config/socket');
 const { PORT, NODE_ENV } = require('./config/env');
 const { initRedis } = require('./config/redis');
+const { syncAllSalons } = require('./services/geoService');
 
 // Import socket handlers
 const { setupChatSocket } = require('./sockets/chatSocket');
@@ -22,6 +23,9 @@ const startServer = async () => {
 
   // Initialize Redis (safe no-op if REDIS_ENABLED=false or unavailable)
   await initRedis();
+
+  // Synchronize salon locations into Redis Geospatial index (background safe)
+  syncAllSalons().catch((err) => console.warn(`Initial Redis GEO sync warning: ${err.message}`));
 
   // Create HTTP server
   const server = http.createServer(app);

@@ -8,6 +8,7 @@ const SalonResource = require('../models/SalonResource');
 const Vendor = require('../models/Vendor');
 
 const { processAndStoreImage, deleteImageSafe } = require('../services/imageService');
+const { searchNearbySalons, indexSalon, removeSalon } = require('../services/geoService');
 
 // Helper function to attach the minimum valid service price to a list of salons
 const attachMinServicePrices = async (salons) => {
@@ -46,6 +47,7 @@ const createSalon = async (req, res, next) => {
     }
 
     const salon = await Salon.create(salonData);
+    indexSalon(salon).catch(err => console.warn(`Redis GEO index error: ${err.message}`));
     res.status(201).json({ success: true, message: 'Salon created successfully', data: salon });
   } catch (error) { next(error); }
 };
@@ -120,10 +122,113 @@ const getNearbySalons = async (req, res, next) => {
     const radiusSetting = await AppSetting.findOne({ key: 'salonSearchRadius' }).lean();
     const radiusInKm = radiusSetting ? parseFloat(radiusSetting.value) : 50;
     const maxDistanceInMeters = radiusInKm * 1000;
+
     // Find active vendors to filter out suspended ones
     const activeVendors = await Vendor.find({ accountStatus: { $ne: 'suspended' } }).select('_id');
     const activeVendorIds = activeVendors.map(v => v._id);
 
+    const pageNum = parseInt(page, 10) || 1;
+    const limitNum = parseInt(limit, 10) || 20;
+
+    // ── ATTEMPT REDIS GEOSPATIAL SEARCH ──────────────────────────────────────
+    let geoResults = null;
+    try {
+      geoResults = await searchNearbySalons({
+        lat,
+        lng,
+        radiusKm: radiusInKm,
+        limit: 150,
+      });
+    } catch (geoErr) {
+      console.warn(`Redis GEO search error: ${geoErr.message}. Falling back to DB.`);
+      geoResults = null;
+    }
+
+    if (geoResults !== null) {
+      if (geoResults.length === 0) {
+        return res.json({
+          success: true,
+          data: { salons: [], total: 0, page: pageNum, totalPages: 0 }
+        });
+      }
+
+      const distMap = new Map(geoResults.map(r => [r.salonId.toString(), r.distanceKm]));
+      let candidateIds = geoResults.map(r => r.salonId.toString());
+
+      const query = {
+        _id: { $in: candidateIds },
+        isActive: true,
+        isApproved: true,
+        vendor: { $in: activeVendorIds },
+      };
+
+      if (category) {
+        const categoryServices = await Service.find({ category, isActive: true }).select('salon');
+        const catSalonIds = categoryServices.map(s => s.salon.toString());
+        candidateIds = candidateIds.filter(id => catSalonIds.includes(id));
+        query._id = { $in: candidateIds };
+      }
+
+      if (search) {
+        const matchedCategories = await Category.find({ name: { $regex: search, $options: 'i' }, isActive: true }).select('_id');
+        const matchedCategoryIds = matchedCategories.map(c => c._id);
+
+        const serviceQuery = { isActive: true };
+        if (matchedCategoryIds.length > 0) {
+          serviceQuery.$or = [
+            { name: { $regex: search, $options: 'i' } },
+            { category: { $in: matchedCategoryIds } }
+          ];
+        } else {
+          serviceQuery.name = { $regex: search, $options: 'i' };
+        }
+
+        const matchedServices = await Service.find(serviceQuery).select('salon');
+        const matchedSalonIds = matchedServices.map(s => s.salon.toString());
+
+        query.$and = [
+          { _id: { $in: candidateIds } },
+          {
+            $or: [
+              { name: { $regex: search, $options: 'i' } },
+              { address: { $regex: search, $options: 'i' } },
+              { _id: { $in: matchedSalonIds } }
+            ]
+          }
+        ];
+        delete query._id;
+      }
+
+      const matchedSalons = await Salon.find(query);
+
+      // Sort according to Redis GEO proximity
+      matchedSalons.sort((a, b) => {
+        const distA = distMap.get(a._id.toString()) ?? 999999;
+        const distB = distMap.get(b._id.toString()) ?? 999999;
+        return distA - distB;
+      });
+
+      const total = matchedSalons.length;
+      const paginatedSalons = matchedSalons.slice((pageNum - 1) * limitNum, pageNum * limitNum);
+      const salonsWithPrices = await attachMinServicePrices(paginatedSalons);
+
+      // Attach distance in kilometers to each salon
+      salonsWithPrices.forEach(s => {
+        s.distanceKm = distMap.get(s._id.toString()) ?? null;
+      });
+
+      return res.json({
+        success: true,
+        data: {
+          salons: salonsWithPrices,
+          total,
+          page: pageNum,
+          totalPages: Math.ceil(total / limitNum)
+        }
+      });
+    }
+
+    // ── FALLBACK: MONGODB $nearSphere GEOSPATIAL QUERY ───────────────────────
     const query = {
       isActive: true,
       isApproved: true,
@@ -137,11 +242,9 @@ const getNearbySalons = async (req, res, next) => {
     };
 
     if (search) {
-      // Find matching categories
       const matchedCategories = await Category.find({ name: { $regex: search, $options: 'i' }, isActive: true }).select('_id');
       const matchedCategoryIds = matchedCategories.map(c => c._id);
 
-      // Find matching services (by name OR by category)
       const serviceQuery = { isActive: true };
       if (matchedCategoryIds.length > 0) {
         serviceQuery.$or = [
@@ -167,10 +270,19 @@ const getNearbySalons = async (req, res, next) => {
       query._id = { $in: catSalonIds };
     }
 
-    const salons = await Salon.find(query).skip((page - 1) * limit).limit(parseInt(limit));
+    const salons = await Salon.find(query).skip((pageNum - 1) * limitNum).limit(limitNum);
+    const total = await Salon.countDocuments(query);
     const salonsWithPrices = await attachMinServicePrices(salons);
 
-    res.json({ success: true, data: { salons: salonsWithPrices, page: parseInt(page) } });
+    res.json({
+      success: true,
+      data: {
+        salons: salonsWithPrices,
+        total,
+        page: pageNum,
+        totalPages: Math.ceil(total / limitNum)
+      }
+    });
   } catch (error) { next(error); }
 };
 
@@ -279,6 +391,9 @@ const updateSalon = async (req, res, next) => {
     }
 
     const updated = await Salon.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
+    if (updated) {
+      indexSalon(updated).catch(err => console.warn(`Redis GEO index error: ${err.message}`));
+    }
     res.json({ success: true, message: 'Salon updated', data: updated });
   } catch (error) { next(error); }
 };
