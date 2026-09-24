@@ -17,19 +17,21 @@ export const NotificationProvider = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [latestNotification, setLatestNotification] = useState(null);
   const { socket } = useSocket();
-  const { user, vendor, userToken, vendorToken } = useAuth();
+  const { user, vendor, admin, userToken, vendorToken, adminToken } = useAuth();
 
   // Fetch unread count on mount
   useEffect(() => {
-    if (!userToken && !vendorToken) return;
+    if (!userToken && !vendorToken && !adminToken) return;
     const fetchCount = async () => {
       try {
         const res = await api.get('/notifications/unread-count');
-        setUnreadCount(res.data.data.count);
+        if (res.data?.success) {
+          setUnreadCount(res.data.data.count || 0);
+        }
       } catch (err) { /* ignore */ }
     };
     fetchCount();
-  }, [userToken, vendorToken]);
+  }, [userToken, vendorToken, adminToken]);
 
   // Request FCM token and register with backend when authenticated
   useEffect(() => {
@@ -76,7 +78,7 @@ export const NotificationProvider = ({ children }) => {
             <span className="text-xs text-slate-600 line-clamp-2">{message}</span>
           </div>
         ),
-        { icon: '🔔', duration: 4000 }
+        { icon: '', duration: 4000 }
       );
     });
 
@@ -94,8 +96,25 @@ export const NotificationProvider = ({ children }) => {
       setLatestNotification(notification);
     };
 
+    const handleNewBooking = (data) => {
+      setUnreadCount((prev) => prev + 1);
+      setLatestNotification({
+        _id: data.booking?._id || Date.now().toString(),
+        type: 'BOOKING_CREATED',
+        title: data.title || 'New Booking Received',
+        message: data.message || `Booking #${data.booking?.bookingNumber || ''} has arrived.`,
+        data: data.booking || {},
+        createdAt: new Date().toISOString(),
+      });
+    };
+
     socket.on('notification:new', handleNewNotification);
-    return () => socket.off('notification:new', handleNewNotification);
+    socket.on('booking:new', handleNewBooking);
+
+    return () => {
+      socket.off('notification:new', handleNewNotification);
+      socket.off('booking:new', handleNewBooking);
+    };
   }, [socket]);
 
   const decrementCount = useCallback(() => {

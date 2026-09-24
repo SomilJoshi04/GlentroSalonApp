@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { useNotifications } from '../../../context/NotificationContext';
+import { useSocket } from '../../../context/SocketContext';
 import { getPendingCounts } from '../services/adminApi';
 import NotificationDropdown from '../components/NotificationDropdown';
 import { useSettings } from '../../../context/SettingContext';
@@ -10,14 +11,86 @@ import { getImageUrl } from '../../../utils/imageUtils';
 const AdminLayout = () => {
   const { admin: user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { socket } = useSocket();
   const { settings } = useSettings();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pendingCounts, setPendingCounts] = useState({ vendors: 0, packages: 0, offers: 0, bookings: 0 });
   const [avatarError, setAvatarError] = useState(false);
+  const [activeBookingAlert, setActiveBookingAlert] = useState(null);
+  const [isRinging, setIsRinging] = useState(false);
+
+  const audioRef = useRef(null);
+  const autoTimeoutRef = useRef(null);
 
   useEffect(() => {
     setAvatarError(false);
   }, [user?.avatar]);
+
+  // Stop notification ringing sound
+  const stopNotificationSound = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    setIsRinging(false);
+    setActiveBookingAlert(null);
+    if (autoTimeoutRef.current) {
+      clearTimeout(autoTimeoutRef.current);
+      autoTimeoutRef.current = null;
+    }
+  }, []);
+
+  // Play notification ringtone with looping
+  const startNotificationSound = useCallback((alertData) => {
+    setActiveBookingAlert(alertData);
+    setIsRinging(true);
+
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch((err) => {
+        console.log('Audio autoplay prevented until user interaction:', err.message);
+      });
+    }
+
+    // Auto timeout after 45 seconds to avoid infinite ringing if away
+    if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
+    autoTimeoutRef.current = setTimeout(() => {
+      stopNotificationSound();
+    }, 45000);
+  }, [stopNotificationSound]);
+
+  // Initialize and prime audio element
+  useEffect(() => {
+    const audio = new Audio('/adminRing.mp3');
+    audio.loop = true;
+    audio.preload = 'auto';
+    audioRef.current = audio;
+
+    // Browser audio unlock on first user gesture
+    const unlockAudio = () => {
+      audio.load();
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
+    window.addEventListener('click', unlockAudio, { once: true });
+    window.addEventListener('keydown', unlockAudio, { once: true });
+
+    return () => {
+      audio.pause();
+      audio.currentTime = 0;
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+      if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
+    };
+  }, []);
+
+  // Stop sound automatically if admin navigates to bookings or notifications
+  useEffect(() => {
+    if (location.pathname === '/admin/bookings' || location.pathname === '/admin/notifications') {
+      stopNotificationSound();
+    }
+  }, [location.pathname, stopNotificationSound]);
 
   // Polling for pending counts every 30 seconds
   const { latestNotification } = useNotifications();
@@ -39,18 +112,38 @@ const AdminLayout = () => {
     return () => clearInterval(interval);
   }, [fetchPendingCounts]);
 
-  // Refresh pending counts and play sound when a new real-time notification arrives
+  // Listen for direct socket booking:new event
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewBooking = (data) => {
+      fetchPendingCounts();
+      startNotificationSound({
+        title: data.title || 'New Booking Alert',
+        message: data.message || `Booking #${data.booking?.bookingNumber || ''} has arrived.`,
+        booking: data.booking,
+      });
+    };
+
+    socket.on('booking:new', handleNewBooking);
+    return () => {
+      socket.off('booking:new', handleNewBooking);
+    };
+  }, [socket, fetchPendingCounts, startNotificationSound]);
+
+  // Trigger sound when latest notification arrives
   useEffect(() => {
     if (latestNotification) {
       fetchPendingCounts();
-      
-      // Play notification ringtone
-      const audio = new Audio('/adminRing.mp3');
-      audio.play().catch(error => {
-        console.log("Notification sound blocked by browser:", error);
-      });
+      if (latestNotification.type?.includes('BOOKING') || latestNotification.type === 'BOOKING_CREATED') {
+        startNotificationSound({
+          title: latestNotification.title || 'New Booking Received',
+          message: latestNotification.message || 'A customer has placed an appointment.',
+          data: latestNotification.data || {},
+        });
+      }
     }
-  }, [latestNotification, fetchPendingCounts]);
+  }, [latestNotification, fetchPendingCounts, startNotificationSound]);
 
   const navItems = [
     { to: '/admin', label: 'Dashboard', icon: 'grid_view' },
@@ -160,7 +253,7 @@ const AdminLayout = () => {
           </div>
 
           <div className="flex items-center gap-4 shrink-0">
-            <NotificationDropdown />
+            <NotificationDropdown onOpen={stopNotificationSound} onAction={stopNotificationSound} />
             <button onClick={() => navigate('/admin/settings')} className="p-2 text-muted-text hover:bg-surface-variant rounded-full transition-colors flex items-center">
               <span className="material-symbols-outlined text-[24px]">settings</span>
             </button>
@@ -181,6 +274,57 @@ const AdminLayout = () => {
             </NavLink>
           </div>
         </header>
+
+        {/* Real-time Booking Ringing Alert Banner */}
+        {activeBookingAlert && (
+          <div className="fixed top-4 right-4 z-50 flex items-center gap-3 px-5 py-3.5 bg-gradient-to-r from-purple-900 via-indigo-950 to-slate-900 text-white rounded-2xl shadow-2xl border border-purple-400/40 backdrop-blur-md animate-bounce-subtle">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/30 border border-purple-300/30 flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-[24px] text-amber-300 animate-pulse">
+                notifications_active
+              </span>
+            </div>
+
+            <div className="min-w-0 max-w-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase font-extrabold tracking-wider px-2 py-0.5 rounded-full bg-amber-400 text-slate-950">
+                  New Booking
+                </span>
+                {isRinging && (
+                  <span className="text-[11px] text-amber-200 animate-pulse font-medium">
+                    🔔 Ringing...
+                  </span>
+                )}
+              </div>
+              <p className="text-sm font-bold text-white mt-0.5 truncate">
+                {activeBookingAlert.title || 'New Booking Received!'}
+              </p>
+              <p className="text-xs text-purple-200 line-clamp-1">
+                {activeBookingAlert.message || 'Check your bookings calendar.'}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 ml-2 shrink-0">
+              <button
+                onClick={() => {
+                  stopNotificationSound();
+                  navigate('/admin/bookings');
+                }}
+                className="px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold transition-all shadow-sm flex items-center gap-1"
+              >
+                <span>View</span>
+                <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+              </button>
+              <button
+                onClick={stopNotificationSound}
+                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1 transition-all border border-white/20"
+                title="Stop Notification Ringtone"
+              >
+                <span className="material-symbols-outlined text-[16px]">volume_off</span>
+                <span>Stop Sound</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto bg-background relative">

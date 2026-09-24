@@ -16,11 +16,33 @@ const createBooking = async (req, res, next) => {
       userId: req.user.id, salonId: salon, services, bookingDate, startTime, couponCode, paymentMethod, packageId
     });
 
-    // Send notification to vendor
+    // Send notification to vendor & admin
     try {
       await notifyBookingCreated(result.booking, result.vendorId);
+
+      // Create admin notification in database
+      await createNotification({
+        recipientRole: 'admin',
+        recipientModel: 'User',
+        type: 'BOOKING_CREATED',
+        title: 'New Booking Received',
+        message: `New booking #${result.booking.bookingNumber || result.booking._id.toString().slice(-6)} placed for ${result.booking.salon?.name || 'Salon'} (${result.booking.startTime || ''}).`,
+        data: {
+          bookingId: result.booking._id,
+          salonId: result.booking.salon?._id || result.booking.salon,
+          bookingNumber: result.booking.bookingNumber,
+        },
+      });
+
       const io = getIO();
+      // Real-time socket emission to vendor
       io.to(`vendor:${result.vendorId}`).emit('booking:new', { booking: result.booking });
+      // Real-time socket emission to admin room
+      io.to('admin').emit('booking:new', {
+        booking: result.booking,
+        title: 'New Booking Alert',
+        message: `New booking #${result.booking.bookingNumber || result.booking._id.toString().slice(-6)} received.`,
+      });
     } catch (e) { console.log('Notification error:', e.message); }
 
     res.status(201).json({ success: true, message: 'Booking created successfully', data: { booking: result.booking, services: result.services } });
@@ -193,20 +215,47 @@ const rejectBooking = async (req, res, next) => {
   }
 };
 
-// @desc    Cancel booking (User)
+// @desc    Cancel booking (User / Vendor / Admin)
 const cancelBooking = async (req, res, next) => {
   try {
-    const booking = await bookingService.cancelBooking(req.params.id, req.user.id, req.user.role, req.body.reason);
+    const reason = req.body?.reason || req.body?.cancellationReason || '';
+    const booking = await bookingService.cancelBooking(req.params.id, req.user.id, req.user.role, reason);
     try {
       const populatedBooking = await Booking.findById(booking._id).populate('salon');
-      await notifyBookingCancelled(booking, populatedBooking.salon.vendor, 'vendor');
       const io = getIO();
-      io.to(`vendor:${populatedBooking.salon.vendor}`).emit('booking:update', { eventType: 'CANCELLED', booking });
+      const vendorId = populatedBooking?.salon?.vendor?.toString();
+      const userId = booking.user?.toString();
+
+      if (req.user.role === 'user') {
+        if (vendorId) {
+          await notifyBookingCancelled(booking, vendorId, 'vendor');
+          io.to(`vendor:${vendorId}`).emit('booking:update', { eventType: 'CANCELLED', booking });
+        }
+      } else if (req.user.role === 'vendor') {
+        if (userId) {
+          await notifyBookingCancelled(booking, userId, 'user');
+          io.to(`user:${userId}`).emit('booking:update', { eventType: 'CANCELLED', booking });
+        }
+      } else {
+        // Admin or system cancellation
+        if (vendorId) {
+          await notifyBookingCancelled(booking, vendorId, 'vendor');
+          io.to(`vendor:${vendorId}`).emit('booking:update', { eventType: 'CANCELLED', booking });
+        }
+        if (userId) {
+          await notifyBookingCancelled(booking, userId, 'user');
+          io.to(`user:${userId}`).emit('booking:update', { eventType: 'CANCELLED', booking });
+        }
+      }
+      io.to('admin').emit('booking:update', { eventType: 'CANCELLED', booking });
     } catch (e) { console.log('Notification error:', e.message); }
-    res.json({ success: true, message: 'Booking cancelled', data: booking });
+    res.json({ success: true, message: 'Booking cancelled successfully', data: booking });
   } catch (error) {
     if (error.message.includes('not authorized') || error.message.includes('Cannot')) {
       return res.status(400).json({ success: false, message: error.message });
+    }
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ success: false, message: error.message });
     }
     next(error);
   }

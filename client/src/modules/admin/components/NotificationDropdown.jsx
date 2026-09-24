@@ -4,7 +4,7 @@ import { useNotifications } from '../../../context/NotificationContext';
 import { getNotifications, markAsRead, markAllAsRead } from '../services/adminApi';
 import { formatDistanceToNow } from 'date-fns';
 
-const NotificationDropdown = () => {
+const NotificationDropdown = ({ onOpen, onAction }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -12,6 +12,14 @@ const NotificationDropdown = () => {
   const navigate = useNavigate();
   
   const { unreadCount, decrementCount, resetCount, latestNotification, clearLatest } = useNotifications();
+
+  const handleToggle = () => {
+    const nextState = !isOpen;
+    setIsOpen(nextState);
+    if (nextState && onOpen) {
+      onOpen();
+    }
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -82,6 +90,9 @@ const NotificationDropdown = () => {
 
   const handleNotificationClick = async (notif) => {
     setIsOpen(false);
+    if (onAction) onAction(notif);
+    if (onOpen) onOpen();
+
     if (!notif.isRead) {
       try {
         await markAsRead(notif._id);
@@ -112,7 +123,7 @@ const NotificationDropdown = () => {
   return (
     <div className="relative" ref={dropdownRef}>
       <button 
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         className={`relative p-2 rounded-full transition-colors flex items-center ${isOpen ? 'bg-surface-variant text-primary' : 'text-muted-text hover:bg-surface-variant'}`}
       >
         <span className="material-symbols-outlined text-[24px]">notifications</span>

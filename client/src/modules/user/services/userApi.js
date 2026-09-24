@@ -36,7 +36,7 @@ export const previewBookingTotal = (data) => api.post('/bookings/calculate-total
 export const createBooking = (data) => api.post('/bookings', data);
 export const getMyBookings = (params) => api.get('/bookings/my', { params });
 export const getBookingById = (id) => api.get(`/bookings/${id}`);
-export const cancelBooking = (id) => api.patch(`/bookings/${id}/cancel`);
+export const cancelBooking = (id, data) => api.patch(`/bookings/${id}/cancel`, typeof data === 'string' ? { reason: data } : (data || {}));
 export const verifyBookingCompletion = (id, otp) => api.patch(`/bookings/${id}/verify-completion`, { otp });
 
 // Payments

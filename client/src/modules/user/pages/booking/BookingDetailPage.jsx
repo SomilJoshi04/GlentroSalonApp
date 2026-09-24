@@ -159,12 +159,14 @@ const BookingDetailPage = () => {
     setCancelling(true);
     try {
       await cancelBooking(id, { reason: cancelReason });
+      toast.success('Booking cancelled successfully');
       setCancelModal(false);
       loadBooking();
     } catch (e) {
-      alert(e.response?.data?.message || 'Cancellation failed');
+      toast.error(e.response?.data?.message || 'Cancellation failed');
+    } finally {
+      setCancelling(false);
     }
-    setCancelling(false);
   };
 
   const handlePayment = async () => {
