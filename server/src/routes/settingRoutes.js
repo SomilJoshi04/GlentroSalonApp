@@ -1,6 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const { getSettings, updateAppLogo, updateAppName, updateSalonSearchRadius, updateBulkSettings, updateLoginImage, updateRegisterImage } = require('../controllers/settingController');
+const { 
+  getSettings, 
+  updateAppLogo, 
+  updateAppName, 
+  updateSalonSearchRadius, 
+  updateBulkSettings, 
+  updateLoginImage, 
+  updateRegisterImage,
+  updateVendorLoginImage,
+  updateVendorRegisterImage 
+} = require('../controllers/settingController');
 const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 const upload = require('../middleware/uploadMiddleware');
@@ -25,5 +35,11 @@ router.put('/login-image', protect, authorize('admin'), upload.single('image'), 
 
 // Protected Admin route to update register page image
 router.put('/register-image', protect, authorize('admin'), upload.single('image'), updateRegisterImage);
+
+// Protected Admin route to update vendor login page image
+router.put('/vendor-login-image', protect, authorize('admin'), upload.single('image'), updateVendorLoginImage);
+
+// Protected Admin route to update vendor register page image
+router.put('/vendor-register-image', protect, authorize('admin'), upload.single('image'), updateVendorRegisterImage);
 
 module.exports = router;

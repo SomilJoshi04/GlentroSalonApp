@@ -10,6 +10,8 @@ router.put('/profile', protect, requireActiveUser, authorize('user', 'admin'), u
 router.put('/location', protect, requireActiveUser, authorize('user'), updateLocation);
 router.patch('/:id/toggle-status', protect, authorize('admin'), toggleUserStatus);
 router.put('/fcm-token', protect, requireActiveUser, updateFcmToken);
+router.post('/fcm-token', protect, requireActiveUser, updateFcmToken);
+router.post('/fcm-tokens/save', protect, requireActiveUser, updateFcmToken);
 router.delete('/account', protect, requireActiveUser, authorize('user'), deleteAccount);
 
 module.exports = router;

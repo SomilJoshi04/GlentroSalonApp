@@ -15,6 +15,8 @@ router.put('/kyc', protect, authorize('vendor'), upload.fields([
 router.put('/bank', protect, authorize('vendor'), updateBankDetails);
 router.get('/documents/:field', protect, authorize('vendor', 'admin'), getKycDocument);
 router.put('/fcm-token', protect, authorize('vendor'), updateFcmToken);
+router.post('/fcm-token', protect, authorize('vendor'), updateFcmToken);
+router.post('/fcm-tokens/save', protect, authorize('vendor'), updateFcmToken);
 
 // Admin routes
 router.get('/', protect, authorize('admin'), getVendors);

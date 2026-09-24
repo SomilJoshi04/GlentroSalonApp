@@ -52,4 +52,11 @@ const clearAllNotifications = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-module.exports = { getNotifications, markAsRead, markAllAsRead, getUnreadCount, deleteNotification, clearAllNotifications };
+module.exports = {
+  getNotifications,
+  markAsRead,
+  markAllAsRead,
+  getUnreadCount,
+  deleteNotification,
+  clearAllNotifications,
+};

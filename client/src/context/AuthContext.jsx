@@ -11,23 +11,57 @@ export const useAuth = () => {
   return context;
 };
 
+// Clean up legacy shared auth keys from localStorage once so they don't leak across tabs
+try {
+  const legacyToken = localStorage.getItem('token');
+  const legacyUser = localStorage.getItem('user');
+  const legacyVendorToken = localStorage.getItem('vendor_token');
+  const legacyVendor = localStorage.getItem('vendor');
+  const legacyAdminToken = localStorage.getItem('admin_token');
+  const legacyAdmin = localStorage.getItem('admin');
+
+  // Migrate to current tab's sessionStorage if empty
+  if (!sessionStorage.getItem('token') && legacyToken) {
+    sessionStorage.setItem('token', legacyToken);
+    if (legacyUser) sessionStorage.setItem('user', legacyUser);
+  }
+  if (!sessionStorage.getItem('vendor_token') && legacyVendorToken) {
+    sessionStorage.setItem('vendor_token', legacyVendorToken);
+    if (legacyVendor) sessionStorage.setItem('vendor', legacyVendor);
+  }
+  if (!sessionStorage.getItem('admin_token') && legacyAdminToken) {
+    sessionStorage.setItem('admin_token', legacyAdminToken);
+    if (legacyAdmin) sessionStorage.setItem('admin', legacyAdmin);
+  }
+
+  // Purge shared localStorage auth keys
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  localStorage.removeItem('vendor_token');
+  localStorage.removeItem('vendor');
+  localStorage.removeItem('admin_token');
+  localStorage.removeItem('admin');
+} catch (e) {
+  // Safe ignore in restricted environments
+}
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('user');
+    const saved = sessionStorage.getItem('user');
     return saved ? JSON.parse(saved) : null;
   });
   const [vendor, setVendor] = useState(() => {
-    const saved = localStorage.getItem('vendor');
+    const saved = sessionStorage.getItem('vendor');
     return saved ? JSON.parse(saved) : null;
   });
   const [admin, setAdmin] = useState(() => {
-    const saved = localStorage.getItem('admin');
+    const saved = sessionStorage.getItem('admin');
     return saved ? JSON.parse(saved) : null;
   });
 
-  const [userToken, setUserToken] = useState(localStorage.getItem('token')); // keep 'token' for user backwards compatibility
-  const [vendorToken, setVendorToken] = useState(localStorage.getItem('vendor_token'));
-  const [adminToken, setAdminToken] = useState(localStorage.getItem('admin_token'));
+  const [userToken, setUserToken] = useState(sessionStorage.getItem('token'));
+  const [vendorToken, setVendorToken] = useState(sessionStorage.getItem('vendor_token'));
+  const [adminToken, setAdminToken] = useState(sessionStorage.getItem('admin_token'));
 
   const [loading, setLoading] = useState(true);
 
@@ -44,44 +78,43 @@ export const AuthProvider = ({ children }) => {
     loadProfiles();
   }, [userToken, vendorToken, adminToken]);
 
-
-  // General login function, caller must handle API call and pass result
+  // Tab-isolated login function: saves credentials to current tab's sessionStorage only
   const setAuth = useCallback((role, userData, token) => {
     if (role === 'user') {
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(userData));
+      sessionStorage.setItem('token', token);
+      sessionStorage.setItem('user', JSON.stringify(userData));
       setUserToken(token);
       setUser(userData);
     } else if (role === 'vendor') {
-      localStorage.setItem('vendor_token', token);
-      localStorage.setItem('vendor', JSON.stringify(userData));
+      sessionStorage.setItem('vendor_token', token);
+      sessionStorage.setItem('vendor', JSON.stringify(userData));
       setVendorToken(token);
       setVendor(userData);
     } else if (role === 'admin') {
-      localStorage.setItem('admin_token', token);
-      localStorage.setItem('admin', JSON.stringify(userData));
+      sessionStorage.setItem('admin_token', token);
+      sessionStorage.setItem('admin', JSON.stringify(userData));
       setAdminToken(token);
       setAdmin(userData);
     }
   }, []);
 
+  // Tab-isolated logout function: removes credentials from current tab's sessionStorage only
   const logout = useCallback((role) => {
     if (role === 'user') {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('user');
       sessionStorage.removeItem('location_prompt_dismissed');
-      localStorage.removeItem('guest_location');
       setUserToken(null);
       setUser(null);
     } else if (role === 'vendor') {
-      localStorage.removeItem('vendor_token');
-      localStorage.removeItem('vendor');
-      localStorage.removeItem('vendor_selected_salon');
+      sessionStorage.removeItem('vendor_token');
+      sessionStorage.removeItem('vendor');
+      sessionStorage.removeItem('vendor_selected_salon');
       setVendorToken(null);
       setVendor(null);
     } else if (role === 'admin') {
-      localStorage.removeItem('admin_token');
-      localStorage.removeItem('admin');
+      sessionStorage.removeItem('admin_token');
+      sessionStorage.removeItem('admin');
       setAdminToken(null);
       setAdmin(null);
     }

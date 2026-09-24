@@ -108,8 +108,25 @@ const toggleUserStatus = async (req, res, next) => {
 // @desc    Update FCM token
 const updateFcmToken = async (req, res, next) => {
   try {
-    await User.findByIdAndUpdate(req.user.id, { fcmToken: req.body.fcmToken });
-    res.json({ success: true, message: 'FCM token updated' });
+    const token = req.body.token !== undefined ? req.body.token : req.body.fcmToken;
+    const platform = (req.body.platform || '').toLowerCase();
+
+    if (token === undefined) {
+      return res.status(400).json({ success: false, message: 'Token is required' });
+    }
+
+    const updateFields = { fcmToken: token };
+    if (['android', 'ios', 'web'].includes(platform)) {
+      updateFields.fcmPlatform = platform;
+    }
+
+    await User.findByIdAndUpdate(req.user.id, updateFields);
+
+    res.json({
+      success: true,
+      message: 'FCM token saved successfully',
+      role: 'user',
+    });
   } catch (error) { next(error); }
 };
 

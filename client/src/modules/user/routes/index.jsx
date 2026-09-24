@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import Loader from '../../../components/common/Loader';
 import AuthLayout from '../layouts/AuthLayout';
@@ -6,6 +6,8 @@ import MainLayout from '../layouts/MainLayout';
 import LegalPageLayout from '../layouts/LegalPageLayout';
 import ProtectedRoute from '../../../components/common/ProtectedRoute';
 import ErrorBoundary from '../../../components/common/ErrorBoundary';
+import { useAuth } from '../../../context/AuthContext';
+import LandingPage from '../../landing/pages/LandingPage';
 
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
@@ -36,16 +38,53 @@ const SuspenseWrapper = ({ children }) => (
   </Suspense>
 );
 
+/**
+ * RootRoute: Controls the root '/' entry point.
+ * - Authenticated User: Shows User Dashboard (HomePage inside MainLayout)
+ * - Authenticated Vendor: Redirects to Vendor Dashboard (/vendor)
+ * - Authenticated Admin: Redirects to Admin Dashboard (/admin)
+ * - Unauthenticated: Renders the production Landing Page
+ */
+const RootRoute = () => {
+  const { user, vendor, admin, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#f9f9ff]">
+        <div className="w-12 h-12 border-4 border-purple-200 border-t-[#54238f] rounded-full animate-spin"></div>
+        <p className="mt-4 text-sm font-medium text-slate-500">Checking session...</p>
+      </div>
+    );
+  }
+
+  if (vendor) {
+    return <Navigate to="/vendor" replace />;
+  }
+
+  // Authenticated customer goes to customer home dashboard
+  if (user) {
+    return (
+      <MainLayout>
+        <HomePage />
+      </MainLayout>
+    );
+  }
+
+  // Admins and unauthenticated visitors can view the landing page
+  return <LandingPage />;
+};
+
 export default function UserRoutes() {
   return (
     <Routes>
+      <Route path="/" element={<RootRoute />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
       {/* Public Routes under MainLayout */}
       <Route element={<MainLayout />}>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/home" element={<HomePage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/offers" element={<OffersPage />} />
         <Route path="/salons" element={<SuspenseWrapper><SalonListPage /></SuspenseWrapper>} />

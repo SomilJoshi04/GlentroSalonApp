@@ -54,7 +54,7 @@ const ProfilePage = () => {
 
       const res = await updateProfile(data);
       setUser(res.data.data);
-      localStorage.setItem('user', JSON.stringify(res.data.data));
+      sessionStorage.setItem('user', JSON.stringify(res.data.data));
       setMessage({ text: 'Profile updated successfully', type: 'success' });
       setEditing(false);
       setAvatarFile(null);
@@ -71,7 +71,7 @@ const ProfilePage = () => {
   const handleLogout = () => {
     setShowLogoutConfirm(false);
     logout('user');
-    navigate('/login');
+    navigate('/');
   };
 
   const handleContactAdmin = async () => {

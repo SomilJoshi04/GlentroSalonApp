@@ -14,14 +14,15 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use((config) => {
   let token = null;
   const path = window.location.pathname;
+  const url = config.url || '';
 
-  if (path.startsWith('/admin')) {
-    token = localStorage.getItem('admin_token');
-  } else if (path.startsWith('/vendor')) {
-    token = localStorage.getItem('vendor_token');
+  if (path.startsWith('/admin') || url.includes('/admin') || url.includes('/landing/preview')) {
+    token = sessionStorage.getItem('admin_token');
+  } else if (path.startsWith('/vendor') || url.includes('/vendor')) {
+    token = sessionStorage.getItem('vendor_token');
   } else {
     // Default to user token for user routes
-    token = localStorage.getItem('token');
+    token = sessionStorage.getItem('token');
   }
   
   if (token && !config.headers.Authorization) {
@@ -35,20 +36,20 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      const url = error.config.url;
+      const url = error.config?.url || '';
       // Only clear auth and trigger logout if the request actually included a token
-      if (error.config.headers.Authorization || error.config.headers?.authorization) {
+      if (error.config?.headers?.Authorization || error.config?.headers?.authorization) {
         if (url.includes('/admin/')) {
-          localStorage.removeItem('admin_token');
-          localStorage.removeItem('admin');
+          sessionStorage.removeItem('admin_token');
+          sessionStorage.removeItem('admin');
           window.dispatchEvent(new CustomEvent('auth:unauthorized', { detail: { role: 'admin' } }));
         } else if (url.includes('/vendor') || url.includes('/vendors/profile') || url.includes('/salons/vendor/')) {
-          localStorage.removeItem('vendor_token');
-          localStorage.removeItem('vendor');
+          sessionStorage.removeItem('vendor_token');
+          sessionStorage.removeItem('vendor');
           window.dispatchEvent(new CustomEvent('auth:unauthorized', { detail: { role: 'vendor' } }));
         } else {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+          sessionStorage.removeItem('token');
+          sessionStorage.removeItem('user');
           window.dispatchEvent(new CustomEvent('auth:unauthorized', { detail: { role: 'user' } }));
         }
       }

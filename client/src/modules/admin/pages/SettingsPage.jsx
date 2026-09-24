@@ -1,6 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSettings } from '../../../context/SettingContext';
-import { updateAppLogo, updateAppName, updateSearchRadius, updateBulkSettings, updateLoginImage, updateRegisterImage } from '../../../services/api/settingApi';
+import { 
+  updateAppLogo, 
+  updateAppName, 
+  updateSearchRadius, 
+  updateBulkSettings, 
+  updateLoginImage, 
+  updateRegisterImage,
+  updateVendorLoginImage,
+  updateVendorRegisterImage 
+} from '../../../services/api/settingApi';
 import ImageUpload from '../../../components/common/ImageUpload';
 
 export default function SettingsPage() {
@@ -8,8 +17,12 @@ export default function SettingsPage() {
   const [logoFile, setLogoFile] = useState(null);
   const [loginImageFile, setLoginImageFile] = useState(null);
   const [registerImageFile, setRegisterImageFile] = useState(null);
+  const [vendorLoginImageFile, setVendorLoginImageFile] = useState(null);
+  const [vendorRegisterImageFile, setVendorRegisterImageFile] = useState(null);
   const [loginImageLoading, setLoginImageLoading] = useState(false);
   const [registerImageLoading, setRegisterImageLoading] = useState(false);
+  const [vendorLoginImageLoading, setVendorLoginImageLoading] = useState(false);
+  const [vendorRegisterImageLoading, setVendorRegisterImageLoading] = useState(false);
   const [appName, setAppName] = useState('');
   const [searchRadius, setSearchRadius] = useState('');
   const [maxPendingDuesLimit, setMaxPendingDuesLimit] = useState('500'); // default display 500
@@ -120,6 +133,52 @@ export default function SettingsPage() {
       setMessage({ type: 'error', text: 'Failed to update register page image' });
     } finally {
       setRegisterImageLoading(false);
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+    }
+  };
+
+  const handleSaveVendorLoginImage = async () => {
+    if (!vendorLoginImageFile) return;
+    setVendorLoginImageLoading(true);
+    setMessage({ type: '', text: '' });
+    try {
+      const formData = new FormData();
+      formData.append('image', vendorLoginImageFile);
+      
+      const res = await updateVendorLoginImage(formData);
+      if (res.data?.success) {
+        setMessage({ type: 'success', text: 'Vendor login page image updated successfully' });
+        await fetchSettings();
+        setVendorLoginImageFile(null);
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage({ type: 'error', text: 'Failed to update vendor login page image' });
+    } finally {
+      setVendorLoginImageLoading(false);
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+    }
+  };
+
+  const handleSaveVendorRegisterImage = async () => {
+    if (!vendorRegisterImageFile) return;
+    setVendorRegisterImageLoading(true);
+    setMessage({ type: '', text: '' });
+    try {
+      const formData = new FormData();
+      formData.append('image', vendorRegisterImageFile);
+      
+      const res = await updateVendorRegisterImage(formData);
+      if (res.data?.success) {
+        setMessage({ type: 'success', text: 'Vendor register page image updated successfully' });
+        await fetchSettings();
+        setVendorRegisterImageFile(null);
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage({ type: 'error', text: 'Failed to update vendor register page image' });
+    } finally {
+      setVendorRegisterImageLoading(false);
       setTimeout(() => setMessage({ type: '', text: '' }), 5000);
     }
   };
@@ -402,6 +461,70 @@ export default function SettingsPage() {
                   className="px-4 py-2 mt-4 sm:mt-0 h-fit bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
                 >
                   {registerImageLoading ? 'Saving...' : 'Save Image'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <hr className="my-8 border-border" />
+
+        <div className="flex flex-col sm:flex-row gap-6 items-start">
+          <div className="flex-1 space-y-2">
+            <h3 className="text-sm font-medium text-on-surface">Vendor Login Page Image</h3>
+            <p className="text-xs text-muted-text max-w-md">
+              This image will be displayed on the Vendor Login page visual showcase.
+              Recommended size: High resolution portrait image (e.g. 1200x1600px).
+            </p>
+            
+            <div className="pt-4 flex gap-3 flex-col sm:flex-row">
+              <div className="flex-1">
+                <ImageUpload 
+                  currentImage={settings?.vendorLoginPageImage}
+                  onFileSelect={setVendorLoginImageFile}
+                  label=""
+                  maxSizeMB={2}
+                />
+              </div>
+              {vendorLoginImageFile && (
+                <button 
+                  onClick={handleSaveVendorLoginImage}
+                  disabled={vendorLoginImageLoading}
+                  className="px-4 py-2 mt-4 sm:mt-0 h-fit bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  {vendorLoginImageLoading ? 'Saving...' : 'Save Image'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <hr className="my-8 border-border" />
+
+        <div className="flex flex-col sm:flex-row gap-6 items-start">
+          <div className="flex-1 space-y-2">
+            <h3 className="text-sm font-medium text-on-surface">Vendor Register Page Image</h3>
+            <p className="text-xs text-muted-text max-w-md">
+              This image will be displayed on the Vendor Register / Onboarding page visual showcase.
+              Recommended size: High resolution portrait image (e.g. 1200x1600px).
+            </p>
+            
+            <div className="pt-4 flex gap-3 flex-col sm:flex-row">
+              <div className="flex-1">
+                <ImageUpload 
+                  currentImage={settings?.vendorRegisterPageImage}
+                  onFileSelect={setVendorRegisterImageFile}
+                  label=""
+                  maxSizeMB={2}
+                />
+              </div>
+              {vendorRegisterImageFile && (
+                <button 
+                  onClick={handleSaveVendorRegisterImage}
+                  disabled={vendorRegisterImageLoading}
+                  className="px-4 py-2 mt-4 sm:mt-0 h-fit bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  {vendorRegisterImageLoading ? 'Saving...' : 'Save Image'}
                 </button>
               )}
             </div>

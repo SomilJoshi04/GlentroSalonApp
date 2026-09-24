@@ -55,6 +55,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    fcmPlatform: {
+      type: String,
+      enum: ['android', 'ios', 'web',''],
+      default: '',
+    },
     accountStatus: {
       type: String,
       enum: ['active', 'deleted', 'recovery_requested'],

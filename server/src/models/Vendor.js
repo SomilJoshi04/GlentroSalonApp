@@ -139,6 +139,11 @@ const vendorSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    fcmPlatform: {
+      type: String,
+      enum: ['android', 'ios', 'web',''],
+      default: '',
+    },
   },
   {
     timestamps: true,

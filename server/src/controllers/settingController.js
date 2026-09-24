@@ -16,7 +16,9 @@ const getSettings = async (req, res, next) => {
     const PUBLIC_KEYS = [
       'appName', 'appLogo', 'salonSearchRadius', 
       'supportEmail', 'supportPhone', 'supportWhatsApp', 'supportHours', 'supportDescription',
-      'loginPageImage', 'registerPageImage', 'jacuzziGlobalEnabled', 'maxPendingDuesLimit'
+      'loginPageImage', 'registerPageImage', 
+      'vendorLoginPageImage', 'vendorRegisterPageImage',
+      'jacuzziGlobalEnabled', 'maxPendingDuesLimit'
     ];
     
     const settings = await AppSetting.find({ key: { $in: PUBLIC_KEYS } });
@@ -101,6 +103,48 @@ const updateRegisterImage = async (req, res, next) => {
 
     const updatedSetting = await AppSetting.findOneAndUpdate(
       { key: 'registerPageImage' },
+      { value: newImage },
+      { new: true, upsert: true }
+    );
+    if (oldImage) deleteImageSafe(oldImage);
+    await deleteCache(SETTINGS_CACHE_KEY);
+    res.json({ success: true, data: updatedSetting });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update Vendor Login Page Image (Admin)
+const updateVendorLoginImage = async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'Please upload an image file' });
+    const newImage = await processAndStoreImage(req.file.buffer, 'vendorLoginPage');
+    const existingImage = await AppSetting.findOne({ key: 'vendorLoginPageImage' });
+    const oldImage = existingImage ? existingImage.value : null;
+
+    const updatedSetting = await AppSetting.findOneAndUpdate(
+      { key: 'vendorLoginPageImage' },
+      { value: newImage },
+      { new: true, upsert: true }
+    );
+    if (oldImage) deleteImageSafe(oldImage);
+    await deleteCache(SETTINGS_CACHE_KEY);
+    res.json({ success: true, data: updatedSetting });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update Vendor Register Page Image (Admin)
+const updateVendorRegisterImage = async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'Please upload an image file' });
+    const newImage = await processAndStoreImage(req.file.buffer, 'vendorRegisterPage');
+    const existingImage = await AppSetting.findOne({ key: 'vendorRegisterPageImage' });
+    const oldImage = existingImage ? existingImage.value : null;
+
+    const updatedSetting = await AppSetting.findOneAndUpdate(
+      { key: 'vendorRegisterPageImage' },
       { value: newImage },
       { new: true, upsert: true }
     );
@@ -200,5 +244,7 @@ module.exports = {
   updateSalonSearchRadius,
   updateBulkSettings,
   updateLoginImage,
-  updateRegisterImage
+  updateRegisterImage,
+  updateVendorLoginImage,
+  updateVendorRegisterImage
 };

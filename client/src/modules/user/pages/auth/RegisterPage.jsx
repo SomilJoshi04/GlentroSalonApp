@@ -14,6 +14,7 @@ const RegisterPage = () => {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [logoError, setLogoError] = useState(false);
   
   const { state } = useLocation();
   const { setAuth } = useAuth();
@@ -126,8 +127,13 @@ const RegisterPage = () => {
           <div className="mb-4 sm:mb-8 mt-1 sm:mt-2 pr-24">
             {/* Logo */}
             <div className="flex items-center gap-2 mb-3 sm:mb-6">
-              {settings?.appLogo ? (
-                <img src={getImageUrl(settings.appLogo)} alt={`${settings?.appName || 'GlentroSalon'} Logo`} className="h-6 sm:h-8 md:h-10 object-contain" />
+              {settings?.appLogo && !logoError ? (
+                <img
+                  src={getImageUrl(settings.appLogo)}
+                  alt={`${settings?.appName || 'GlentroSalon'} Logo`}
+                  onError={() => setLogoError(true)}
+                  className="h-6 sm:h-8 md:h-10 object-contain"
+                />
               ) : (
                 <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-[#31105D] to-[#8854C0] flex items-center justify-center text-white font-bold text-sm sm:text-lg shadow-md">
                   {(settings?.appName || 'GlentroSalon').charAt(0)}

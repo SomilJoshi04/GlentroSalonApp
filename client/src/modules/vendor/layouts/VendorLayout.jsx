@@ -69,7 +69,7 @@ const VendorLayout = () => {
           ))}
         </nav>
         <div className="p-4 border-t border-white/10 mt-auto shrink-0 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-4">
-          <button onClick={() => { logout('vendor'); navigate('/vendor/login'); }}
+          <button onClick={() => { logout('vendor'); navigate('/'); }}
             className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-[13px] font-medium text-white/80 hover:bg-error hover:text-white transition-colors duration-200">
             <span className="material-symbols-outlined text-[18px]">logout</span>
             Logout

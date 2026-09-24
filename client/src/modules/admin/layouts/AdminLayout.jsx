@@ -72,6 +72,7 @@ const AdminLayout = () => {
     { to: '/admin/payments', label: 'Payments & Revenue', icon: 'account_balance_wallet' },
     { to: '/admin/notifications', label: 'Notifications', icon: 'notifications' },
     { to: '/admin/content', label: 'Content (CMS)', icon: 'article' },
+    { to: '/admin/landing-cms', label: 'Landing Page CMS', icon: 'web' },
     { to: '/admin/settings', label: 'Settings', icon: 'settings' },
     { to: '/admin/support', label: 'Live Support', icon: 'headset_mic' },
     { to: '/admin/booking-issues', label: 'Booking Issues', icon: 'report_problem' },

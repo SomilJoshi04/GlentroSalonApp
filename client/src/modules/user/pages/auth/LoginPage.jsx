@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../../context/AuthContext';
 import { loginUser } from '../../../../services/api/authApi';
@@ -13,6 +13,7 @@ const LoginPage = () => {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [logoError, setLogoError] = useState(false);
 
   // Account Recovery State (from original implementation)
   const [showRecoveryForm, setShowRecoveryForm] = useState(false);
@@ -20,9 +21,19 @@ const LoginPage = () => {
   const [recoveryLoading, setRecoveryLoading] = useState(false);
 
   const { state } = useLocation();
-  const { setAuth } = useAuth();
+  const { user, setAuth } = useAuth();
   const { settings } = useSettings();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      if (state?.from) {
+        navigate(state.from, { state: state.bookingState, replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
+    }
+  }, [user, navigate, state]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -177,8 +188,13 @@ const LoginPage = () => {
           <div className="mb-8 mt-2 pr-24">
             {/* Logo */}
             <div className="flex items-center gap-2 mb-6">
-              {settings?.appLogo ? (
-                <img src={getImageUrl(settings.appLogo)} alt={`${settings?.appName || 'GlentroSalon'} Logo`} className="h-8 md:h-10 object-contain" />
+              {settings?.appLogo && !logoError ? (
+                <img
+                  src={getImageUrl(settings.appLogo)}
+                  alt={`${settings?.appName || 'GlentroSalon'} Logo`}
+                  onError={() => setLogoError(true)}
+                  className="h-8 md:h-10 object-contain"
+                />
               ) : (
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#31105D] to-[#8854C0] flex items-center justify-center text-white font-bold text-lg shadow-md">
                   {(settings?.appName || 'GlentroSalon').charAt(0)}

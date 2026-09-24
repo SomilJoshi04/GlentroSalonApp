@@ -34,6 +34,7 @@ const ProfilePage = lazy(() => import('../pages/ProfilePage'));
 const ReviewsPage = lazy(() => import('../pages/ReviewsPage'));
 const AdminPaymentsPage = lazy(() => import('../pages/AdminPaymentsPage'));
 const VendorCashControlPage = lazy(() => import('../pages/VendorCashControlPage'));
+const LandingCmsPage = lazy(() => import('../pages/LandingCmsPage'));
 
 const SuspenseWrapper = ({ children }) => (
   <Suspense fallback={<Loader text="Loading..." />}>
@@ -66,6 +67,7 @@ export default function AdminRoutes() {
         <Route path="settings" element={<SuspenseWrapper><SettingsPage /></SuspenseWrapper>} />
         <Route path="notifications" element={<SuspenseWrapper><NotificationsPage /></SuspenseWrapper>} />
         <Route path="content" element={<SuspenseWrapper><ContentPage /></SuspenseWrapper>} />
+        <Route path="landing-cms" element={<SuspenseWrapper><LandingCmsPage /></SuspenseWrapper>} />
         <Route path="faqs" element={<SuspenseWrapper><AdminFAQPage /></SuspenseWrapper>} />
         <Route path="booking-issues" element={<SuspenseWrapper><AdminBookingIssuesPage /></SuspenseWrapper>} />
         <Route path="support" element={<SuspenseWrapper><SupportPage /></SuspenseWrapper>} />

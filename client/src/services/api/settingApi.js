@@ -25,3 +25,14 @@ export const updateRegisterImage = (formData) =>
   axiosInstance.put('/settings/register-image', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
+
+export const updateVendorLoginImage = (formData) =>
+  axiosInstance.put('/settings/vendor-login-image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+
+export const updateVendorRegisterImage = (formData) =>
+  axiosInstance.put('/settings/vendor-register-image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+
